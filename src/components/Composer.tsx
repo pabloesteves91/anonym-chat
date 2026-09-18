@@ -43,7 +43,7 @@ export function Composer({ onSend, disabled }: { onSend: (text: string) => void;
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Nachricht schreiben – Enter sendet, Shift+Enter macht eine neue Zeile"
-          className="max-h-32 min-h-[2.75rem] flex-1 resize-y rounded-sm border border-line-strong bg-surface px-3 py-2.5 text-ink placeholder:text-muted/70"
+          className="max-h-32 min-h-[2.75rem] flex-1 resize-y rounded-sm border border-line-strong bg-surface px-3 py-2.5 text-ink placeholder:text-muted"
         />
         <Button variant="primary" onClick={submit} disabled={disabled || text.trim().length === 0}>
           Senden

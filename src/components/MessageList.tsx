@@ -74,8 +74,8 @@ export function MessageList({
   }, [messages, typing])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4">
-      <ol className="flex flex-col gap-3" role="log" aria-live="polite" aria-label="Chatverlauf">
+    <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
+      <ol className="mt-auto flex flex-col gap-3" role="log" aria-live="polite" aria-label="Chatverlauf">
         {messages.map((message) => (
           <Bubble key={message.id} message={message} />
         ))}

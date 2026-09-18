@@ -73,7 +73,7 @@ export function Field({
 }
 
 export const inputClass =
-  'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink placeholder:text-muted/70'
+  'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink placeholder:text-muted'
 
 export function TagToggle({
   label,
