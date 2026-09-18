@@ -23,7 +23,11 @@ export function Profile() {
   if (!user) return null
 
   const entwurf = draft ?? user.profile
-  const dirty = JSON.stringify(entwurf) !== JSON.stringify(user.profile)
+  // Reihenfolge der Interessen ist bedeutungslos – sonst gilt ab- und wieder
+  // anwählen fälschlich als Änderung.
+  const vergleichbar = (profile: ProfileData) =>
+    JSON.stringify({ ...profile, interests: [...profile.interests].sort() })
+  const dirty = vergleichbar(entwurf) !== vergleichbar(user.profile)
 
   const update = (patch: Partial<ProfileData>) => {
     setSaved(false)

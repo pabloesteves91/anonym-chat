@@ -73,7 +73,13 @@ function ReportCard({ report }: { report: Report }) {
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" disabled={busy || report.status === 'geprueft'} onClick={() => void setStatus(report.id, 'geprueft')}>
+        <Button
+          size="sm"
+          // Aus einer Sperre führt nur der ausdrückliche Weg "Sperre aufheben",
+          // nicht ein beiläufiges "geprüft".
+          disabled={busy || report.status !== 'offen'}
+          onClick={() => void setStatus(report.id, 'geprueft')}
+        >
           Als geprüft markieren
         </Button>
         {report.status === 'gesperrt' ? (

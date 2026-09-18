@@ -29,7 +29,7 @@ import type {
  * ein AbortSignal.
  */
 
-export type ApiErrorCode = 'abgebrochen' | 'kein-treffer' | 'nicht-verifiziert' | 'ungueltig'
+export type ApiErrorCode = 'abgebrochen' | 'kein-treffer' | 'nicht-verifiziert' | 'ungueltig' | 'speicher'
 
 export class ApiError extends Error {
   readonly code: ApiErrorCode
@@ -222,12 +222,18 @@ export async function submitReport(input: ReportInput, reporter: User): Promise<
       .filter((m) => m.author !== 'system')
       .slice(-EXCERPT_LENGTH)
       .map(({ author, text, ts }) => ({ author, text, ts })),
-    autoFlags: input.messages.filter((m) => m.flag).length,
+    // Nur Treffer des gemeldeten Kontos – eigene markierte Nachrichten
+    // sind keine Belastung des Gegenübers.
+    autoFlags: input.messages.filter((m) => m.author === 'partner' && m.flag).length,
     status: 'offen',
   }
 
   const reports = readJson<Report[]>(KEYS.reports, [])
-  writeJson(KEYS.reports, [report, ...reports])
+  if (!writeJson(KEYS.reports, [report, ...reports])) {
+    // Lieber ein ehrlicher Fehler als eine Vorgangsnummer für eine Meldung,
+    // die nirgends liegt.
+    throw new ApiError('Die Meldung konnte nicht gespeichert werden.', 'speicher')
+  }
   return report
 }
 
@@ -245,13 +251,11 @@ export async function updateReportStatus(id: string, status: ReportStatus): Prom
   // Sperren wirken sofort auf das Matching: gesperrte Konten tauchen nicht
   // mehr im Pool auf. Weil die Identität verifiziert ist, kann sich dahinter
   // in Phase 2 auch kein neues Konto verstecken.
-  const blocked = new Set(readJson<string[]>(KEYS.blocked, []))
-  const report = next.find((r) => r.id === id)
-  if (report) {
-    if (status === 'gesperrt') blocked.add(report.reportedId)
-    else blocked.delete(report.reportedId)
-    writeJson(KEYS.blocked, [...blocked])
-  }
+  //
+  // Die Sperrliste wird aus allen Meldungen neu berechnet: ein Konto bleibt
+  // gesperrt, solange auch nur eine Meldung dagegen auf "gesperrt" steht.
+  const blocked = [...new Set(next.filter((r) => r.status === 'gesperrt').map((r) => r.reportedId))]
+  writeJson(KEYS.blocked, blocked)
   return next
 }
 

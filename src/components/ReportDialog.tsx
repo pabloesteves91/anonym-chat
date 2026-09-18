@@ -11,6 +11,7 @@ export function ReportDialog({
   partnerPseudonym,
   excerptCount,
   busy,
+  error,
 }: {
   open: boolean
   onClose: () => void
@@ -18,6 +19,7 @@ export function ReportDialog({
   partnerPseudonym: string
   excerptCount: number
   busy: boolean
+  error?: string | null
 }) {
   const [reason, setReason] = useState<ReportReason>('belaestigung')
   const [note, setNote] = useState('')
@@ -80,6 +82,8 @@ export function ReportDialog({
           Mitgeschickt werden die letzten {excerptCount} Nachrichten dieses Chats. Sonst nichts – kein früherer Verlauf,
           keine Angaben zu deiner Person über die interne Kennung hinaus.
         </Note>
+
+        {error ? <Note tone="warn">{error}</Note> : null}
 
         <div className="flex flex-wrap justify-end gap-3">
           <Button type="button" variant="quiet" onClick={onClose} disabled={busy}>

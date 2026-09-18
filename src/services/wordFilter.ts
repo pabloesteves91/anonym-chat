@@ -65,20 +65,30 @@ const RULES: Rule[] = [
   },
 ]
 
-/** Kleinschreibung, Umlaut-Varianten und Zeichenwiederholungen vereinheitlichen. */
+/** Nur Kleinschreibung und Leerraum – Ziffern und Zeichen bleiben erhalten. */
+function plain(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Zusätzlich Zahlen- und Zeichenersetzungen ("1d10t", "n4ckt") auflösen.
+ * Nur für den Wortabgleich – Muster mit Ziffern (Telefon, Altersangabe)
+ * oder Zeichen (@ in Adressen) laufen gegen `plain()`, sonst würde die
+ * Normalisierung genau das zerstören, wonach sie suchen.
+ */
 function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[0@]/g, (c) => (c === '0' ? 'o' : 'a'))
+  const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '@': 'a' }
+  return plain(text)
+    .replace(/[01345@]/g, (char) => LEET[char])
     .replace(/(.)\1{2,}/g, '$1$1')
-    .replace(/\s+/g, ' ')
 }
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export function scanText(text: string): FilterVerdict | null {
   const haystack = normalize(text)
-  if (!haystack.trim()) return null
+  const raw = plain(text)
+  if (!raw.trim()) return null
 
   let found: FilterVerdict | null = null
 
@@ -90,7 +100,7 @@ export function scanText(text: string): FilterVerdict | null {
       if (re.test(haystack)) terms.push(term)
     }
     for (const pattern of rule.patterns ?? []) {
-      const match = haystack.match(pattern)
+      const match = raw.match(pattern)
       if (match) terms.push(match[0].trim())
     }
 

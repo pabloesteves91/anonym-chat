@@ -31,6 +31,7 @@ interface ChatState {
   endChat: (reason: EndReason) => void
   nextChat: () => Promise<void>
   report: (reason: ReportReason, note: string, reporter: User) => Promise<Report | null>
+  clearError: () => void
   dismissEnded: () => void
 }
 
@@ -38,10 +39,23 @@ interface ChatState {
 let controller: AbortController | null = null
 let runToken = 0
 let turn = 0
-const timers = new Set<number>()
+/** Verhindert, dass mehrere Partnerantworten gleichzeitig laufen. */
+let partnerTurnActive = false
 
+interface Timer {
+  id: number
+  resolve: () => void
+}
+
+const timers = new Set<Timer>()
+
+/** Bricht laufende Wartezeiten ab und löst ihre Promises auf, damit keine
+ *  hängenden Fortsetzungen zurückbleiben. */
 function clearTimers() {
-  timers.forEach((id) => window.clearTimeout(id))
+  timers.forEach((timer) => {
+    window.clearTimeout(timer.id)
+    timer.resolve()
+  })
   timers.clear()
 }
 
@@ -49,16 +63,18 @@ function stopRun() {
   controller?.abort()
   controller = null
   clearTimers()
+  partnerTurnActive = false
   runToken += 1
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
-    const id = window.setTimeout(() => {
-      timers.delete(id)
+    const timer: Timer = { id: 0, resolve }
+    timer.id = window.setTimeout(() => {
+      timers.delete(timer)
       resolve()
     }, ms)
-    timers.add(id)
+    timers.add(timer)
   })
 }
 
@@ -70,7 +86,8 @@ export const useChat = create<ChatState>((set, get) => {
   /** Holt eine Partnerantwort und spielt vorher den Tippindikator ab. */
   async function playPartnerTurn(token: number, first: boolean, ownInterests: string[]) {
     const partner = get().partner
-    if (!partner || token !== runToken) return
+    if (!partner || token !== runToken || partnerTurnActive) return
+    partnerTurnActive = true
 
     try {
       const utterance = first
@@ -98,6 +115,8 @@ export const useChat = create<ChatState>((set, get) => {
       }))
     } catch {
       if (token === runToken) set({ partnerTyping: false })
+    } finally {
+      if (token === runToken) partnerTurnActive = false
     }
   }
 
@@ -120,6 +139,7 @@ export const useChat = create<ChatState>((set, get) => {
       controller = new AbortController()
       const token = runToken
       turn = 0
+      partnerTurnActive = false
 
       set({
         status: 'suche',
@@ -206,10 +226,19 @@ export const useChat = create<ChatState>((set, get) => {
           lastReport: report,
         })
         return report
-      } catch {
-        set({ error: 'Meldung konnte nicht gespeichert werden.' })
+      } catch (error) {
+        set({
+          error:
+            error instanceof Error && error.message
+              ? error.message
+              : 'Meldung konnte nicht gespeichert werden.',
+        })
         return null
       }
+    },
+
+    clearError() {
+      set({ error: null })
     },
 
     dismissEnded() {

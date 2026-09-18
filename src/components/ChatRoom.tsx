@@ -15,15 +15,19 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
   const endChat = useChat((s) => s.endChat)
   const nextChat = useChat((s) => s.nextChat)
   const report = useChat((s) => s.report)
+  const error = useChat((s) => s.error)
+  const clearError = useChat((s) => s.clearError)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const submitReport = async (reason: ReportReason, note: string) => {
     setBusy(true)
-    await report(reason, note, user)
+    const result = await report(reason, note, user)
     setBusy(false)
-    setDialogOpen(false)
+    // Nur schliessen, wenn die Meldung wirklich erfasst wurde – sonst bleibt
+    // der Dialog mit Fehlermeldung offen und der Text erhalten.
+    if (result) setDialogOpen(false)
   }
 
   return (
@@ -44,7 +48,14 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
             <Button size="sm" onClick={() => endChat('selbst')}>
               Chat beenden
             </Button>
-            <Button size="sm" variant="danger" onClick={() => setDialogOpen(true)}>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                clearError()
+                setDialogOpen(true)
+              }}
+            >
               Melden
             </Button>
           </div>
@@ -56,11 +67,15 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
 
       <ReportDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          clearError()
+          setDialogOpen(false)
+        }}
         onSubmit={(reason, note) => void submitReport(reason, note)}
         partnerPseudonym={partner.pseudonym}
         excerptCount={Math.min(8, messages.filter((m) => m.author !== 'system').length)}
         busy={busy}
+        error={error}
       />
     </>
   )
