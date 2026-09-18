@@ -1,0 +1,125 @@
+@import 'tailwindcss';
+
+/* -------------------------------------------------------------------------
+   Designtokens – "Amtsstube, aber warm".
+   Alle Farben sind hier einmal definiert (Light), werden weiter unten für
+   Dark neu belegt und ausschliesslich über die Tailwind-Utilities benutzt.
+   ------------------------------------------------------------------------- */
+
+:root {
+  --ground: #edf0ee;
+  --surface: #ffffff;
+  --surface-raised: #f7f9f8;
+  --ink: #141f1c;
+  --muted: #6c7b77;
+  --accent: #1f6f63;
+  --accent-ink: #ffffff;
+  --accent-soft: #dce8e4;
+  --signal: #9e4130;
+  --signal-soft: #f3e1db;
+  --line: #d3dad7;
+  --line-strong: #b9c3bf;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ground: #101615;
+    --surface: #18201e;
+    --surface-raised: #1f2926;
+    --ink: #e7ece9;
+    --muted: #8fa09b;
+    --accent: #57b4a3;
+    --accent-ink: #0c1413;
+    --accent-soft: #1d2e2a;
+    --signal: #d2775f;
+    --signal-soft: #32211c;
+    --line: #29332f;
+    --line-strong: #3b4642;
+  }
+}
+
+:root[data-theme='dark'] {
+  --ground: #101615;
+  --surface: #18201e;
+  --surface-raised: #1f2926;
+  --ink: #e7ece9;
+  --muted: #8fa09b;
+  --accent: #57b4a3;
+  --accent-ink: #0c1413;
+  --accent-soft: #1d2e2a;
+  --signal: #d2775f;
+  --signal-soft: #32211c;
+  --line: #29332f;
+  --line-strong: #3b4642;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sichtbarer Fokus – überall, nicht nur auf Buttons. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* Utility-Klassen für wiederkehrende Textrollen. */
+@utility label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@utility prose-column {
+  max-width: 62ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
