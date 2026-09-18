@@ -38,6 +38,7 @@ export function Composer({ onSend, disabled }: { onSend: (text: string) => void;
         <textarea
           id="nachricht"
           rows={1}
+          maxLength={2000}
           value={text}
           disabled={disabled}
           onChange={(event) => setText(event.target.value)}

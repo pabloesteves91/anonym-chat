@@ -205,6 +205,8 @@ export async function requestReply(
 /* --------------------------------------------------------------- Moderation */
 
 const EXCERPT_LENGTH = 8
+/** Obergrenze, damit der lokale Speicher nicht unbegrenzt volläuft. */
+const MAX_REPORTS = 200
 
 export async function submitReport(input: ReportInput, reporter: User): Promise<Report> {
   await delay(between(500, 900))
@@ -229,7 +231,7 @@ export async function submitReport(input: ReportInput, reporter: User): Promise<
   }
 
   const reports = readJson<Report[]>(KEYS.reports, [])
-  if (!writeJson(KEYS.reports, [report, ...reports])) {
+  if (!writeJson(KEYS.reports, [report, ...reports].slice(0, MAX_REPORTS))) {
     // Lieber ein ehrlicher Fehler als eine Vorgangsnummer für eine Meldung,
     // die nirgends liegt.
     throw new ApiError('Die Meldung konnte nicht gespeichert werden.', 'speicher')

@@ -11,6 +11,8 @@ import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '
  * und auch das nur, wenn der Nutzer meldet.
  */
 
+const MAX_MESSAGE_LENGTH = 2000
+
 export type ChatStatus = 'idle' | 'suche' | 'aktiv' | 'beendet'
 export type EndReason = 'selbst' | 'gemeldet' | 'naechster'
 
@@ -186,7 +188,9 @@ export const useChat = create<ChatState>((set, get) => {
     },
 
     sendMessage(text) {
-      const trimmed = text.trim()
+      // Harte Obergrenze auch abseits des Eingabefelds: der Wortfilter läuft
+      // über jede Nachricht, und der Verlauf soll nicht beliebig wachsen.
+      const trimmed = text.trim().slice(0, MAX_MESSAGE_LENGTH)
       if (!trimmed || get().status !== 'aktiv') return
 
       const message: Message = {
