@@ -11,12 +11,14 @@ Domain im Wurzelverzeichnis läuft.
 Lint, Typprüfung, Tests, Build, Veröffentlichung. Schlägt einer der Schritte
 fehl, geht nichts live.
 
-Der erste Lauf versucht, Pages selbst zu aktivieren. Falls das an Rechten
-scheitert, einmal von Hand:
+**Einmalig vorher nötig**, sonst bricht der Workflow im Schritt
+`configure-pages` ab: Der Workflow-Token darf die Pages-Site nicht selbst
+anlegen (`Resource not accessible by integration`), das geht nur von Hand:
 
 **Settings → Pages → Build and deployment → Source: „GitHub Actions"**
 
-Danach unter **Actions** den Lauf ansehen; die Adresse steht am Ende des
+Danach den Workflow erneut starten (**Actions → Pages → Run workflow**) oder
+einfach den nächsten Push abwarten. Unter **Actions** den Lauf ansehen; die Adresse steht am Ende des
 Deploy-Jobs, üblicherweise:
 
 ```
