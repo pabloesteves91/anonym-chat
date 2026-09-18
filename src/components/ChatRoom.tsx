@@ -41,7 +41,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
               {languageLabelShort(partner.language)} · {partner.interests.join(', ')}
             </p>
           </div>
-          <VerifiedBadge verified size="sm" />
+          <VerifiedBadge status="verifiziert" size="sm" />
           <div className="ml-auto flex flex-wrap gap-2">
             <Button size="sm" onClick={() => void nextChat()}>
               Nächster Chat

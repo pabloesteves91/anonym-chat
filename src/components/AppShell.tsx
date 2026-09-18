@@ -39,7 +39,7 @@ export function AppShell() {
                 {user.pseudonym}
               </span>
             ) : null}
-            <VerifiedBadge verified={Boolean(user?.verified)} size="sm" />
+            <VerifiedBadge status={user?.verificationStatus ?? 'offen'} size="sm" />
             <ThemeToggle />
           </div>
         </div>
@@ -57,8 +57,8 @@ export function AppShell() {
 
       <footer className="border-t border-line px-4 py-4">
         <p className="mx-auto max-w-5xl text-xs text-muted">
-          Prototyp, Phase 1. Simulierte Verifizierung, simulierte Gesprächspartner, keine Serververbindung. Hochgeladene
-          Dateien werden weder gelesen noch gespeichert.
+          Prototyp, Phase 1. Simulierte SMS, manuelle Freigabe in der eigenen Moderationsansicht, simulierte
+          Gesprächspartner, keine Serververbindung. Ausweisbilder bleiben im Sitzungsspeicher dieses Browsers.
         </p>
       </footer>
     </div>

@@ -42,14 +42,21 @@ export interface Profile {
   interests: string[]
 }
 
+/** Stand der Verifizierung aus Sicht des Nutzers. */
+export type VerificationStatus = 'offen' | 'wartet' | 'verifiziert' | 'abgelehnt'
+
 export interface User {
   /** Im System eindeutig – gegenüber anderen Nutzern nie sichtbar. */
   id: string
   /** Anzeigename gegenüber anderen Nutzern, z.B. "Blauer Falke 4417". */
   pseudonym: string
+  /** Kurzform für "Prüfung bestanden" – Chat setzt das voraus. */
   verified: boolean
-  /** ISO-Zeitstempel der (simulierten) Verifizierung. */
+  verificationStatus: VerificationStatus
+  /** ISO-Zeitstempel der Freigabe durch die Moderation. */
   verifiedAt: string | null
+  /** Bestätigte Mobilnummer, im UI nur maskiert sichtbar. */
+  phone: string | null
   profile: Profile
 }
 
@@ -139,13 +146,54 @@ export interface ReportInput {
   messages: Message[]
 }
 
-/** Zustand der (simulierten) Verifizierung. */
-export type VerificationStage =
-  | 'idle'
-  | 'dokument'
-  | 'liveness'
-  | 'abgleich'
-  | 'fertig'
+/** Schritte des Antragsformulars. */
+export type VerifyStep = 'telefon' | 'code' | 'ausweis' | 'selfie' | 'pruefen'
+
+export const VERIFY_STEPS: { key: VerifyStep; label: string }[] = [
+  { key: 'telefon', label: 'Mobilnummer' },
+  { key: 'code', label: 'SMS-Code' },
+  { key: 'ausweis', label: 'Ausweisfoto' },
+  { key: 'selfie', label: 'Selfie' },
+  { key: 'pruefen', label: 'Absenden' },
+]
+
+/** Metadaten eines hochgeladenen Bildes – ohne die Bilddaten selbst. */
+export interface UploadMeta {
+  name: string
+  size: number
+  type: string
+}
+
+export type RequestDecision = 'wartet' | 'freigegeben' | 'abgelehnt'
+
+export const REJECTION_REASONS = [
+  'Ausweis nicht lesbar',
+  'Selfie und Ausweis stimmen nicht überein',
+  'Dokument abgelaufen',
+  'Person offensichtlich unter 18',
+  'Verdacht auf Fälschung',
+] as const
+
+/** Ein Verifizierungsantrag, wie ihn die Moderation zu sehen bekommt. */
+export interface VerificationRequest {
+  id: string
+  userId: string
+  pseudonym: string
+  /** Nur maskiert – die vollständige Nummer sieht die Prüfung nicht. */
+  phoneMasked: string
+  submittedAt: string
+  status: RequestDecision
+  decidedAt: string | null
+  decidedBy: string | null
+  rejectionReason: string | null
+  documents: { ausweis: UploadMeta; selfie: UploadMeta }
+}
+
+/** Bildvorschauen zu einem Antrag – flüchtig, nur im Sitzungsspeicher. */
+export interface VerificationImages {
+  ausweis: string | null
+  selfie: string | null
+}
 
 export interface Session {
   user: User | null

@@ -1,8 +1,10 @@
 # Verifizierter Anonymchat – Prototyp (Phase 1)
 
-Zufalls-Textchat, bei dem sich alle Teilnehmenden einmal ausweisen müssen.
-Gegenüber anderen bleibt man anonym – gegenüber dem System nicht. Genau
-deshalb wirkt eine Sperre dauerhaft und nicht nur bis zum nächsten Konto.
+Zufalls-Textchat, bei dem sich alle Teilnehmenden einmal ausweisen müssen:
+Mobilnummer per SMS, Foto des Ausweises, Selfie damit – freigegeben wird von
+Hand durch die Moderation. Gegenüber anderen bleibt man anonym, gegenüber dem
+System nicht. Genau deshalb wirkt eine Sperre dauerhaft und nicht nur bis zum
+nächsten Konto.
 
 **Dieser Prototyp ist vollständig simuliert.** Es gibt kein Backend, keine
 echte Ausweisprüfung und keine anderen Menschen. Der Zweck ist, Flow und UX
@@ -31,7 +33,8 @@ Laufzeit keinen einzigen Netzwerk-Aufruf.
 
 | Bereich | Enthalten |
 | --- | --- |
-| Onboarding | Startseite mit Konzept, simulierte Verifizierung in drei Schritten (Dokument, Lebendprüfung, Abgleich), Status in `localStorage` |
+| Onboarding | Startseite mit Konzept, Antrag in fünf Schritten (Mobilnummer, SMS-Code, Ausweisfoto, Selfie, Absenden), Status in `localStorage` |
+| Manuelle Freigabe | Antrag geht in eine Warteschlange; ein Mensch sieht beide Bilder und entscheidet über Freigabe oder Ablehnung mit Begründung. Nichts wird automatisch verifiziert |
 | Profil | Zufälliges Pseudonym („Blauer Falke 4417"), Sprache, Altersgruppe, bis zu fünf Interessen – nur fürs Matching |
 | Matching | Optionaler Filter, Warteschlange mit Suchlauf, Treffer nach 1–3 s, Fall „niemand passendes erreichbar" |
 | Chat | Textchat mit Tippindikator, Skript-Antworten, „Nächster Chat", „Chat beenden", „Melden" |
@@ -49,11 +52,37 @@ Der Chatverlauf lebt ausschliesslich im Arbeitsspeicher und wird beim Beenden
 verworfen. Nur wenn gemeldet wird, wandern die letzten acht Nachrichten als
 Auszug in die Meldung – im Dialog offen ausgewiesen.
 
-### Die Datei beim Upload
+### Der Verifizierungsweg
 
-Das gewählte Dokument wird **nicht gelesen, nicht gespeichert und nicht
-gesendet**. Die App zeigt nur den Dateinamen an; der Inhalt wird nie
-angefasst (siehe `submitDocument()` in `src/services/mockApi.ts`).
+1. **Mobilnummer** – wird normalisiert (`079 …` → `+4179…`) und geprüft.
+2. **SMS-Code** – sechsstellig, zehn Minuten gültig, drei Versuche. Im
+   Prototyp geht keine SMS raus: der Code steht im UI.
+3. **Ausweisfoto** und **Selfie mit Ausweis** – beide Bilder werden im Browser
+   auf 720 px verkleinert (`src/services/image.ts`).
+4. **Absenden** – Status `wartet`, der Chat bleibt gesperrt.
+5. **Entscheid** – unter `/admin` sieht die Moderation beide Bilder und gibt
+   frei oder lehnt mit Begründung ab. Erst das setzt `verifiziert`.
+
+Bei Ablehnung kann mit besseren Aufnahmen neu eingereicht werden.
+
+### Wo die Bilder liegen
+
+Die Originaldateien verlassen das Gerät nicht. Verarbeitet wird nur die
+verkleinerte Vorschau, und die liegt im **`sessionStorage`** – sie übersteht
+einen Reload im selben Tab, aber weder einen Browserneustart noch den Wechsel
+in ein anderes Fenster. Nach dem Entscheid werden beide Bilder gelöscht. In
+den Antragsdaten in `localStorage` stehen nur Metadaten (Dateiname, Grösse,
+Typ), nie Bilddaten.
+
+Ausweisbilder gehören nicht in dauerhaften Browserspeicher – der Prototyp
+macht diese Grenze bewusst sichtbar: Nach einem Browserneustart zeigt die
+Prüfansicht statt des Bildes den Hinweis, dass es weg ist.
+
+### Doppelrolle im Prototyp
+
+Da alles lokal läuft, ist dieselbe Person Antragsteller **und** Moderation.
+In der echten Version sind das zwei getrennte Rollen mit getrennten Zugängen;
+die Bilder lägen nie im Browser des Antragstellers.
 
 ## Architektur
 
@@ -123,20 +152,32 @@ Server; Nachrichten laufen über WebSocket statt über ein lokales Skript.
 Einstiegspunkt ist `src/services/mockApi.ts` – die Signaturen sind so
 gewählt, dass sie ein echter Client erfüllen kann.
 
-### Echte Verifizierung – niemals selbst gebaut
-Ausweisprüfung und Lebenderkennung kommen von einem spezialisierten Anbieter
-(z.B. Veriff, Sumsub, IDnow). Ausweisdaten gehen direkt vom Gerät zum
-Anbieter, nie über eigene Server; zurück kommt idealerweise nur „geprüft
-ja/nein", ein Altersnachweis und ein stabiler Identifikator. Zu klären:
-Anbieterwahl, Kosten pro Prüfung, Wiederholprüfung, Umgang mit
-Fehlschlägen, Ausweisdokumente ohne maschinenlesbare Zone, Barrierefreiheit
-des Prüfprozesses.
+### SMS-Versand
+Ein Gateway (Twilio, MessageBird, Swisscom) ersetzt den angezeigten Demo-Code.
+Zu klären: Kosten pro SMS, Rate-Limiting gegen SMS-Pumping, Sperrlisten für
+Wegwerf- und VoIP-Nummern, Länderabdeckung, Zustellprobleme, und ob eine
+Nummer pro Person erzwungen wird (sie ist der stärkste Wiedererkennungsanker).
+
+### Manuelle Prüfung im Betrieb
+Die Prüfung von Hand ist eine bewusste Entscheidung – sie braucht aber
+Werkzeug und Regeln: Prüfoberfläche mit Zugriffsprotokoll, Vier-Augen-Prinzip
+bei Ablehnungen, Schulung der Prüfenden, Reaktionszeiten und Bereitschaft,
+Umgang mit Rückfragen, Einspruch gegen eine Ablehnung, Stichproben zur
+Qualitätssicherung. Bilder gehören in einen verschlüsselten Speicher mit
+enger Zugriffskontrolle und automatischer Löschfrist (üblich: Löschung
+unmittelbar nach dem Entscheid, nur Prüfvermerk bleibt).
+
+Bei grösseren Mengen lässt sich die Prüfung mit einem spezialisierten
+Anbieter (Veriff, Sumsub, IDnow) kombinieren: automatische Vorprüfung,
+manuell nur die unklaren Fälle. Selbst gebaut wird die Dokumentenprüfung in
+keinem Fall.
 
 ### Datenschutz und Recht
-Ausweisdaten sind besonders schützenswert – DSG (CH) und DSGVO (EU) gelten
-in vollem Umfang. Zu klären: Rechtsgrundlage und Zweckbindung,
-Auftragsverarbeitungsverträge mit dem Prüfanbieter, Speicherort und
--dauer, Löschkonzept und Betroffenenrechte, Datenschutzerklärung und AGB,
+Ausweisdaten und biometrische Aufnahmen sind besonders schützenswert – DSG
+(CH) und DSGVO (EU) gelten in vollem Umfang, und ein Selfie zum Abgleich ist
+biometrische Verarbeitung. Zu klären: Rechtsgrundlage und Zweckbindung,
+Auftragsverarbeitungsverträge mit SMS-Gateway und Prüfanbieter, Speicherort
+und -dauer, Löschkonzept und Betroffenenrechte, Datenschutzerklärung und AGB,
 Vorgehen bei Behördenanfragen, Protokollierung von Sperrentscheiden,
 Meldewege nach DSA (EU) und Impressumspflichten. Diese Punkte sind
 juristisch zu begleiten, nicht nebenbei zu lösen.

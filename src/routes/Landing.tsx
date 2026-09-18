@@ -6,7 +6,7 @@ import { useSession } from '../store/useSession'
 const SCHRITTE = [
   {
     titel: 'Einmal ausweisen',
-    text: 'Dokument und Lebendprüfung – einmalig, bevor der erste Chat möglich ist.',
+    text: 'Mobilnummer per SMS, Foto des Ausweises, Selfie dazu – einmalig, bevor der erste Chat möglich ist.',
   },
   {
     titel: 'Anonym auftreten',
@@ -14,7 +14,7 @@ const SCHRITTE = [
   },
   {
     titel: 'Sperren, die halten',
-    text: 'Weil im Hintergrund eine geprüfte Identität steht, trifft eine Sperre die Person – nicht nur ein Konto.',
+    text: 'Weil im Hintergrund eine von Hand geprüfte Identität steht, trifft eine Sperre die Person – nicht nur ein Konto.',
   },
 ]
 
@@ -30,9 +30,10 @@ export function Landing() {
           Anonym gegenüber einander. Eindeutig gegenüber dem System.
         </h1>
         <p className="prose-column mt-5 text-lg text-muted">
-          Wer hier mitschreibt, hat sich einmal ausgewiesen – gesehen wird davon nichts ausser einem Siegel. Das
-          Gegenüber erfährt nur einen zufälligen Anzeigenamen, während das System die Person kennt. Genau deshalb
-          wirkt eine Sperre dauerhaft und nicht nur bis zum nächsten neuen Konto.
+          Wer hier mitschreibt, hat sich einmal ausgewiesen – bestätigte Mobilnummer, Ausweisfoto, Selfie, von einem
+          Menschen geprüft. Gesehen wird davon nichts ausser einem Siegel: Das Gegenüber erfährt nur einen zufälligen
+          Anzeigenamen, während das System die Person kennt. Genau deshalb wirkt eine Sperre dauerhaft und nicht nur
+          bis zum nächsten neuen Konto.
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -76,14 +77,15 @@ export function Landing() {
       <Panel className="p-5">
         <h2 className="font-display text-xl font-semibold">Was dieser Prototyp nicht tut</h2>
         <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">
-          <li>— Keine echte Ausweisprüfung. Der Upload wird nicht gelesen, nicht gespeichert, nicht gesendet.</li>
-          <li>— Kein Server, keine anderen Menschen: die Gegenüber sind Skript-Attrappen.</li>
+          <li>— Keine echte SMS: der Code steht im Prototyp direkt auf dem Bildschirm.</li>
+          <li>— Keine echte Ausweisprüfung. Die Fotos bleiben auf diesem Gerät und werden nach dem Entscheid gelöscht.</li>
+          <li>— Kein Server, keine anderen Menschen: die Gegenüber sind Skript-Attrappen, und du bist gleichzeitig die Moderation.</li>
           <li>— Kein Video, kein Audio, keine Bezahlung.</li>
         </ul>
         <div className="mt-4">
           <Note>
-            Alles bleibt in diesem Browser. Verifizierungsstatus, Profil und Meldungen liegen in localStorage und lassen
-            sich im Profil jederzeit zurücksetzen.
+            Alles bleibt in diesem Browser. Verifizierungsstatus, Profil und Meldungen liegen in localStorage, die
+            Ausweisbilder nur im Sitzungsspeicher – zurücksetzen lässt sich alles im Profil.
           </Note>
         </div>
       </Panel>

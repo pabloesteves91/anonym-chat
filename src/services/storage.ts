@@ -11,6 +11,10 @@ const PREFIX = 'vac.v1.'
 
 export const KEYS = {
   user: `${PREFIX}user`,
+  requests: `${PREFIX}verifications`,
+  sms: `${PREFIX}sms`,
+  /** Präfix für Bildvorschauen im Sitzungsspeicher. */
+  preview: `${PREFIX}preview.`,
   reports: `${PREFIX}reports`,
   blocked: `${PREFIX}blocked`,
   selfBlocked: `${PREFIX}selfblocked`,
@@ -61,6 +65,39 @@ export function writeJson(key: string, value: unknown): boolean {
 export function remove(key: string): void {
   try {
     window.localStorage.removeItem(key)
+  } catch {
+    /* egal */
+  }
+}
+
+/**
+ * Sitzungsspeicher für die Ausweis- und Selfie-Vorschauen.
+ *
+ * Bewusst sessionStorage statt localStorage: die Bilder überleben einen
+ * Reload im selben Tab, aber nicht das Schliessen des Browsers. Ausweisbilder
+ * gehören nicht in dauerhaften Speicher – in Phase 2 liegen sie ohnehin beim
+ * Prüfanbieter und nie hier.
+ */
+export function readSessionString(key: string): string | null {
+  try {
+    return window.sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+export function writeSessionString(key: string, value: string): boolean {
+  try {
+    window.sessionStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function removeSession(key: string): void {
+  try {
+    window.sessionStorage.removeItem(key)
   } catch {
     /* egal */
   }

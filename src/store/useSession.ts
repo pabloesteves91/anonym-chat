@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import * as api from '../services/mockApi'
-import type { Profile, User, VerificationStage } from '../services/types'
+import type { Profile, User } from '../services/types'
 
 /**
  * Identität und Verifizierungsstatus.
@@ -15,28 +15,26 @@ interface SessionState {
   storageAvailable: boolean
   codexAccepted: boolean
   selfBlocked: string[]
-  stage: VerificationStage
   error: string | null
   busy: boolean
 
   load: () => Promise<void>
+  /** Nur Nutzer und Status neu lesen, ohne Ladezustand zurückzusetzen. */
+  refreshUser: () => Promise<void>
   acceptCodex: () => Promise<void>
   refreshBlocks: () => Promise<void>
   unblockAll: () => Promise<void>
-  verify: (file: File | null) => Promise<boolean>
-  resetVerification: () => void
   saveProfile: (profile: Profile) => Promise<void>
   newPseudonym: () => Promise<void>
   resetIdentity: () => Promise<void>
 }
 
-export const useSession = create<SessionState>((set, get) => ({
+export const useSession = create<SessionState>((set) => ({
   ready: false,
   user: null,
   storageAvailable: true,
   codexAccepted: false,
   selfBlocked: [],
-  stage: 'idle',
   error: null,
   busy: false,
 
@@ -48,8 +46,12 @@ export const useSession = create<SessionState>((set, get) => ({
       storageAvailable: session.storageAvailable,
       codexAccepted: session.codexAccepted,
       selfBlocked: session.selfBlocked,
-      stage: session.user?.verified ? 'fertig' : 'idle',
     })
+  },
+
+  async refreshUser() {
+    const session = await api.getSession()
+    set({ user: session.user, storageAvailable: session.storageAvailable })
   },
 
   async acceptCodex() {
@@ -67,24 +69,6 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ selfBlocked: [], busy: false })
   },
 
-  async verify(file) {
-    set({ error: null, busy: true, stage: 'dokument' })
-    try {
-      await api.submitDocument(file)
-      await api.runLivenessCheck((stage) => set({ stage }))
-      const user = await api.completeVerification()
-      set({ user, stage: 'fertig', busy: false })
-      return true
-    } catch (error) {
-      const message = error instanceof api.ApiError ? error.message : 'Verifizierung fehlgeschlagen.'
-      set({ error: message, stage: 'idle', busy: false })
-      return false
-    }
-  },
-
-  resetVerification() {
-    set({ stage: get().user?.verified ? 'fertig' : 'idle', error: null })
-  },
 
   async saveProfile(profile) {
     set({ busy: true })
@@ -108,6 +92,6 @@ export const useSession = create<SessionState>((set, get) => ({
 
   async resetIdentity() {
     await api.resetIdentity()
-    set({ user: null, stage: 'idle', error: null, codexAccepted: false, selfBlocked: [] })
+    set({ user: null, error: null, codexAccepted: false, selfBlocked: [] })
   },
 }))

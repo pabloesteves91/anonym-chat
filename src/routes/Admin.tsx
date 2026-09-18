@@ -3,6 +3,7 @@ import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { REPORT_REASONS } from '../services/types'
 import type { Report, ReportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
+import { VerificationQueue } from '../components/VerificationQueue'
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   offen: 'Offen',
@@ -119,10 +120,14 @@ export function Admin() {
       <div className="prose-column">
         <PageTitle kicker="Mock-Ansicht">Moderation</PageTitle>
         <p className="text-muted">
-          Alle Meldungen aus diesem Browser. In einer echten Version läge diese Seite hinter Anmeldung und Rollenprüfung
-          und würde nie im Auslieferungs-Bundle der App stecken.
+          Verifizierungsanträge und Meldungen aus diesem Browser. In einer echten Version läge diese Seite hinter
+          Anmeldung und Rollenprüfung und würde nie im Auslieferungs-Bundle der App stecken.
         </p>
       </div>
+
+      <VerificationQueue />
+
+      <h2 className="font-display text-2xl font-semibold">Meldungen</h2>
 
       <div className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-4">
         {(['offen', 'geprueft', 'gesperrt'] as ReportStatus[]).map((status) => (

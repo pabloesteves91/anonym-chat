@@ -1,4 +1,13 @@
-import { KEYS, isStorageAvailable, readJson, remove, writeJson } from './storage'
+import {
+  KEYS,
+  isStorageAvailable,
+  readJson,
+  readSessionString,
+  remove,
+  removeSession,
+  writeJson,
+  writeSessionString,
+} from './storage'
 import { generateId, generatePseudonym } from './pseudonym'
 import { PARTNER_POOL, openerFor, replyFor, typingDurationFor } from './partnerScript'
 import { scanText } from './wordFilter'
@@ -12,8 +21,10 @@ import type {
   ReportInput,
   ReportStatus,
   Session,
+  UploadMeta,
   User,
-  VerificationStage,
+  VerificationImages,
+  VerificationRequest,
 } from './types'
 
 /**
@@ -67,10 +78,14 @@ function readUser(): User | null {
   const user = readJson<User | null>(KEYS.user, null)
   if (!user || typeof user.id !== 'string' || typeof user.pseudonym !== 'string') return null
   // Defensive Migration: fehlende Felder auffüllen statt die App crashen lassen.
+  const verified = Boolean(user.verified)
   return {
     ...user,
-    verified: Boolean(user.verified),
+    verified,
+    // Ältere Datensätze kannten den Status noch nicht.
+    verificationStatus: user.verificationStatus ?? (verified ? 'verifiziert' : 'offen'),
     verifiedAt: user.verifiedAt ?? null,
+    phone: user.phone ?? null,
     profile: { ...DEFAULT_PROFILE, ...(user.profile ?? {}) },
   }
 }
@@ -121,45 +136,215 @@ export async function clearSelfBlocked(): Promise<void> {
   remove(KEYS.selfBlocked)
 }
 
+/* ------------------------------------------------------- Verifizierung (SMS) */
+
+const CODE_GUELTIG_MS = 10 * 60 * 1000
+const MAX_CODE_VERSUCHE = 3
+
+interface SmsState {
+  phone: string
+  code: string
+  expiresAt: number
+  attempts: number
+}
+
+/** Sehr grosszügige Prüfung – Formate unterscheiden sich pro Land. */
+export function normalizePhone(input: string): string | null {
+  const roh = input.replace(/[\s/.-]/g, '')
+  if (/^0\d{9}$/.test(roh)) return `+41${roh.slice(1)}` // CH-Mobilnummer ohne Vorwahl
+  if (/^\+\d{9,15}$/.test(roh)) return roh
+  return null
+}
+
+export function maskPhone(phone: string): string {
+  const sichtbar = phone.slice(-2)
+  const prefix = phone.slice(0, 3)
+  return `${prefix} •• ••• •• ${sichtbar}`
+}
+
 /**
- * Nimmt das "Ausweisdokument" entgegen.
+ * Verschickt den SMS-Code.
  *
- * Die Datei wird bewusst WEDER gelesen NOCH gespeichert NOCH übertragen –
- * geprüft wird nur, dass überhaupt etwas ausgewählt wurde. In Phase 2
- * übernimmt ein externer Anbieter (z.B. Veriff/Sumsub) diesen Schritt
- * vollständig; die Datei darf dieses Gerät dann direkt Richtung Anbieter
- * verlassen, nie über unseren Server.
+ * Im Prototyp geht keine SMS raus – der Code wird zurückgegeben und im UI
+ * angezeigt. In Phase 2 übernimmt das ein SMS-Gateway, und der Code verlässt
+ * den Server nie.
  */
-export async function submitDocument(file: File | null, signal?: AbortSignal): Promise<void> {
-  if (!file) throw new ApiError('Bitte zuerst ein Dokument auswählen.', 'ungueltig')
-  await delay(between(900, 1500), signal)
+export async function requestSmsCode(input: string): Promise<{ phone: string; code: string; expiresAt: number }> {
+  const phone = normalizePhone(input)
+  if (!phone) {
+    throw new ApiError('Diese Nummer sieht nicht nach einer Mobilnummer aus (z.B. 079 123 45 67).', 'ungueltig')
+  }
+  await delay(between(700, 1400))
+
+  const state: SmsState = {
+    phone,
+    code: String(Math.floor(100000 + Math.random() * 900000)),
+    expiresAt: Date.now() + CODE_GUELTIG_MS,
+    attempts: 0,
+  }
+  if (!writeJson(KEYS.sms, state)) {
+    throw new ApiError('Der Code konnte nicht hinterlegt werden.', 'speicher')
+  }
+  return { phone, code: state.code, expiresAt: state.expiresAt }
 }
 
-/** Simulierter Liveness-Check; meldet Zwischenstände an die UI. */
-export async function runLivenessCheck(
-  onStage: (stage: VerificationStage) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  onStage('liveness')
-  await delay(between(1400, 2200), signal)
-  onStage('abgleich')
-  await delay(between(900, 1600), signal)
+export async function confirmSmsCode(input: string): Promise<string> {
+  await delay(between(400, 900))
+  const state = readJson<SmsState | null>(KEYS.sms, null)
+  if (!state) throw new ApiError('Kein Code angefordert.', 'ungueltig')
+  if (Date.now() > state.expiresAt) {
+    remove(KEYS.sms)
+    throw new ApiError('Der Code ist abgelaufen. Bitte einen neuen anfordern.', 'ungueltig')
+  }
+  if (state.attempts >= MAX_CODE_VERSUCHE) {
+    remove(KEYS.sms)
+    throw new ApiError('Zu viele Fehlversuche. Bitte einen neuen Code anfordern.', 'ungueltig')
+  }
+  if (input.replace(/\s/g, '') !== state.code) {
+    writeJson(KEYS.sms, { ...state, attempts: state.attempts + 1 })
+    const offen = MAX_CODE_VERSUCHE - state.attempts - 1
+    throw new ApiError(
+      offen > 0 ? `Code stimmt nicht. Noch ${offen} Versuch${offen === 1 ? '' : 'e'}.` : 'Code stimmt nicht.',
+      'ungueltig',
+    )
+  }
+  remove(KEYS.sms)
+  return state.phone
 }
 
-/** Schliesst die Verifizierung ab und legt die Identität an. */
-export async function completeVerification(signal?: AbortSignal): Promise<User> {
-  await delay(between(300, 600), signal)
+/* ---------------------------------------------- Verifizierung (Einreichung) */
+
+const previewKey = (requestId: string, kind: 'ausweis' | 'selfie') => `${KEYS.preview}${requestId}.${kind}`
+
+function readRequests(): VerificationRequest[] {
+  return readJson<VerificationRequest[]>(KEYS.requests, []).filter((r) => r && typeof r.id === 'string')
+}
+
+export interface VerificationInput {
+  phone: string
+  ausweis: { dataUrl: string; meta: UploadMeta }
+  selfie: { dataUrl: string; meta: UploadMeta }
+}
+
+/**
+ * Reicht den Antrag zur manuellen Prüfung ein.
+ *
+ * Die Bildvorschauen landen im Sitzungsspeicher, die Antragsdaten ohne Bilder
+ * in localStorage. Freigeben kann nur die Moderation – hier passiert nichts
+ * automatisch.
+ */
+export async function submitVerification(input: VerificationInput): Promise<VerificationRequest> {
+  await delay(between(900, 1600))
+
   const existing = readUser()
-  const user: User = existing
-    ? { ...existing, verified: true, verifiedAt: new Date().toISOString() }
-    : {
-        id: generateId('usr'),
-        pseudonym: generatePseudonym(),
-        verified: true,
-        verifiedAt: new Date().toISOString(),
-        profile: { ...DEFAULT_PROFILE },
-      }
-  return persistUser(user)
+  const user: User = existing ?? {
+    id: generateId('usr'),
+    pseudonym: generatePseudonym(),
+    verified: false,
+    verificationStatus: 'offen',
+    verifiedAt: null,
+    phone: null,
+    profile: { ...DEFAULT_PROFILE },
+  }
+
+  const request: VerificationRequest = {
+    id: generateId('ver'),
+    userId: user.id,
+    pseudonym: user.pseudonym,
+    phoneMasked: maskPhone(input.phone),
+    submittedAt: new Date().toISOString(),
+    status: 'wartet',
+    decidedAt: null,
+    decidedBy: null,
+    rejectionReason: null,
+    documents: { ausweis: input.ausweis.meta, selfie: input.selfie.meta },
+  }
+
+  // Ältere Anträge derselben Person werden ersetzt, nicht angehäuft.
+  const andere = readRequests().filter((r) => r.userId !== user.id)
+  if (!writeJson(KEYS.requests, [request, ...andere])) {
+    throw new ApiError('Der Antrag konnte nicht gespeichert werden.', 'speicher')
+  }
+
+  writeSessionString(previewKey(request.id, 'ausweis'), input.ausweis.dataUrl)
+  writeSessionString(previewKey(request.id, 'selfie'), input.selfie.dataUrl)
+
+  persistUser({ ...user, phone: input.phone, verified: false, verificationStatus: 'wartet' })
+  return request
+}
+
+/** Antrag der eigenen Person, sofern vorhanden. */
+export async function getMyVerification(): Promise<VerificationRequest | null> {
+  await delay(between(150, 320))
+  const user = readUser()
+  if (!user) return null
+  return readRequests().find((r) => r.userId === user.id) ?? null
+}
+
+export async function listVerificationRequests(): Promise<VerificationRequest[]> {
+  await delay(between(150, 350))
+  return readRequests()
+}
+
+/** Bildvorschauen zu einem Antrag – nach Browserneustart nicht mehr da. */
+export async function getVerificationImages(requestId: string): Promise<VerificationImages> {
+  await delay(between(80, 180))
+  return {
+    ausweis: readSessionString(previewKey(requestId, 'ausweis')),
+    selfie: readSessionString(previewKey(requestId, 'selfie')),
+  }
+}
+
+/**
+ * Entscheid der Moderation. Das ist der einzige Weg zu "verifiziert" – es gibt
+ * keine automatische Freigabe.
+ */
+export async function decideVerification(
+  requestId: string,
+  decision: 'freigegeben' | 'abgelehnt',
+  rejectionReason?: string,
+): Promise<VerificationRequest[]> {
+  await delay(between(400, 800))
+  const requests = readRequests()
+  const request = requests.find((r) => r.id === requestId)
+  if (!request) throw new ApiError('Antrag nicht gefunden.', 'ungueltig')
+
+  const aktualisiert: VerificationRequest = {
+    ...request,
+    status: decision,
+    decidedAt: new Date().toISOString(),
+    decidedBy: 'Moderation (Demo)',
+    rejectionReason: decision === 'abgelehnt' ? (rejectionReason?.trim() || 'Ohne Angabe') : null,
+  }
+  const next = requests.map((r) => (r.id === requestId ? aktualisiert : r))
+  if (!writeJson(KEYS.requests, next)) {
+    throw new ApiError('Der Entscheid konnte nicht gespeichert werden.', 'speicher')
+  }
+
+  // Nach dem Entscheid werden die Bilder verworfen – die Prüfung ist vorbei.
+  removeSession(previewKey(requestId, 'ausweis'))
+  removeSession(previewKey(requestId, 'selfie'))
+
+  const user = readUser()
+  if (user && user.id === request.userId) {
+    persistUser({
+      ...user,
+      verified: decision === 'freigegeben',
+      verificationStatus: decision === 'freigegeben' ? 'verifiziert' : 'abgelehnt',
+      verifiedAt: decision === 'freigegeben' ? aktualisiert.decidedAt : null,
+    })
+  }
+  return next
+}
+
+/** Nach einer Ablehnung neu einreichen: alten Antrag verwerfen. */
+export async function withdrawVerification(): Promise<void> {
+  await delay(between(150, 300))
+  const user = readUser()
+  if (!user) return
+  const rest = readRequests().filter((r) => r.userId !== user.id)
+  writeJson(KEYS.requests, rest)
+  persistUser({ ...user, verified: false, verificationStatus: 'offen', verifiedAt: null })
 }
 
 export async function updateProfile(profile: Profile): Promise<User> {
@@ -179,9 +364,18 @@ export async function regeneratePseudonym(): Promise<User> {
 /** Nur für die Demo: setzt Identität und Verifizierung zurück. */
 export async function resetIdentity(): Promise<void> {
   await delay(between(150, 300))
+  const user = readUser()
+  if (user) {
+    for (const request of readRequests().filter((r) => r.userId === user.id)) {
+      removeSession(previewKey(request.id, 'ausweis'))
+      removeSession(previewKey(request.id, 'selfie'))
+    }
+    writeJson(KEYS.requests, readRequests().filter((r) => r.userId !== user.id))
+  }
   remove(KEYS.user)
   remove(KEYS.codex)
   remove(KEYS.selfBlocked)
+  remove(KEYS.sms)
 }
 
 /* ----------------------------------------------------------------- Matching */

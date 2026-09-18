@@ -37,20 +37,104 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('Verifizierung', () => {
-  it('verlangt eine Datei, liest sie aber nicht', async () => {
-    const result = await settle(api.submitDocument(null))
-    expect(result).toBeInstanceOf(api.ApiError)
+const bild = (name: string) => ({
+  dataUrl: `data:image/jpeg;base64,${name}`,
+  meta: { name: `${name}.jpg`, size: 1024, type: 'image/jpeg' },
+})
+
+async function eingereicht() {
+  const { code } = (await settle(api.requestSmsCode('079 123 45 67'))) as { code: string }
+  const phone = (await settle(api.confirmSmsCode(code))) as string
+  return (await settle(
+    api.submitVerification({ phone, ausweis: bild('ausweis'), selfie: bild('selfie') }),
+  )) as Awaited<ReturnType<typeof api.submitVerification>>
+}
+
+describe('SMS-Bestätigung', () => {
+  it('normalisiert Schweizer Nummern und weist Unsinn ab', async () => {
+    expect(api.normalizePhone('079 123 45 67')).toBe('+41791234567')
+    expect(api.normalizePhone('+49 170 1234567')).toBe('+491701234567')
+    expect(api.normalizePhone('hallo')).toBeNull()
+
+    const result = await settle(api.requestSmsCode('12'))
     expect((result as api.ApiError).code).toBe('ungueltig')
   })
 
-  it('legt bei Abschluss eine verifizierte Identität an und persistiert sie', async () => {
-    const user = (await settle(api.completeVerification())) as User
-    expect(user.verified).toBe(true)
-    expect(user.pseudonym).toMatch(/^\S+ \S+ \d{4}$/)
+  it('zeigt die Nummer nur maskiert', () => {
+    expect(api.maskPhone('+41791234567')).not.toContain('123456')
+    expect(api.maskPhone('+41791234567')).toContain('67')
+  })
 
-    const session = await settle(api.getSession())
-    expect((session as Awaited<ReturnType<typeof api.getSession>>).user?.id).toBe(user.id)
+  it('akzeptiert nur den gesendeten Code und zählt Fehlversuche', async () => {
+    const { code } = (await settle(api.requestSmsCode('079 123 45 67'))) as { code: string }
+
+    const falsch = await settle(api.confirmSmsCode('000000'))
+    expect((falsch as api.ApiError).code).toBe('ungueltig')
+
+    const phone = await settle(api.confirmSmsCode(code))
+    expect(phone).toBe('+41791234567')
+  })
+
+  it('lässt abgelaufene Codes nicht mehr zu', async () => {
+    const { code } = (await settle(api.requestSmsCode('079 123 45 67'))) as { code: string }
+    vi.setSystemTime(Date.now() + 11 * 60 * 1000)
+    const result = await settle(api.confirmSmsCode(code))
+    expect((result as api.ApiError).message).toMatch(/abgelaufen/)
+  })
+})
+
+describe('Verifizierungsantrag', () => {
+  it('reicht ein, ohne selbst freizugeben', async () => {
+    const request = await eingereicht()
+    expect(request.status).toBe('wartet')
+    expect(request.phoneMasked).not.toContain('1234567')
+
+    const session = (await settle(api.getSession())) as Awaited<ReturnType<typeof api.getSession>>
+    expect(session.user?.verified).toBe(false)
+    expect(session.user?.verificationStatus).toBe('wartet')
+  })
+
+  it('legt die Bilder nur im Sitzungsspeicher ab', async () => {
+    const request = await eingereicht()
+    const images = (await settle(api.getVerificationImages(request.id))) as { ausweis: string | null }
+    expect(images.ausweis).toContain('data:image/jpeg')
+    expect(window.localStorage.getItem(KEYS.requests)).not.toContain('data:image')
+  })
+
+  it('verifiziert erst durch die Entscheidung der Moderation', async () => {
+    const request = await eingereicht()
+    await settle(api.decideVerification(request.id, 'freigegeben'))
+
+    const session = (await settle(api.getSession())) as Awaited<ReturnType<typeof api.getSession>>
+    expect(session.user?.verified).toBe(true)
+    expect(session.user?.verificationStatus).toBe('verifiziert')
+    // Nach dem Entscheid sind die Bilder weg.
+    expect(((await settle(api.getVerificationImages(request.id))) as { selfie: string | null }).selfie).toBeNull()
+  })
+
+  it('hält eine Ablehnung mit Begründung fest', async () => {
+    const request = await eingereicht()
+    await settle(api.decideVerification(request.id, 'abgelehnt', 'Ausweis nicht lesbar'))
+
+    const session = (await settle(api.getSession())) as Awaited<ReturnType<typeof api.getSession>>
+    expect(session.user?.verified).toBe(false)
+    expect(session.user?.verificationStatus).toBe('abgelehnt')
+
+    const meins = (await settle(api.getMyVerification())) as Awaited<ReturnType<typeof api.getMyVerification>>
+    expect(meins?.rejectionReason).toBe('Ausweis nicht lesbar')
+  })
+
+  it('ersetzt beim erneuten Einreichen den alten Antrag', async () => {
+    const erste = await eingereicht()
+    await settle(api.decideVerification(erste.id, 'abgelehnt', 'Dokument abgelaufen'))
+    await settle(api.withdrawVerification())
+    const zweite = await eingereicht()
+
+    const alle = (await settle(api.listVerificationRequests())) as Awaited<
+      ReturnType<typeof api.listVerificationRequests>
+    >
+    expect(alle).toHaveLength(1)
+    expect(alle[0].id).toBe(zweite.id)
   })
 
   it('lehnt Profiländerungen ohne Identität ab', async () => {
@@ -90,7 +174,9 @@ describe('Meldungen', () => {
     id: 'usr_self',
     pseudonym: 'Blauer Falke 1234',
     verified: true,
+    verificationStatus: 'verifiziert',
     verifiedAt: new Date().toISOString(),
+    phone: '+41791234567',
     profile: { language: 'de', ageGroup: '25–34', interests: [] },
   }
 
