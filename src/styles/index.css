@@ -123,3 +123,49 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Warteschlangen-Animation: ein ruhiger Suchlauf, kein Spinner-Karussell. */
+@keyframes vac-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+
+.sweep::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 25%;
+  background: var(--accent);
+  animation: vac-sweep 1.8s ease-in-out infinite;
+}
+
+@keyframes vac-blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: vac-blink 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep::after {
+    width: 100%;
+    opacity: 0.35;
+    animation: none;
+  }
+  .typing-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+}
