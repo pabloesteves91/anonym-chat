@@ -200,6 +200,13 @@ Wortfilter, Storage und `mockApi` liegen vor: `npm run test`),
 Rate-Limiting, Missbrauchserkennung beim Matching, Skalierung der
 Warteschlange.
 
+## Testrunde
+
+`docs/testrunde.md` enthält Aufgaben, Fragebogen und Auswertungsraster für
+Tests mit echten Personen. In der App gibt es beim Ausweisfoto und beim
+Selfie den Knopf „Demo-Bild einsetzen" – für einen Prototyp-Test soll
+niemand ein echtes Dokument hochladen.
+
 ## Entwicklung mit Claude Code
 
 `.claude/hooks/session-start.sh` installiert in Web-Sessions die
