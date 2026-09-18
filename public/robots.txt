@@ -1,0 +1,4 @@
+# Prototyp, nicht für Suchmaschinen gedacht.
+# Beim Start als echtes Produkt entfernen oder auf "Allow: /" ändern.
+User-agent: *
+Disallow: /

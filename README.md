@@ -200,6 +200,14 @@ Wortfilter, Storage und `mockApi` liegen vor: `npm run test`),
 Rate-Limiting, Missbrauchserkennung beim Matching, Skalierung der
 Warteschlange.
 
+## Hosting
+
+`npm run build:static` erzeugt eine rein statische Seite. Der Workflow
+`.github/workflows/pages.yml` baut und veröffentlicht sie bei jedem Push auf
+den Default-Branch über GitHub Pages – Lint, Typprüfung und Tests laufen
+vorher. Einrichtung, eigene Domain und DNS-Einträge stehen in
+`docs/deployment.md`.
+
 ## Testrunde
 
 `docs/testrunde.md` enthält Aufgaben, Fragebogen und Auswertungsraster für

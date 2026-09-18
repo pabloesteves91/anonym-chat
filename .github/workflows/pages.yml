@@ -1,0 +1,60 @@
+name: Pages
+
+# Baut den statischen Prototyp und veröffentlicht ihn auf GitHub Pages.
+# Läuft auf dem Default-Branch; `main` ist mit aufgeführt, damit ein
+# späteres Umbenennen den Workflow nicht stillschweigend abschaltet.
+on:
+  push:
+    branches:
+      - main
+      - claude/busy-galileo-ovdxll
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Nie zwei Deployments gleichzeitig; ein laufendes wird abgebrochen.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Kaputtes kommt nicht live: Lint, Typprüfung und Tests laufen vor dem Build.
+      - run: npm run lint
+      - run: npm test
+
+      - run: npm run build:static
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Legt die Pages-Site beim ersten Lauf selbst an. Schlägt das fehl,
+          # einmal von Hand: Settings → Pages → Source: GitHub Actions.
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
