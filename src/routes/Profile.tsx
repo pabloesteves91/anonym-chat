@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
@@ -15,29 +15,28 @@ export function Profile() {
   const newPseudonym = useSession((s) => s.newPseudonym)
   const resetIdentity = useSession((s) => s.resetIdentity)
 
-  const [draft, setDraft] = useState<ProfileData | null>(user?.profile ?? null)
+  // Kein Effekt zum Spiegeln: der Entwurf überlagert das Profil nur, solange
+  // er existiert. Nach dem Speichern sind beide wieder deckungsgleich.
+  const [draft, setDraft] = useState<ProfileData | null>(null)
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    if (user && !draft) setDraft(user.profile)
-  }, [user, draft])
+  if (!user) return null
 
-  if (!user || !draft) return null
+  const entwurf = draft ?? user.profile
+  const dirty = JSON.stringify(entwurf) !== JSON.stringify(user.profile)
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(user.profile)
+  const update = (patch: Partial<ProfileData>) => {
+    setSaved(false)
+    setDraft({ ...entwurf, ...patch })
+  }
 
   const toggleInterest = (interest: string) => {
-    setSaved(false)
-    setDraft((current) => {
-      if (!current) return current
-      const active = current.interests.includes(interest)
-      if (!active && current.interests.length >= MAX_INTERESSEN) return current
-      return {
-        ...current,
-        interests: active
-          ? current.interests.filter((i) => i !== interest)
-          : [...current.interests, interest],
-      }
+    const active = entwurf.interests.includes(interest)
+    if (!active && entwurf.interests.length >= MAX_INTERESSEN) return
+    update({
+      interests: active
+        ? entwurf.interests.filter((i) => i !== interest)
+        : [...entwurf.interests, interest],
     })
   }
 
@@ -76,7 +75,7 @@ export function Profile() {
           className="flex flex-col gap-6"
           onSubmit={async (event) => {
             event.preventDefault()
-            await saveProfile(draft)
+            await saveProfile(entwurf)
             setSaved(true)
           }}
         >
@@ -85,11 +84,8 @@ export function Profile() {
               <select
                 id="sprache"
                 className={inputClass}
-                value={draft.language}
-                onChange={(event) => {
-                  setSaved(false)
-                  setDraft({ ...draft, language: event.target.value as Language })
-                }}
+                value={entwurf.language}
+                onChange={(event) => update({ language: event.target.value as Language })}
               >
                 {LANGUAGES.map((language) => (
                   <option key={language.value} value={language.value}>
@@ -103,11 +99,8 @@ export function Profile() {
               <select
                 id="alter"
                 className={inputClass}
-                value={draft.ageGroup}
-                onChange={(event) => {
-                  setSaved(false)
-                  setDraft({ ...draft, ageGroup: event.target.value as AgeGroup })
-                }}
+                value={entwurf.ageGroup}
+                onChange={(event) => update({ ageGroup: event.target.value as AgeGroup })}
               >
                 {AGE_GROUPS.map((group) => (
                   <option key={group} value={group}>
@@ -120,14 +113,14 @@ export function Profile() {
 
           <fieldset className="border-0 p-0">
             <legend className="label-caps mb-2">
-              Interessen · {draft.interests.length} von {MAX_INTERESSEN}
+              Interessen · {entwurf.interests.length} von {MAX_INTERESSEN}
             </legend>
             <div className="flex flex-wrap gap-2">
               {INTERESTS.map((interest) => (
                 <TagToggle
                   key={interest}
                   label={interest}
-                  active={draft.interests.includes(interest)}
+                  active={entwurf.interests.includes(interest)}
                   onToggle={() => toggleInterest(interest)}
                 />
               ))}

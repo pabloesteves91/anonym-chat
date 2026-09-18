@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react'
 import { Button } from './ui'
-import * as api from '../services/mockApi'
+import { scanText } from '../services/wordFilter'
 
 /**
  * Eingabezeile. Der Wortfilter läuft schon beim Tippen und warnt vorab –
@@ -8,7 +8,7 @@ import * as api from '../services/mockApi'
  */
 export function Composer({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
   const [text, setText] = useState('')
-  const verdict = text.trim().length > 2 ? api.scanMessage(text) : null
+  const verdict = text.trim().length > 2 ? scanText(text) : null
 
   const submit = () => {
     const value = text.trim()
