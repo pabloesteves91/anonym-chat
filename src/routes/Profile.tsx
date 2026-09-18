@@ -1,5 +1,171 @@
-import { PageTitle } from '../components/ui'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
+import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
+import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
+import { useSession } from '../store/useSession'
+
+const MAX_INTERESSEN = 5
 
 export function Profile() {
-  return <PageTitle kicker="In Arbeit">Profile</PageTitle>
+  const navigate = useNavigate()
+  const user = useSession((s) => s.user)
+  const busy = useSession((s) => s.busy)
+  const saveProfile = useSession((s) => s.saveProfile)
+  const newPseudonym = useSession((s) => s.newPseudonym)
+  const resetIdentity = useSession((s) => s.resetIdentity)
+
+  const [draft, setDraft] = useState<ProfileData | null>(user?.profile ?? null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (user && !draft) setDraft(user.profile)
+  }, [user, draft])
+
+  if (!user || !draft) return null
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(user.profile)
+
+  const toggleInterest = (interest: string) => {
+    setSaved(false)
+    setDraft((current) => {
+      if (!current) return current
+      const active = current.interests.includes(interest)
+      if (!active && current.interests.length >= MAX_INTERESSEN) return current
+      return {
+        ...current,
+        interests: active
+          ? current.interests.filter((i) => i !== interest)
+          : [...current.interests, interest],
+      }
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="prose-column">
+        <PageTitle kicker="Sichtbar ist nur, was hier steht">Profil</PageTitle>
+        <p className="text-muted">
+          Kein Klarname, kein Foto, keine Biografie. Die Angaben unten dienen ausschliesslich dem Matching und lassen
+          sich jederzeit ändern.
+        </p>
+      </div>
+
+      <Panel className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="label-caps">Anzeigename</p>
+          <p className="mt-1 font-mono text-xl text-ink">{user.pseudonym}</p>
+          <p className="mt-1 text-sm text-muted">Das – und nur das – sieht dein Gegenüber im Chat.</p>
+        </div>
+        <Button onClick={() => void newPseudonym()} disabled={busy}>
+          Neu würfeln
+        </Button>
+      </Panel>
+
+      <Panel className="p-5">
+        <p className="label-caps">Interne Kennung</p>
+        <p className="mt-1 font-mono text-sm text-muted">{user.id}</p>
+        <p className="mt-2 text-sm text-muted">
+          Bleibt an deine Verifizierung gebunden und ist im Chat niemals sichtbar. Sie ist der Grund, weshalb eine
+          Sperre nicht durch ein neues Konto umgangen werden kann.
+        </p>
+      </Panel>
+
+      <Panel className="p-5">
+        <form
+          className="flex flex-col gap-6"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            await saveProfile(draft)
+            setSaved(true)
+          }}
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Sprache" htmlFor="sprache" hint="Bestimmt, wer dir vorgeschlagen wird.">
+              <select
+                id="sprache"
+                className={inputClass}
+                value={draft.language}
+                onChange={(event) => {
+                  setSaved(false)
+                  setDraft({ ...draft, language: event.target.value as Language })
+                }}
+              >
+                {LANGUAGES.map((language) => (
+                  <option key={language.value} value={language.value}>
+                    {language.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Altersgruppe" htmlFor="alter" hint="Grobe Spanne statt Geburtsdatum.">
+              <select
+                id="alter"
+                className={inputClass}
+                value={draft.ageGroup}
+                onChange={(event) => {
+                  setSaved(false)
+                  setDraft({ ...draft, ageGroup: event.target.value as AgeGroup })
+                }}
+              >
+                {AGE_GROUPS.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <fieldset className="border-0 p-0">
+            <legend className="label-caps mb-2">
+              Interessen · {draft.interests.length} von {MAX_INTERESSEN}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {INTERESTS.map((interest) => (
+                <TagToggle
+                  key={interest}
+                  label={interest}
+                  active={draft.interests.includes(interest)}
+                  onToggle={() => toggleInterest(interest)}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" variant="primary" disabled={busy || !dirty}>
+              Speichern
+            </Button>
+            <Button type="button" variant="primary" onClick={() => navigate('/chat')}>
+              Chat starten
+            </Button>
+            <span aria-live="polite" className="text-sm text-muted">
+              {saved && !dirty ? 'Gespeichert.' : dirty ? 'Ungespeicherte Änderungen.' : ''}
+            </span>
+          </div>
+        </form>
+      </Panel>
+
+      <Panel className="flex flex-col gap-3 p-5">
+        <h2 className="font-display text-xl font-semibold">Identität zurücksetzen</h2>
+        <Note tone="warn">
+          Nur für diesen Prototyp: löscht Verifizierung, Pseudonym und Profil aus dem Browser. In einer echten Version
+          wäre das genau nicht möglich – sonst wären Sperren wertlos.
+        </Note>
+        <div>
+          <Button
+            variant="danger"
+            onClick={async () => {
+              await resetIdentity()
+              navigate('/')
+            }}
+          >
+            Zurücksetzen
+          </Button>
+        </div>
+      </Panel>
+    </div>
+  )
 }
