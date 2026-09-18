@@ -20,7 +20,10 @@ import type {
   Report,
   ReportInput,
   ReportStatus,
+  AccessLogEntry,
+  ChatTranscript,
   Session,
+  TranscriptMessage,
   UploadMeta,
   User,
   VerificationImages,
@@ -436,6 +439,117 @@ export async function requestReply(
   return { text, typingMs: typingDurationFor(text) }
 }
 
+
+/* ------------------------------------------- Chatverlauf (72-Stunden-Puffer) */
+
+/**
+ * Aufbewahrungsfrist für Chatverläufe.
+ *
+ * Verläufe werden zur Missbrauchsprüfung vorgehalten und danach gelöscht.
+ * Die Frist ist die einzige Bremse gegen einen wachsenden Datenberg – sie
+ * wird bei jedem Lesezugriff durchgesetzt, nicht nur beim Schreiben, damit
+ * abgelaufene Verläufe auch dann verschwinden, wenn die App tagelang nicht
+ * offen war.
+ */
+export const RETENTION_MS = 72 * 60 * 60 * 1000
+
+function pruneTranscripts(list: ChatTranscript[]): ChatTranscript[] {
+  const jetzt = Date.now()
+  return list.filter((t) => t && typeof t.id === 'string' && t.expiresAt > jetzt)
+}
+
+function readTranscripts(): ChatTranscript[] {
+  const alle = readJson<ChatTranscript[]>(KEYS.transcripts, [])
+  const gueltig = pruneTranscripts(alle)
+  if (gueltig.length !== alle.length) writeJson(KEYS.transcripts, gueltig)
+  return gueltig
+}
+
+function logAccess(transcriptId: string, action: AccessLogEntry['action']): void {
+  const eintrag: AccessLogEntry = {
+    id: generateId('log'),
+    at: new Date().toISOString(),
+    transcriptId,
+    by: 'Moderation (Demo)',
+    action,
+  }
+  const bisher = readJson<AccessLogEntry[]>(KEYS.accessLog, [])
+  writeJson(KEYS.accessLog, [eintrag, ...bisher].slice(0, 200))
+}
+
+export interface TranscriptInput {
+  owner: User
+  partner: Partner
+  messages: Message[]
+}
+
+/** Legt den Verlauf eines beendeten Chats in den Moderationsspeicher. */
+export async function saveTranscript(input: TranscriptInput): Promise<ChatTranscript | null> {
+  const relevant: TranscriptMessage[] = input.messages
+    .filter((m): m is Message & { author: 'me' | 'partner' } => m.author !== 'system')
+    .map(({ author, text, ts, flag }) => ({ author, text, ts, flag }))
+
+  // Ein Chat ohne Wortwechsel hat nichts, was eine Aufbewahrung rechtfertigt.
+  if (relevant.length === 0) return null
+
+  await delay(between(150, 320))
+
+  const transcript: ChatTranscript = {
+    id: generateId('chat'),
+    ownerId: input.owner.id,
+    ownerPseudonym: input.owner.pseudonym,
+    partnerId: input.partner.id,
+    partnerPseudonym: input.partner.pseudonym,
+    startedAt: new Date(relevant[0].ts).toISOString(),
+    endedAt: new Date().toISOString(),
+    expiresAt: Date.now() + RETENTION_MS,
+    messages: relevant,
+    flagCount: relevant.filter((m) => m.flag).length,
+    reported: false,
+  }
+
+  const bisher = readTranscripts()
+  if (!writeJson(KEYS.transcripts, [transcript, ...bisher])) return null
+  return transcript
+}
+
+/** Übersicht für die Moderation – ohne Zugriffseintrag, das ist noch kein Mitlesen. */
+export async function listTranscripts(): Promise<ChatTranscript[]> {
+  await delay(between(150, 320))
+  return readTranscripts()
+}
+
+/** Öffnet einen Verlauf. Das ist Mitlesen und wird protokolliert. */
+export async function openTranscript(id: string): Promise<ChatTranscript | null> {
+  await delay(between(150, 320))
+  const transcript = readTranscripts().find((t) => t.id === id) ?? null
+  if (transcript) logAccess(id, 'geoeffnet')
+  return transcript
+}
+
+export async function deleteTranscript(id: string): Promise<ChatTranscript[]> {
+  await delay(between(150, 320))
+  const rest = readTranscripts().filter((t) => t.id !== id)
+  writeJson(KEYS.transcripts, rest)
+  logAccess(id, 'geloescht')
+  return rest
+}
+
+export async function listAccessLog(): Promise<AccessLogEntry[]> {
+  await delay(between(100, 200))
+  return readJson<AccessLogEntry[]>(KEYS.accessLog, [])
+}
+
+/** Markiert den Verlauf, zu dem eine Meldung eingegangen ist. */
+function markReported(transcriptId: string | null): void {
+  if (!transcriptId) return
+  const alle = readTranscripts()
+  writeJson(
+    KEYS.transcripts,
+    alle.map((t) => (t.id === transcriptId ? { ...t, reported: true } : t)),
+  )
+}
+
 /* --------------------------------------------------------------- Moderation */
 
 const EXCERPT_LENGTH = 8
@@ -444,6 +558,7 @@ const MAX_REPORTS = 200
 
 export async function submitReport(input: ReportInput, reporter: User): Promise<Report> {
   await delay(between(500, 900))
+  markReported(input.transcriptId ?? null)
 
   const report: Report = {
     id: generateId('rep'),
@@ -461,6 +576,7 @@ export async function submitReport(input: ReportInput, reporter: User): Promise<
     // Nur Treffer des gemeldeten Kontos – eigene markierte Nachrichten
     // sind keine Belastung des Gegenübers.
     autoFlags: input.messages.filter((m) => m.author === 'partner' && m.flag).length,
+    transcriptId: input.transcriptId ?? null,
     status: 'offen',
   }
 
@@ -509,6 +625,8 @@ export async function clearReports(): Promise<void> {
   await delay(between(200, 400))
   remove(KEYS.reports)
   remove(KEYS.blocked)
+  remove(KEYS.transcripts)
+  remove(KEYS.accessLog)
 }
 
 /** Nur für die Demo: setzt Kodex-Bestätigung und eigene Blockierungen zurück. */

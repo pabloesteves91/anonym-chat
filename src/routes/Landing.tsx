@@ -106,8 +106,9 @@ export function Landing() {
         </ul>
         <div className="mt-4">
           <Note>
-            Alles bleibt in diesem Browser. Verifizierungsstatus, Profil und Meldungen liegen in localStorage, die
-            Ausweisbilder nur im Sitzungsspeicher – zurücksetzen lässt sich alles im Profil.
+            Alles bleibt in diesem Browser. Verifizierungsstatus, Profil, Meldungen und die 72 Stunden aufbewahrten
+            Chatverläufe liegen in localStorage, die Ausweisbilder nur im Sitzungsspeicher – zurücksetzen lässt sich
+            alles im Profil.
           </Note>
         </div>
       </Panel>

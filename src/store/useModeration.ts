@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import * as api from '../services/mockApi'
-import type { Report, ReportStatus, VerificationImages, VerificationRequest } from '../services/types'
+import type {
+  AccessLogEntry,
+  ChatTranscript,
+  Report,
+  ReportStatus,
+  VerificationImages,
+  VerificationRequest,
+} from '../services/types'
 
 /** Datenquelle der Moderationsansicht. */
 interface ModerationState {
@@ -11,8 +18,14 @@ interface ModerationState {
   requests: VerificationRequest[]
   /** Bildvorschauen je Antrag – nur solange die Browsersitzung läuft. */
   images: Record<string, VerificationImages>
+  transcripts: ChatTranscript[]
+  /** Geöffnete Verläufe dieser Sitzung, je Eintrag protokolliert. */
+  opened: Record<string, ChatTranscript>
+  accessLog: AccessLogEntry[]
 
   load: () => Promise<void>
+  openTranscript: (id: string) => Promise<void>
+  deleteTranscript: (id: string) => Promise<void>
   decide: (requestId: string, decision: 'freigegeben' | 'abgelehnt', reason?: string) => Promise<void>
   setStatus: (id: string, status: ReportStatus) => Promise<void>
   clearAll: () => Promise<void>
@@ -25,12 +38,17 @@ export const useModeration = create<ModerationState>((set) => ({
   blocked: [],
   requests: [],
   images: {},
+  transcripts: [],
+  opened: {},
+  accessLog: [],
 
   async load() {
-    const [reports, blocked, requests] = await Promise.all([
+    const [reports, blocked, requests, transcripts, accessLog] = await Promise.all([
       api.listReports(),
       api.listBlocked(),
       api.listVerificationRequests(),
+      api.listTranscripts(),
+      api.listAccessLog(),
     ])
 
     // Bilder nur für offene Anträge holen – entschiedene haben keine mehr.
@@ -38,7 +56,26 @@ export const useModeration = create<ModerationState>((set) => ({
     const paare = await Promise.all(
       offen.map(async (request) => [request.id, await api.getVerificationImages(request.id)] as const),
     )
-    set({ reports, blocked, requests, images: Object.fromEntries(paare), ready: true })
+    set({ reports, blocked, requests, transcripts, accessLog, images: Object.fromEntries(paare), ready: true })
+  },
+
+  async openTranscript(id) {
+    const transcript = await api.openTranscript(id)
+    if (!transcript) return
+    set((state) => ({ opened: { ...state.opened, [id]: transcript } }))
+    // Das Protokoll ist erst mit dem neuen Eintrag vollständig.
+    set({ accessLog: await api.listAccessLog() })
+  },
+
+  async deleteTranscript(id) {
+    set({ busy: true })
+    const transcripts = await api.deleteTranscript(id)
+    const accessLog = await api.listAccessLog()
+    set((state) => {
+      const opened = { ...state.opened }
+      delete opened[id]
+      return { transcripts, accessLog, opened, busy: false }
+    })
   },
 
   async decide(requestId, decision, reason) {
@@ -61,6 +98,6 @@ export const useModeration = create<ModerationState>((set) => ({
   async clearAll() {
     set({ busy: true })
     await api.clearReports()
-    set({ reports: [], blocked: [], busy: false })
+    set({ reports: [], blocked: [], transcripts: [], accessLog: [], opened: {}, busy: false })
   },
 }))

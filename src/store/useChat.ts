@@ -1,14 +1,16 @@
 import { create } from 'zustand'
 import * as api from '../services/mockApi'
 import { generateId } from '../services/pseudonym'
+import { useSession } from './useSession'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'
 
 /**
  * Chat-Ablauf: Suche, aktives Gespräch, Beenden, Melden.
  *
- * Der Verlauf lebt ausschliesslich hier im Speicher und wird beim Beenden
- * verworfen – bewusst flüchtig. Nur ein Ausschnitt wandert in eine Meldung,
- * und auch das nur, wenn der Nutzer meldet.
+ * Der Verlauf lebt im Arbeitsspeicher und ist für beide Seiten weg, sobald
+ * der Chat endet. Beim Beenden wandert er einmal in den Moderationsspeicher,
+ * wo er nach 72 Stunden automatisch abläuft – nachlesen kann ihn dort nur
+ * die Moderation, und jeder Zugriff wird protokolliert.
  */
 
 const MAX_MESSAGE_LENGTH = 2000
@@ -86,6 +88,23 @@ function systemMessage(text: string): Message {
 }
 
 export const useChat = create<ChatState>((set, get) => {
+  /**
+   * Legt den Verlauf in den Moderationsspeicher, bevor er aus dem
+   * Arbeitsspeicher verschwindet. Muss synchron bis zum ersten `await`
+   * laufen, solange der Zustand noch steht.
+   */
+  async function persistTranscript(): Promise<string | null> {
+    const { partner, messages } = get()
+    const user = useSession.getState().user
+    if (!partner || !user) return null
+    try {
+      const transcript = await api.saveTranscript({ owner: user, partner, messages })
+      return transcript?.id ?? null
+    } catch {
+      return null
+    }
+  }
+
   /** Holt eine Partnerantwort und spielt vorher den Tippindikator ab. */
   async function playPartnerTurn(token: number, first: boolean, ownInterests: string[]) {
     const partner = get().partner
@@ -163,7 +182,7 @@ export const useChat = create<ChatState>((set, get) => {
           partner,
           messages: [
             systemMessage(
-              `Verbunden mit ${partner.pseudonym}. Beide Seiten sind verifiziert. Der Verlauf wird beim Beenden verworfen.`,
+              `Verbunden mit ${partner.pseudonym}. Beide Seiten sind verifiziert. Der Verlauf wird 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht.`,
             ),
           ],
         })
@@ -206,8 +225,10 @@ export const useChat = create<ChatState>((set, get) => {
     },
 
     endChat(reason) {
+      // Erst sichern, dann leeren: der Verlauf liegt danach nur noch im
+      // Moderationsspeicher und läuft dort nach 72 Stunden ab.
+      void persistTranscript()
       stopRun()
-      // Verlauf wird hier tatsächlich verworfen, nicht nur ausgeblendet.
       set({ status: 'beendet', endReason: reason, partner: null, messages: [], partnerTyping: false })
     },
 
@@ -232,7 +253,8 @@ export const useChat = create<ChatState>((set, get) => {
       const { partner, messages } = get()
       if (!partner) return null
       try {
-        const report = await api.submitReport({ reason, note, partner, messages }, reporter)
+        const transcriptId = await persistTranscript()
+        const report = await api.submitReport({ reason, note, partner, messages, transcriptId }, reporter)
         stopRun()
         set({
           status: 'beendet',

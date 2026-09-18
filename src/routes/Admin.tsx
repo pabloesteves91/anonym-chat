@@ -4,6 +4,7 @@ import { REPORT_REASONS } from '../services/types'
 import type { Report, ReportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
 import { VerificationQueue } from '../components/VerificationQueue'
+import { TranscriptList } from '../components/TranscriptList'
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   offen: 'Offen',
@@ -120,12 +121,14 @@ export function Admin() {
       <div className="prose-column">
         <PageTitle kicker="Mock-Ansicht">Moderation</PageTitle>
         <p className="text-muted">
-          Verifizierungsanträge und Meldungen aus diesem Browser. In einer echten Version läge diese Seite hinter
+          Verifizierungsanträge, gespeicherte Chatverläufe und Meldungen aus diesem Browser. In einer echten Version läge diese Seite hinter
           Anmeldung und Rollenprüfung und würde nie im Auslieferungs-Bundle der App stecken.
         </p>
       </div>
 
       <VerificationQueue />
+
+      <TranscriptList />
 
       <h2 className="font-display text-2xl font-semibold">Meldungen</h2>
 
@@ -166,11 +169,11 @@ export function Admin() {
       <Panel className="flex flex-col gap-3 p-5">
         <h2 className="font-display text-xl font-semibold">Demo-Daten löschen</h2>
         <Note tone="warn">
-          Entfernt alle Meldungen und Sperren aus dem lokalen Speicher. In der Produktion gäbe es diesen Knopf nicht:
+          Entfernt Meldungen, Sperren, gespeicherte Verläufe und das Zugriffsprotokoll aus dem lokalen Speicher. In der Produktion gäbe es diesen Knopf nicht:
           Sperren müssen eine verifizierte Person dauerhaft binden, sonst sind sie wirkungslos.
         </Note>
         <div>
-          <Button variant="danger" disabled={busy || reports.length === 0} onClick={() => void clearAll()}>
+          <Button variant="danger" disabled={busy} onClick={() => void clearAll()}>
             Alles löschen
           </Button>
         </div>

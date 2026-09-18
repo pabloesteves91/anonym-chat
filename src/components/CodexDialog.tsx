@@ -4,7 +4,7 @@ import { Button } from './ui'
 const REGELN = [
   {
     titel: 'Das Gegenüber ist eine echte, geprüfte Person',
-    text: 'Anonymität gilt nach aussen, nicht nach innen. Was du schreibst, ist deinem Konto zugeordnet.',
+    text: 'Anonymität gilt nach aussen, nicht nach innen. Was du schreibst, ist deinem Konto zugeordnet und wird 72 Stunden für die Missbrauchsprüfung aufbewahrt.',
   },
   {
     titel: 'Keine sexuelle Ansprache ohne Einverständnis',

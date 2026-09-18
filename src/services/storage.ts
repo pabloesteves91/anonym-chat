@@ -13,6 +13,8 @@ export const KEYS = {
   user: `${PREFIX}user`,
   requests: `${PREFIX}verifications`,
   sms: `${PREFIX}sms`,
+  transcripts: `${PREFIX}transcripts`,
+  accessLog: `${PREFIX}accesslog`,
   /** Präfix für Bildvorschauen im Sitzungsspeicher. */
   preview: `${PREFIX}preview.`,
   reports: `${PREFIX}reports`,

@@ -28,7 +28,7 @@ function Ended() {
           ? 'Danke – die Moderation übernimmt'
           : blockiert
             ? 'Ihr werdet nicht mehr verbunden'
-            : 'Der Verlauf wurde verworfen'}
+            : 'Der Chat ist vorbei'}
       </h2>
 
       {gemeldet && report ? (
@@ -53,8 +53,9 @@ function Ended() {
         </p>
       ) : (
         <p className="mt-2 max-w-prose text-muted">
-          Nachrichten dieses Chats sind gelöscht und lassen sich nicht wiederherstellen – auch nicht von uns. Das ist
-          Absicht.
+          Für dich ist der Verlauf weg – nachlesen kann ihn weder du noch dein Gegenüber. Die Moderation kann ihn bei
+          Verdacht auf Missbrauch noch 72 Stunden lang einsehen, danach wird er automatisch gelöscht. Jeder solche
+          Zugriff wird protokolliert.
         </p>
       )}
 

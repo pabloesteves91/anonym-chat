@@ -224,3 +224,74 @@ describe('Meldungen', () => {
     expect((result as api.ApiError).code).toBe('speicher')
   })
 })
+
+describe('Chatverläufe', () => {
+  const owner: User = {
+    id: 'usr_self',
+    pseudonym: 'Blauer Falke 1234',
+    verified: true,
+    verificationStatus: 'verifiziert',
+    verifiedAt: new Date().toISOString(),
+    phone: '+41791234567',
+    profile: { language: 'de', ageGroup: '25–34', interests: [] },
+  }
+
+  const verlauf = () =>
+    api.saveTranscript({
+      owner,
+      partner,
+      messages: [
+        nachricht('me', 'hallo'),
+        nachricht('partner', 'schreib mir auf telegram', true),
+        { id: 'sys', author: 'system', text: 'Verbunden', ts: Date.now() },
+      ],
+    })
+
+  it('speichert nur echte Nachrichten, keine Systemzeilen', async () => {
+    const t = (await settle(verlauf())) as Awaited<ReturnType<typeof api.saveTranscript>>
+    expect(t?.messages).toHaveLength(2)
+    expect(t?.flagCount).toBe(1)
+    expect(t?.reported).toBe(false)
+  })
+
+  it('legt für einen Chat ohne Wortwechsel nichts an', async () => {
+    const t = await settle(api.saveTranscript({ owner, partner, messages: [] }))
+    expect(t).toBeNull()
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(0)
+  })
+
+  it('löscht Verläufe nach Ablauf der Frist von selbst', async () => {
+    await settle(verlauf())
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(1)
+
+    vi.setSystemTime(Date.now() + api.RETENTION_MS + 1000)
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(0)
+    // Auch aus dem Speicher, nicht nur aus der Antwort.
+    expect(window.localStorage.getItem(KEYS.transcripts)).toBe('[]')
+  })
+
+  it('protokolliert jedes Öffnen und Löschen', async () => {
+    const t = (await settle(verlauf())) as { id: string }
+
+    // Die Übersicht allein ist noch kein Mitlesen.
+    await settle(api.listTranscripts())
+    expect(((await settle(api.listAccessLog())) as unknown[]).length).toBe(0)
+
+    await settle(api.openTranscript(t.id))
+    await settle(api.deleteTranscript(t.id))
+
+    const log = (await settle(api.listAccessLog())) as { action: string; transcriptId: string }[]
+    expect(log.map((e) => e.action)).toEqual(['geloescht', 'geoeffnet'])
+    expect(log.every((e) => e.transcriptId === t.id)).toBe(true)
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(0)
+  })
+
+  it('markiert den Verlauf, zu dem gemeldet wurde', async () => {
+    const t = (await settle(verlauf())) as { id: string }
+    await settle(
+      api.submitReport({ reason: 'spam', note: '', partner, messages: [], transcriptId: t.id }, owner),
+    )
+    const alle = (await settle(api.listTranscripts())) as { reported: boolean }[]
+    expect(alle[0].reported).toBe(true)
+  })
+})

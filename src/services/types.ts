@@ -88,6 +88,42 @@ export interface Message {
   flag?: FilterVerdict
 }
 
+/** Eine Nachricht, wie sie im Moderationsspeicher liegt. */
+export interface TranscriptMessage {
+  author: 'me' | 'partner'
+  text: string
+  ts: number
+  flag?: FilterVerdict
+}
+
+/**
+ * Gespeicherter Chatverlauf. Wird nach Ablauf der Frist automatisch
+ * entfernt – `expiresAt` ist die einzige Wahrheit dazu.
+ */
+export interface ChatTranscript {
+  id: string
+  ownerId: string
+  ownerPseudonym: string
+  partnerId: string
+  partnerPseudonym: string
+  startedAt: string
+  endedAt: string
+  /** Epoch-Millisekunden, ab dann wird der Verlauf gelöscht. */
+  expiresAt: number
+  messages: TranscriptMessage[]
+  flagCount: number
+  reported: boolean
+}
+
+/** Jeder Blick in einen Verlauf wird festgehalten. */
+export interface AccessLogEntry {
+  id: string
+  at: string
+  transcriptId: string
+  by: string
+  action: 'geoeffnet' | 'geloescht'
+}
+
 export interface MatchFilter {
   /** 'egal' = keine Einschränkung. */
   language: Language | 'egal'
@@ -136,6 +172,8 @@ export interface Report {
   excerpt: { author: MessageAuthor; text: string; ts: number }[]
   /** Treffer des lokalen Wortfilters im Verlauf. */
   autoFlags: number
+  /** Verweis auf den gespeicherten Chatverlauf, solange die Frist läuft. */
+  transcriptId: string | null
   status: ReportStatus
 }
 
@@ -144,6 +182,7 @@ export interface ReportInput {
   note: string
   partner: Partner
   messages: Message[]
+  transcriptId?: string | null
 }
 
 /** Schritte des Antragsformulars. */

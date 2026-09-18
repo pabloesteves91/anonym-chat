@@ -79,8 +79,8 @@ export function ReportDialog({
         </div>
 
         <Note>
-          Mitgeschickt werden die letzten {excerptCount} Nachrichten dieses Chats. Sonst nichts – kein früherer Verlauf,
-          keine Angaben zu deiner Person über die interne Kennung hinaus.
+          An die Meldung werden die letzten {excerptCount} Nachrichten angehängt. Der vollständige Verlauf dieses Chats
+          liegt ohnehin 72 Stunden im Moderationsspeicher – die Meldung sorgt dafür, dass ihn jemand ansieht.
         </Note>
 
         {error ? <Note tone="warn">{error}</Note> : null}

@@ -38,6 +38,7 @@ Laufzeit keinen einzigen Netzwerk-Aufruf.
 | Profil | Zufälliges Pseudonym („Blauer Falke 4417"), Sprache, Altersgruppe, bis zu fünf Interessen – nur fürs Matching |
 | Matching | Optionaler Filter, Warteschlange mit Suchlauf, Treffer nach 1–3 s, Fall „niemand passendes erreichbar" |
 | Chat | Textchat mit Tippindikator, Skript-Antworten, „Nächster Chat", „Chat beenden", „Melden" |
+| Chatverläufe | Jeder beendete Chat liegt 72 Stunden im Moderationsspeicher und läuft dann von selbst ab; Öffnen und Löschen werden protokolliert |
 | Moderation | Lokaler Wortfilter (markiert, blockiert nicht), Warnung vor dem Senden bei schweren Treffern, Melde-Dialog mit fünf Gründen und Freitext, Moderationsansicht unter `/admin` |
 | Selbstschutz | Verhaltenskodex einmalig vor dem ersten Chat, „Nicht mehr verbinden" blockiert ein Konto nur für einen selbst (ohne Meldung), Übersicht und Aufhebung im Profil |
 
@@ -48,9 +49,25 @@ Zwei Arten von Ausschluss, bewusst getrennt:
 - **Eigene Blockierung** – betrifft nur das eigene Matching, die Moderation
   erfährt nichts davon. Wer meldet, blockiert automatisch mit.
 
-Der Chatverlauf lebt ausschliesslich im Arbeitsspeicher und wird beim Beenden
-verworfen. Nur wenn gemeldet wird, wandern die letzten acht Nachrichten als
-Auszug in die Meldung – im Dialog offen ausgewiesen.
+### Chatverläufe und Aufbewahrung
+
+Für die Chattenden ist der Verlauf mit dem Beenden weg – weder die eigene
+noch die andere Seite kann etwas nachlesen. Beim Beenden wandert er einmal in
+den **Moderationsspeicher**, wo er nach **72 Stunden automatisch abläuft**.
+Die Frist wird bei jedem Lesezugriff durchgesetzt, nicht nur beim Schreiben:
+abgelaufene Verläufe verschwinden auch dann, wenn die App tagelang nicht
+offen war.
+
+Die Moderation kann diese Verläufe unter `/admin` öffnen – bei Spamverdacht,
+nach einer Meldung, bei Filtertreffern. **Jedes Öffnen und jedes Löschen wird
+protokolliert** und ist in derselben Ansicht sichtbar. Die blosse Übersicht
+(wer mit wem, wie viele Nachrichten, wie viele Filtertreffer) erzeugt keinen
+Eintrag, das Öffnen des Inhalts schon.
+
+Das ist bewusst so gebaut: Ein Moderationsteam, das jedes Gespräch ohne
+Anlass mitlesen kann, braucht eine Spur, die zeigt, wer wann was angesehen
+hat. Im Prototyp ist das eine Liste in localStorage; im Betrieb wären es
+Rollen, ein unveränderliches Protokoll und ein Vier-Augen-Prinzip.
 
 ### Der Verifizierungsweg
 
@@ -109,7 +126,8 @@ Stores und UI bleiben unverändert.
 
 Persistiert werden unter dem Präfix `vac.v1.` nur: Identität und
 Verifizierungsstatus, Meldungen, Sperrliste, eigene Blockierungen,
-Kodex-Bestätigung, Themenwahl. Jeder Zugriff ist
+Chatverläufe mit Ablaufzeitpunkt, Zugriffsprotokoll, Kodex-Bestätigung,
+Themenwahl. Jeder Zugriff ist
 gekapselt – bei blockiertem oder leerem Storage startet die App normal und
 weist im Kopfbereich darauf hin.
 
@@ -181,6 +199,19 @@ und -dauer, Löschkonzept und Betroffenenrechte, Datenschutzerklärung und AGB,
 Vorgehen bei Behördenanfragen, Protokollierung von Sperrentscheiden,
 Meldewege nach DSA (EU) und Impressumspflichten. Diese Punkte sind
 juristisch zu begleiten, nicht nebenbei zu lösen.
+
+### Aufbewahrung der Chatverläufe
+Die 72-Stunden-Frist ist im Prototyp eine Zahl in `mockApi.ts`; im Betrieb
+braucht sie Infrastruktur: Verschlüsselung im Ruhezustand, ein Löschjob, der
+unabhängig von Nutzerzugriffen läuft, Zugriffskontrolle nach Rollen und ein
+Protokoll, das die Moderation nicht selbst verändern kann. Dazu die
+rechtliche Seite: Inhalte privater Kommunikation sind besonders heikel,
+Nutzer haben ein Auskunftsrecht auf das, was über sie gespeichert ist – auch
+auf Nachrichten des Gegenübers –, und was aufbewahrt wird, kann von Behörden
+herausverlangt werden. Ob als Kommunikationsdienst zusätzlich Pflichten aus
+dem BÜPF-Umfeld greifen, gehört anwaltlich abgeklärt. Ende-zu-Ende-
+Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
+bewusste Entscheidung, keine Lücke.
 
 ### Moderation
 Serverseitige Klassifikation statt Wortliste, Eskalationsstufen,
