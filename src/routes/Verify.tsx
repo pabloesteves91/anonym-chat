@@ -37,6 +37,7 @@ function BildFeld({
   hint,
   preview,
   onPick,
+  onDemo,
   busy,
 }: {
   id: string
@@ -44,6 +45,7 @@ function BildFeld({
   hint: string
   preview: { dataUrl: string; meta: { name: string; size: number } } | null
   onPick: (file: File | null) => void
+  onDemo: () => void
   busy: boolean
 }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -66,6 +68,13 @@ function BildFeld({
           onChange={(event) => onPick(event.target.files?.[0] ?? null)}
         />
       </label>
+
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        Für einen Testdurchlauf kein echtes Foto nötig:
+        <Button size="sm" variant="quiet" type="button" onClick={onDemo} disabled={busy}>
+          Demo-Bild einsetzen
+        </Button>
+      </p>
 
       {preview ? (
         <figure className="flex items-center gap-4 rounded-sm border border-line bg-surface p-3">
@@ -175,7 +184,8 @@ function Antragsformular() {
             <h2 className="font-display text-xl font-semibold">Foto des Ausweises</h2>
             <p className="mt-1 text-sm text-muted">
               Pass, ID oder Führerausweis, gut ausgeleuchtet und vollständig im Bild. Die Prüfung schaut auf Name,
-              Geburtsdatum und Gültigkeit – nichts davon wird im Profil angezeigt.
+              Geburtsdatum und Gültigkeit – nichts davon wird im Profil angezeigt. Zum Ausprobieren des Ablaufs reicht
+              ein beliebiges Bild oder das Demo-Bild.
             </p>
           </div>
           <BildFeld
@@ -185,6 +195,7 @@ function Antragsformular() {
             preview={v.ausweis}
             busy={v.busy}
             onPick={(file) => void v.pickImage('ausweis', file)}
+            onDemo={() => v.useDemoImage('ausweis')}
           />
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap gap-3">
@@ -204,7 +215,7 @@ function Antragsformular() {
             <h2 className="font-display text-xl font-semibold">Selfie mit Ausweis</h2>
             <p className="mt-1 text-sm text-muted">
               Halte den Ausweis neben dein Gesicht, beides scharf und lesbar. So sieht die Prüfung, dass Dokument und
-              Person zusammengehören.
+              Person zusammengehören. Zum Ausprobieren musst du dich nicht selbst fotografieren – nimm das Demo-Bild.
             </p>
           </div>
           <BildFeld
@@ -214,6 +225,7 @@ function Antragsformular() {
             preview={v.selfie}
             busy={v.busy}
             onPick={(file) => void v.pickImage('selfie', file)}
+            onDemo={() => v.useDemoImage('selfie')}
           />
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap gap-3">
@@ -249,7 +261,7 @@ function Antragsformular() {
                   <img
                     src={v.ausweis.dataUrl}
                     alt="Vorschau Ausweisfoto"
-                    className="h-20 w-full rounded-sm border border-line object-cover"
+                    className="h-20 w-full rounded-sm border border-line bg-raised object-contain"
                   />
                 ) : (
                   '–'
@@ -263,7 +275,7 @@ function Antragsformular() {
                   <img
                     src={v.selfie.dataUrl}
                     alt="Vorschau Selfie"
-                    className="h-20 w-full rounded-sm border border-line object-cover"
+                    className="h-20 w-full rounded-sm border border-line bg-raised object-contain"
                   />
                 ) : (
                   '–'

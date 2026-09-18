@@ -29,7 +29,7 @@ export function AppShell() {
               Profil
             </NavLink>
             <NavLink to="/admin" className={navClass}>
-              Meldungen
+              Moderation
             </NavLink>
           </nav>
 

@@ -74,6 +74,28 @@ export function Landing() {
         </ol>
       </section>
 
+      <Panel className="border-accent/40 p-5">
+        <h2 className="font-display text-xl font-semibold">So testest du das hier</h2>
+        <ol className="mt-3 flex flex-col gap-2 text-sm">
+          <li>
+            <span className="font-mono text-xs text-accent">01</span> Mobilnummer eingeben – der SMS-Code erscheint
+            direkt auf dem Bildschirm, es geht keine echte SMS raus.
+          </li>
+          <li>
+            <span className="font-mono text-xs text-accent">02</span> Beim Ausweisfoto und beim Selfie auf
+            „Demo-Bild einsetzen" tippen. Für den Test braucht es kein echtes Foto von dir.
+          </li>
+          <li>
+            <span className="font-mono text-xs text-accent">03</span> Du bist gleichzeitig die Moderation: den eigenen
+            Antrag unter <span className="text-ink">Moderation</span> freigeben, dann ist der Chat offen.
+          </li>
+          <li>
+            <span className="font-mono text-xs text-accent">04</span> Nochmal von vorn? Im Profil ganz unten
+            „Zurücksetzen".
+          </li>
+        </ol>
+      </Panel>
+
       <Panel className="p-5">
         <h2 className="font-display text-xl font-semibold">Was dieser Prototyp nicht tut</h2>
         <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">

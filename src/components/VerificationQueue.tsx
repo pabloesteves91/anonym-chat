@@ -12,7 +12,7 @@ function Bild({ src, alt, fehlt }: { src: string | null; alt: string; fehlt: str
     <figure className="flex flex-col gap-1">
       <figcaption className="label-caps">{alt}</figcaption>
       {src ? (
-        <img src={src} alt={alt} className="h-40 w-full rounded-sm border border-line object-cover" />
+        <img src={src} alt={alt} className="h-40 w-full rounded-sm border border-line bg-raised object-contain" />
       ) : (
         <p className="flex h-40 items-center justify-center rounded-sm border border-dashed border-line-strong bg-raised p-3 text-center text-sm text-muted">
           {fehlt}

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import * as api from '../services/mockApi'
-import { ImageError, createPreview, type Preview } from '../services/image'
+import { ImageError, createDemoPreview, createPreview, type Preview } from '../services/image'
 import { useSession } from './useSession'
 import type { VerificationRequest, VerifyStep } from '../services/types'
 
@@ -31,6 +31,7 @@ interface VerificationState {
   sendCode: () => Promise<void>
   confirmCode: () => Promise<void>
   pickImage: (kind: 'ausweis' | 'selfie', file: File | null) => Promise<void>
+  useDemoImage: (kind: 'ausweis' | 'selfie') => void
   submit: () => Promise<boolean>
   loadRequest: () => Promise<void>
   startOver: () => Promise<void>
@@ -90,9 +91,18 @@ export const useVerification = create<VerificationState>((set, get) => ({
     set({ busy: true, error: null })
     try {
       const preview = await createPreview(file)
-      set({ [kind]: preview, busy: false } as Pick<VerificationState, 'ausweis' | 'selfie'> & { busy: boolean })
+      set(kind === 'ausweis' ? { ausweis: preview, busy: false } : { selfie: preview, busy: false })
     } catch (error) {
       set({ busy: false, error: fehlertext(error, 'Das Foto konnte nicht verarbeitet werden.') })
+    }
+  },
+
+  useDemoImage(kind) {
+    try {
+      const preview = createDemoPreview(kind)
+      set(kind === 'ausweis' ? { ausweis: preview, error: null } : { selfie: preview, error: null })
+    } catch (error) {
+      set({ error: fehlertext(error, 'Das Demo-Bild konnte nicht erzeugt werden.') })
     }
   },
 
