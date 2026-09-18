@@ -150,4 +150,8 @@ export type VerificationStage =
 export interface Session {
   user: User | null
   storageAvailable: boolean
+  /** Verhaltenskodex vor dem ersten Chat bestätigt? */
+  codexAccepted: boolean
+  /** Selbst blockierte Konten – unabhängig von Meldungen. */
+  selfBlocked: string[]
 }

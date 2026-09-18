@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
@@ -14,6 +14,13 @@ export function Profile() {
   const saveProfile = useSession((s) => s.saveProfile)
   const newPseudonym = useSession((s) => s.newPseudonym)
   const resetIdentity = useSession((s) => s.resetIdentity)
+  const selfBlocked = useSession((s) => s.selfBlocked)
+  const refreshBlocks = useSession((s) => s.refreshBlocks)
+  const unblockAll = useSession((s) => s.unblockAll)
+
+  useEffect(() => {
+    void refreshBlocks()
+  }, [refreshBlocks])
 
   // Kein Effekt zum Spiegeln: der Entwurf überlagert das Profil nur, solange
   // er existiert. Nach dem Speichern sind beide wieder deckungsgleich.
@@ -143,6 +150,31 @@ export function Profile() {
             </span>
           </div>
         </form>
+      </Panel>
+
+      <Panel className="flex flex-col gap-3 p-5">
+        <h2 className="font-display text-xl font-semibold">Blockierte Konten</h2>
+        <p className="text-sm text-muted">
+          {selfBlocked.length === 0
+            ? 'Du hast niemanden blockiert. Im Chat geht das über „Nicht mehr verbinden" – ohne Meldung und ohne dass die Moderation davon erfährt.'
+            : `${selfBlocked.length} ${selfBlocked.length === 1 ? 'Konto wird' : 'Konten werden'} dir nicht mehr zugelost. Sperren durch die Moderation sind davon unabhängig und lassen sich hier nicht aufheben.`}
+        </p>
+        {selfBlocked.length > 0 ? (
+          <>
+            <ul className="flex flex-wrap gap-2">
+              {selfBlocked.map((id) => (
+                <li key={id} className="rounded-[2px] border border-line px-2 py-1 font-mono text-xs text-muted">
+                  {id}
+                </li>
+              ))}
+            </ul>
+            <div>
+              <Button disabled={busy} onClick={() => void unblockAll()}>
+                Alle Blockierungen aufheben
+              </Button>
+            </div>
+          </>
+        ) : null}
       </Panel>
 
       <Panel className="flex flex-col gap-3 p-5">

@@ -84,7 +84,41 @@ function persistUser(user: User): User {
 
 export async function getSession(): Promise<Session> {
   await delay(between(120, 260))
-  return { user: readUser(), storageAvailable: isStorageAvailable() }
+  return {
+    user: readUser(),
+    storageAvailable: isStorageAvailable(),
+    codexAccepted: readJson<boolean>(KEYS.codex, false) === true,
+    selfBlocked: readJson<string[]>(KEYS.selfBlocked, []),
+  }
+}
+
+/** Verhaltenskodex bestätigen – einmalig vor dem ersten Chat. */
+export async function acceptCodex(): Promise<void> {
+  await delay(between(120, 240))
+  writeJson(KEYS.codex, true)
+}
+
+/**
+ * Persönliche Blockierung ohne Meldung: betrifft nur das eigene Matching
+ * und ist damit etwas anderes als eine Sperre durch die Moderation.
+ */
+export async function blockPartner(partnerId: string): Promise<string[]> {
+  await delay(between(150, 300))
+  const list = new Set(readJson<string[]>(KEYS.selfBlocked, []))
+  list.add(partnerId)
+  const next = [...list]
+  writeJson(KEYS.selfBlocked, next)
+  return next
+}
+
+export async function listSelfBlocked(): Promise<string[]> {
+  await delay(between(100, 200))
+  return readJson<string[]>(KEYS.selfBlocked, [])
+}
+
+export async function clearSelfBlocked(): Promise<void> {
+  await delay(between(150, 300))
+  remove(KEYS.selfBlocked)
 }
 
 /**
@@ -146,6 +180,8 @@ export async function regeneratePseudonym(): Promise<User> {
 export async function resetIdentity(): Promise<void> {
   await delay(between(150, 300))
   remove(KEYS.user)
+  remove(KEYS.codex)
+  remove(KEYS.selfBlocked)
 }
 
 /* ----------------------------------------------------------------- Matching */
@@ -153,7 +189,11 @@ export async function resetIdentity(): Promise<void> {
 export async function findMatch(filter: MatchFilter, signal?: AbortSignal): Promise<Partner> {
   await delay(between(1000, 3000), signal)
 
-  const blocked = new Set(readJson<string[]>(KEYS.blocked, []))
+  // Gesperrt durch die Moderation oder selbst blockiert – beides schliesst aus.
+  const blocked = new Set([
+    ...readJson<string[]>(KEYS.blocked, []),
+    ...readJson<string[]>(KEYS.selfBlocked, []),
+  ])
   const candidates = PARTNER_POOL.filter((partner) => {
     if (blocked.has(partner.id)) return false
     if (filter.language !== 'egal' && partner.language !== filter.language) return false
@@ -230,6 +270,11 @@ export async function submitReport(input: ReportInput, reporter: User): Promise<
     status: 'offen',
   }
 
+  // Wer meldet, will dem Konto in aller Regel nicht gleich wieder begegnen.
+  const selfBlocked = new Set(readJson<string[]>(KEYS.selfBlocked, []))
+  selfBlocked.add(input.partner.id)
+  writeJson(KEYS.selfBlocked, [...selfBlocked])
+
   const reports = readJson<Report[]>(KEYS.reports, [])
   if (!writeJson(KEYS.reports, [report, ...reports].slice(0, MAX_REPORTS))) {
     // Lieber ein ehrlicher Fehler als eine Vorgangsnummer für eine Meldung,
@@ -270,4 +315,11 @@ export async function clearReports(): Promise<void> {
   await delay(between(200, 400))
   remove(KEYS.reports)
   remove(KEYS.blocked)
+}
+
+/** Nur für die Demo: setzt Kodex-Bestätigung und eigene Blockierungen zurück. */
+export async function resetLocalPreferences(): Promise<void> {
+  await delay(between(120, 240))
+  remove(KEYS.codex)
+  remove(KEYS.selfBlocked)
 }

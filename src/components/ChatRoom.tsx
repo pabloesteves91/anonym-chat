@@ -14,6 +14,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
   const sendMessage = useChat((s) => s.sendMessage)
   const endChat = useChat((s) => s.endChat)
   const nextChat = useChat((s) => s.nextChat)
+  const blockAndEnd = useChat((s) => s.blockAndEnd)
   const report = useChat((s) => s.report)
   const error = useChat((s) => s.error)
   const clearError = useChat((s) => s.clearError)
@@ -47,6 +48,13 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
             </Button>
             <Button size="sm" onClick={() => endChat('selbst')}>
               Chat beenden
+            </Button>
+            <Button
+              size="sm"
+              title="Beendet den Chat und verhindert, dass ihr erneut verbunden werdet"
+              onClick={() => void blockAndEnd()}
+            >
+              Nicht mehr verbinden
             </Button>
             <Button
               size="sm"

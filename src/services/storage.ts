@@ -13,6 +13,8 @@ export const KEYS = {
   user: `${PREFIX}user`,
   reports: `${PREFIX}reports`,
   blocked: `${PREFIX}blocked`,
+  selfBlocked: `${PREFIX}selfblocked`,
+  codex: `${PREFIX}codex`,
   theme: `${PREFIX}theme`,
 } as const
 

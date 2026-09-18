@@ -1,0 +1,140 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as api from './mockApi'
+import { KEYS } from './storage'
+import type { Message, Partner, User } from './types'
+
+/**
+ * Die simulierte Latenz wird mit falschen Timern übersprungen – die Tests
+ * prüfen das Verhalten, nicht die Wartezeit.
+ */
+async function settle<T>(promise: Promise<T>): Promise<T | Error> {
+  const guarded = promise.catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))))
+  await vi.advanceTimersByTimeAsync(10_000)
+  return guarded
+}
+
+const partner: Partner = {
+  id: 'usr_k29fa1',
+  pseudonym: 'Stiller Kranich 2048',
+  language: 'de',
+  interests: ['Bücher', 'Wandern', 'Kochen'],
+}
+
+const nachricht = (author: Message['author'], text: string, flagged = false): Message => ({
+  id: `m_${text}`,
+  author,
+  text,
+  ts: Date.now(),
+  flag: flagged ? { level: 'mild', reason: 'Beleidigung', terms: ['x'] } : undefined,
+})
+
+beforeEach(() => {
+  window.localStorage.clear()
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+describe('Verifizierung', () => {
+  it('verlangt eine Datei, liest sie aber nicht', async () => {
+    const result = await settle(api.submitDocument(null))
+    expect(result).toBeInstanceOf(api.ApiError)
+    expect((result as api.ApiError).code).toBe('ungueltig')
+  })
+
+  it('legt bei Abschluss eine verifizierte Identität an und persistiert sie', async () => {
+    const user = (await settle(api.completeVerification())) as User
+    expect(user.verified).toBe(true)
+    expect(user.pseudonym).toMatch(/^\S+ \S+ \d{4}$/)
+
+    const session = await settle(api.getSession())
+    expect((session as Awaited<ReturnType<typeof api.getSession>>).user?.id).toBe(user.id)
+  })
+
+  it('lehnt Profiländerungen ohne Identität ab', async () => {
+    const result = await settle(api.updateProfile({ language: 'de', ageGroup: '25–34', interests: [] }))
+    expect((result as api.ApiError).code).toBe('nicht-verifiziert')
+  })
+})
+
+describe('Matching', () => {
+  it('berücksichtigt den Sprachfilter', async () => {
+    const treffer = (await settle(api.findMatch({ language: 'it', interests: [] }))) as Partner
+    expect(treffer.language).toBe('it')
+  })
+
+  it('meldet, wenn der Filter niemanden übrig lässt', async () => {
+    const result = await settle(api.findMatch({ language: 'it', interests: ['Games'] }))
+    expect((result as api.ApiError).code).toBe('kein-treffer')
+  })
+
+  it('schliesst gesperrte und selbst blockierte Konten aus', async () => {
+    window.localStorage.setItem(KEYS.blocked, JSON.stringify(['usr_t71ab9']))
+    window.localStorage.setItem(KEYS.selfBlocked, JSON.stringify(['usr_z90ii6']))
+    const result = await settle(api.findMatch({ language: 'fr', interests: [] }))
+    expect((result as api.ApiError).code).toBe('kein-treffer')
+  })
+
+  it('bricht die Suche über das Signal ab', async () => {
+    const controller = new AbortController()
+    const laufend = api.findMatch({ language: 'egal', interests: [] }, controller.signal).catch((e: unknown) => e)
+    controller.abort()
+    expect((await laufend as api.ApiError).code).toBe('abgebrochen')
+  })
+})
+
+describe('Meldungen', () => {
+  const reporter: User = {
+    id: 'usr_self',
+    pseudonym: 'Blauer Falke 1234',
+    verified: true,
+    verifiedAt: new Date().toISOString(),
+    profile: { language: 'de', ageGroup: '25–34', interests: [] },
+  }
+
+  it('zählt nur markierte Nachrichten des gemeldeten Kontos', async () => {
+    const messages = [
+      nachricht('me', 'du idiot', true),
+      nachricht('partner', 'schreib mir auf telegram', true),
+      nachricht('partner', 'alles gut'),
+    ]
+    const report = await settle(api.submitReport({ reason: 'spam', note: ' Test ', partner, messages }, reporter))
+    expect((report as Awaited<ReturnType<typeof api.submitReport>>).autoFlags).toBe(1)
+    expect((report as Awaited<ReturnType<typeof api.submitReport>>).note).toBe('Test')
+  })
+
+  it('blockiert das gemeldete Konto auch für den Melder', async () => {
+    await settle(api.submitReport({ reason: 'spam', note: '', partner, messages: [] }, reporter))
+    const blockiert = (await settle(api.listSelfBlocked())) as string[]
+    expect(blockiert).toContain(partner.id)
+  })
+
+  it('hebt eine Sperre nicht auf, solange eine zweite Meldung sie trägt', async () => {
+    const erste = (await settle(api.submitReport({ reason: 'spam', note: '', partner, messages: [] }, reporter))) as {
+      id: string
+    }
+    const zweite = (await settle(
+      api.submitReport({ reason: 'belaestigung', note: '', partner, messages: [] }, reporter),
+    )) as { id: string }
+
+    await settle(api.updateReportStatus(erste.id, 'gesperrt'))
+    await settle(api.updateReportStatus(zweite.id, 'gesperrt'))
+    // Eine der beiden Meldungen wird abgehakt – die Sperre muss bleiben.
+    await settle(api.updateReportStatus(zweite.id, 'geprueft'))
+
+    expect((await settle(api.listBlocked())) as string[]).toContain(partner.id)
+
+    await settle(api.updateReportStatus(erste.id, 'geprueft'))
+    expect((await settle(api.listBlocked())) as string[]).not.toContain(partner.id)
+  })
+
+  it('meldet einen Fehler, statt eine Vorgangsnummer ohne Vorgang zu liefern', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    const result = await settle(api.submitReport({ reason: 'spam', note: '', partner, messages: [] }, reporter))
+    expect((result as api.ApiError).code).toBe('speicher')
+  })
+})

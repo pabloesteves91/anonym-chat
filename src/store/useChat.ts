@@ -14,7 +14,7 @@ import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '
 const MAX_MESSAGE_LENGTH = 2000
 
 export type ChatStatus = 'idle' | 'suche' | 'aktiv' | 'beendet'
-export type EndReason = 'selbst' | 'gemeldet' | 'naechster'
+export type EndReason = 'selbst' | 'gemeldet' | 'naechster' | 'blockiert'
 
 interface ChatState {
   status: ChatStatus
@@ -31,6 +31,7 @@ interface ChatState {
   cancelSearch: () => void
   sendMessage: (text: string) => void
   endChat: (reason: EndReason) => void
+  blockAndEnd: () => Promise<void>
   nextChat: () => Promise<void>
   report: (reason: ReportReason, note: string, reporter: User) => Promise<Report | null>
   clearError: () => void
@@ -208,6 +209,18 @@ export const useChat = create<ChatState>((set, get) => {
       stopRun()
       // Verlauf wird hier tatsächlich verworfen, nicht nur ausgeblendet.
       set({ status: 'beendet', endReason: reason, partner: null, messages: [], partnerTyping: false })
+    },
+
+    /** Persönliche Blockierung: dieses Konto wird nicht mehr zugelost. */
+    async blockAndEnd() {
+      const partner = get().partner
+      if (!partner) return
+      try {
+        await api.blockPartner(partner.id)
+      } catch {
+        // Blockierung nicht gespeichert – der Chat endet trotzdem.
+      }
+      get().endChat('blockiert')
     },
 
     async nextChat() {

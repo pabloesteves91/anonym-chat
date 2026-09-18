@@ -13,11 +13,16 @@ interface SessionState {
   ready: boolean
   user: User | null
   storageAvailable: boolean
+  codexAccepted: boolean
+  selfBlocked: string[]
   stage: VerificationStage
   error: string | null
   busy: boolean
 
   load: () => Promise<void>
+  acceptCodex: () => Promise<void>
+  refreshBlocks: () => Promise<void>
+  unblockAll: () => Promise<void>
   verify: (file: File | null) => Promise<boolean>
   resetVerification: () => void
   saveProfile: (profile: Profile) => Promise<void>
@@ -29,6 +34,8 @@ export const useSession = create<SessionState>((set, get) => ({
   ready: false,
   user: null,
   storageAvailable: true,
+  codexAccepted: false,
+  selfBlocked: [],
   stage: 'idle',
   error: null,
   busy: false,
@@ -39,8 +46,25 @@ export const useSession = create<SessionState>((set, get) => ({
       ready: true,
       user: session.user,
       storageAvailable: session.storageAvailable,
+      codexAccepted: session.codexAccepted,
+      selfBlocked: session.selfBlocked,
       stage: session.user?.verified ? 'fertig' : 'idle',
     })
+  },
+
+  async acceptCodex() {
+    await api.acceptCodex()
+    set({ codexAccepted: true })
+  },
+
+  async refreshBlocks() {
+    set({ selfBlocked: await api.listSelfBlocked() })
+  },
+
+  async unblockAll() {
+    set({ busy: true })
+    await api.clearSelfBlocked()
+    set({ selfBlocked: [], busy: false })
   },
 
   async verify(file) {
@@ -84,6 +108,6 @@ export const useSession = create<SessionState>((set, get) => ({
 
   async resetIdentity() {
     await api.resetIdentity()
-    set({ user: null, stage: 'idle', error: null })
+    set({ user: null, stage: 'idle', error: null, codexAccepted: false, selfBlocked: [] })
   },
 }))

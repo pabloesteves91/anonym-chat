@@ -14,10 +14,13 @@ Voraussetzung: Node 20 oder neuer (entwickelt mit Node 22).
 
 ```bash
 npm install
-npm run dev      # Entwicklungsserver auf http://localhost:5173
-npm run build    # Typprüfung + Produktionsbuild nach dist/
-npm run preview  # Build lokal ausliefern
-npm run lint     # oxlint
+npm run dev           # Entwicklungsserver auf http://localhost:5173
+npm run build         # Typprüfung + Produktionsbuild nach dist/
+npm run build:static  # Build für statische Auslieferung (Hash-Routing,
+                      # relative Pfade – für Hosting ohne Server-Rewrites)
+npm run preview       # Build lokal ausliefern
+npm run test          # Vitest (Wortfilter, Storage, mockApi)
+npm run lint          # oxlint
 ```
 
 Die App läuft vollständig offline: Schriften sind als npm-Pakete lokal
@@ -32,7 +35,15 @@ Laufzeit keinen einzigen Netzwerk-Aufruf.
 | Profil | Zufälliges Pseudonym („Blauer Falke 4417"), Sprache, Altersgruppe, bis zu fünf Interessen – nur fürs Matching |
 | Matching | Optionaler Filter, Warteschlange mit Suchlauf, Treffer nach 1–3 s, Fall „niemand passendes erreichbar" |
 | Chat | Textchat mit Tippindikator, Skript-Antworten, „Nächster Chat", „Chat beenden", „Melden" |
-| Moderation | Lokaler Wortfilter (markiert, blockiert nicht), Melde-Dialog mit fünf Gründen und Freitext, Moderationsansicht unter `/admin` |
+| Moderation | Lokaler Wortfilter (markiert, blockiert nicht), Warnung vor dem Senden bei schweren Treffern, Melde-Dialog mit fünf Gründen und Freitext, Moderationsansicht unter `/admin` |
+| Selbstschutz | Verhaltenskodex einmalig vor dem ersten Chat, „Nicht mehr verbinden" blockiert ein Konto nur für einen selbst (ohne Meldung), Übersicht und Aufhebung im Profil |
+
+Zwei Arten von Ausschluss, bewusst getrennt:
+
+- **Sperre durch die Moderation** – Folge einer Meldung, gilt systemweit und
+  ist im Prototyp unter `/admin` sichtbar.
+- **Eigene Blockierung** – betrifft nur das eigene Matching, die Moderation
+  erfährt nichts davon. Wer meldet, blockiert automatisch mit.
 
 Der Chatverlauf lebt ausschliesslich im Arbeitsspeicher und wird beim Beenden
 verworfen. Nur wenn gemeldet wird, wandern die letzten acht Nachrichten als
@@ -50,8 +61,10 @@ angefasst (siehe `submitDocument()` in `src/services/mockApi.ts`).
 src/
   routes/       Landing · Verify · Profile · Chat · Admin · NotFound
   components/   AppShell, Lobby, Queue, ChatRoom, MessageList, Composer,
-                ReportDialog, Dialog, VerifiedBadge, ThemeToggle, ui
+                ReportDialog, CodexDialog, Dialog, VerifiedBadge,
+                ThemeToggle, ui
   services/     mockApi.ts   ← einzige "Backend"-Grenze
+                *.test.ts    Vitest-Tests für Filter, Storage und mockApi
                 storage.ts   defensive localStorage-Hülle (try/catch)
                 types.ts · wordFilter.ts · pseudonym.ts · partnerScript.ts
   store/        useSession · useChat · useModeration · useTheme (Zustand)
@@ -66,7 +79,8 @@ diese eine Datei gegen einen HTTP-/WebSocket-Client getauscht; Typen,
 Stores und UI bleiben unverändert.
 
 Persistiert werden unter dem Präfix `vac.v1.` nur: Identität und
-Verifizierungsstatus, Meldungen, Sperrliste, Themenwahl. Jeder Zugriff ist
+Verifizierungsstatus, Meldungen, Sperrliste, eigene Blockierungen,
+Kodex-Bestätigung, Themenwahl. Jeder Zugriff ist
 gekapselt – bei blockiertem oder leerem Storage startet die App normal und
 weist im Kopfbereich darauf hin.
 
@@ -140,6 +154,13 @@ in Echtzeit, Jugendschutzauflagen und je nach Markt weitere regulatorische
 Anforderungen hinzu. Das ist ein eigener Themenblock, kein Feature.
 
 ### Technisch offen
-Mehrsprachige Oberfläche, Tests (Unit für Wortfilter und Storage, E2E für
-den Flow), Rate-Limiting, Missbrauchserkennung beim Matching, Skalierung
-der Warteschlange.
+Mehrsprachige Oberfläche, E2E-Tests für den ganzen Flow (Unit-Tests für
+Wortfilter, Storage und `mockApi` liegen vor: `npm run test`),
+Rate-Limiting, Missbrauchserkennung beim Matching, Skalierung der
+Warteschlange.
+
+## Entwicklung mit Claude Code
+
+`.claude/hooks/session-start.sh` installiert in Web-Sessions die
+Abhängigkeiten, damit Build, Lint und Tests sofort laufen. Lokal tut der
+Hook nichts.

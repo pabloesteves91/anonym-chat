@@ -15,13 +15,20 @@ function Ended() {
   const startSearch = useChat((s) => s.startSearch)
 
   const gemeldet = endReason === 'gemeldet'
+  const blockiert = endReason === 'blockiert'
   const reasonLabel = REPORT_REASONS.find((r) => r.value === report?.reason)?.label
 
   return (
     <Panel className="p-6">
-      <p className="label-caps">{gemeldet ? 'Meldung erfasst' : 'Chat beendet'}</p>
+      <p className="label-caps">
+        {gemeldet ? 'Meldung erfasst' : blockiert ? 'Konto blockiert' : 'Chat beendet'}
+      </p>
       <h2 className="mt-2 font-display text-2xl font-semibold">
-        {gemeldet ? 'Danke – die Moderation übernimmt' : 'Der Verlauf wurde verworfen'}
+        {gemeldet
+          ? 'Danke – die Moderation übernimmt'
+          : blockiert
+            ? 'Ihr werdet nicht mehr verbunden'
+            : 'Der Verlauf wurde verworfen'}
       </h2>
 
       {gemeldet && report ? (
@@ -39,6 +46,11 @@ function Ended() {
             .
           </Note>
         </div>
+      ) : blockiert ? (
+        <p className="mt-2 max-w-prose text-muted">
+          Das Konto ist nur für dich blockiert – die Moderation erfährt davon nichts. Wenn etwas vorgefallen ist, das
+          Konsequenzen haben sollte, ist eine Meldung der richtige Weg. Aufheben lässt sich die Blockierung im Profil.
+        </p>
       ) : (
         <p className="mt-2 max-w-prose text-muted">
           Nachrichten dieses Chats sind gelöscht und lassen sich nicht wiederherstellen – auch nicht von uns. Das ist

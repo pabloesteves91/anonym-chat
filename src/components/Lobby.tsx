@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { Button, Field, Note, Panel, TagToggle, inputClass } from './ui'
+import { CodexDialog } from './CodexDialog'
+import { useSession } from '../store/useSession'
 import { INTERESTS, LANGUAGES } from '../services/types'
 import type { Language } from '../services/types'
 import { useChat } from '../store/useChat'
@@ -9,6 +12,27 @@ export function Lobby() {
   const setFilter = useChat((s) => s.setFilter)
   const startSearch = useChat((s) => s.startSearch)
   const error = useChat((s) => s.error)
+  const codexAccepted = useSession((s) => s.codexAccepted)
+  const acceptCodex = useSession((s) => s.acceptCodex)
+  const selfBlocked = useSession((s) => s.selfBlocked)
+  const [codexOpen, setCodexOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const start = () => {
+    if (!codexAccepted) {
+      setCodexOpen(true)
+      return
+    }
+    void startSearch()
+  }
+
+  const acceptAndStart = async () => {
+    setBusy(true)
+    await acceptCodex()
+    setBusy(false)
+    setCodexOpen(false)
+    void startSearch()
+  }
 
   const toggleInterest = (interest: string) =>
     setFilter({
@@ -19,7 +43,8 @@ export function Lobby() {
     })
 
   return (
-    <Panel className="p-5">
+    <>
+      <Panel className="p-5">
       <h2 className="font-display text-2xl font-semibold">Neuer Chat</h2>
       <p className="mt-1 text-sm text-muted">
         Der Filter ist optional. Je enger er gesetzt ist, desto länger kann die Suche dauern.
@@ -59,7 +84,7 @@ export function Lobby() {
         {error ? <Note tone="warn">{error}</Note> : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="primary" onClick={() => void startSearch()}>
+          <Button variant="primary" onClick={start}>
             Chat starten
           </Button>
           {filter.interests.length > 0 || filter.language !== 'egal' ? (
@@ -68,7 +93,22 @@ export function Lobby() {
             </Button>
           ) : null}
         </div>
+
+        {selfBlocked.length > 0 ? (
+          <p className="text-sm text-muted">
+            {selfBlocked.length} {selfBlocked.length === 1 ? 'Konto ist' : 'Konten sind'} für dich blockiert und
+            {selfBlocked.length === 1 ? ' wird' : ' werden'} nicht mehr zugelost. Aufheben lässt sich das im Profil.
+          </p>
+        ) : null}
       </div>
-    </Panel>
+      </Panel>
+
+      <CodexDialog
+        open={codexOpen}
+        onClose={() => setCodexOpen(false)}
+        onAccept={() => void acceptAndStart()}
+        busy={busy}
+      />
+    </>
   )
 }

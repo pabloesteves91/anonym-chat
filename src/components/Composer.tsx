@@ -8,13 +8,21 @@ import { scanText } from '../services/wordFilter'
  */
 export function Composer({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
   const [text, setText] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
   const verdict = text.trim().length > 2 ? scanText(text) : null
+  // Schwere Treffer brauchen einen zweiten, bewussten Klick.
+  const needsConfirm = verdict?.level === 'severe' && !confirmed
 
   const submit = () => {
     const value = text.trim()
     if (!value || disabled) return
+    if (needsConfirm) {
+      setConfirmed(true)
+      return
+    }
     onSend(value)
     setText('')
+    setConfirmed(false)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -28,7 +36,9 @@ export function Composer({ onSend, disabled }: { onSend: (text: string) => void;
     <div className="border-t border-line px-4 py-3">
       {verdict ? (
         <p className="mb-2 font-mono text-[0.6875rem] tracking-wide text-signal uppercase" aria-live="polite">
-          Hinweis: {verdict.reason}. Diese Nachricht würde markiert.
+          {verdict.level === 'severe'
+            ? `${verdict.reason} – das kann zur Sperre führen.`
+            : `Hinweis: ${verdict.reason}. Diese Nachricht würde markiert.`}
         </p>
       ) : null}
       <div className="flex items-end gap-2">
@@ -41,13 +51,20 @@ export function Composer({ onSend, disabled }: { onSend: (text: string) => void;
           maxLength={2000}
           value={text}
           disabled={disabled}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value)
+            setConfirmed(false)
+          }}
           onKeyDown={onKeyDown}
           placeholder="Nachricht schreiben – Enter sendet, Shift+Enter macht eine neue Zeile"
           className="max-h-32 min-h-[2.75rem] flex-1 resize-y rounded-sm border border-line-strong bg-surface px-3 py-2.5 text-ink placeholder:text-muted"
         />
-        <Button variant="primary" onClick={submit} disabled={disabled || text.trim().length === 0}>
-          Senden
+        <Button
+          variant={needsConfirm ? 'danger' : 'primary'}
+          onClick={submit}
+          disabled={disabled || text.trim().length === 0}
+        >
+          {needsConfirm ? 'Trotzdem senden' : 'Senden'}
         </Button>
       </div>
     </div>
