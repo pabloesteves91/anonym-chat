@@ -214,6 +214,18 @@ dem BÜPF-Umfeld greifen, gehört anwaltlich abgeklärt. Ende-zu-Ende-
 Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
 bewusste Entscheidung, keine Lücke.
 
+### Konten und Identität
+Nutzende melden sich mit Google oder Apple an (`/anmelden`). Das Konto ist die
+Klammer um alles Persönliche: Pseudonym, Profil, Verifizierungsstand und
+eigene Blockierungen hängen daran. Im Chat ist davon nichts sichtbar – dort
+gilt nur das Pseudonym.
+
+Solange die Daten lokal liegen, trennt `setAccount()` in `storage.ts` die
+Speicherbereiche: Schlüssel wie `vac.v1.user` werden um die Kennung des
+Kontos ergänzt. Zwei Anmeldungen im selben Browser teilen sich dadurch
+nichts – so wie später auf dem Server. Moderationsdaten (Anträge, Meldungen,
+Verläufe) bleiben kontoübergreifend, die Moderation sieht alle.
+
 ### Zugang zur Moderation
 `/admin` verlangt eine Anmeldung über Firebase Auth. Berechtigt ist genau
 eine Kennung (`MODERATOR_UID` in `src/services/firebase.ts`); jedes andere
@@ -233,6 +245,21 @@ und nur die. Beide Dateien liegen im Repo und sind auf dieselbe UID gemünzt.
 Die Firebase-Konfiguration steht offen im Quellcode. Das ist bei Web-Apps
 richtig so: Sie ist ein öffentlicher Bezeichner, kein Geheimnis. Der
 Service-Account-Schlüssel dagegen gehört nie ins Repo.
+
+### Testübersicht und Emulator
+`/test` (nur über die Fusszeile verlinkt) zeigt den Stand aller Phasen und
+springt direkt hinein, inklusive „Verifizierung überspringen". Für
+automatisierte Durchläufe ohne echtes Firebase gibt es den Auth-Emulator:
+
+```bash
+npm run emulator      # startet den Auth-Emulator auf Port 9099
+npm run dev:emulator  # Dev-Server, der ihn statt Firebase benutzt
+```
+
+Im Emulator-Modus erscheint auf der Anmeldeseite zusätzlich ein Testkonto –
+die Anbieter-Anmeldung braucht Google-Infrastruktur, die in einer
+abgeschotteten Umgebung nicht erreichbar ist. Im Produktionsbuild ist dieser
+Weg abgeschaltet.
 
 ### Freigabe im Demo-Modus
 Solange die Anträge nur im Browser der antragstellenden Person liegen, sieht

@@ -1,5 +1,6 @@
 import {
   KEYS,
+  accountKey,
   isStorageAvailable,
   readJson,
   readSessionString,
@@ -78,7 +79,7 @@ const between = (min: number, max: number) => min + Math.random() * (max - min)
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
 
 function readUser(): User | null {
-  const user = readJson<User | null>(KEYS.user, null)
+  const user = readJson<User | null>(accountKey(KEYS.user), null)
   if (!user || typeof user.id !== 'string' || typeof user.pseudonym !== 'string') return null
   // Defensive Migration: fehlende Felder auffüllen statt die App crashen lassen.
   const verified = Boolean(user.verified)
@@ -94,26 +95,48 @@ function readUser(): User | null {
 }
 
 function persistUser(user: User): User {
-  writeJson(KEYS.user, user)
+  writeJson(accountKey(KEYS.user), user)
   return user
 }
 
 /* ------------------------------------------------------------------ Session */
+
+/**
+ * Legt beim ersten Anmelden die anonyme Identität an.
+ *
+ * Die Kennung des Kontos ist zugleich die interne Kennung im System – so
+ * wie später auf dem Server. Das Pseudonym wird einmal gewürfelt und bleibt,
+ * bis es jemand neu würfelt.
+ */
+export async function ensureIdentity(uid: string): Promise<User> {
+  await delay(between(120, 240))
+  const existing = readUser()
+  if (existing) return existing
+  return persistUser({
+    id: uid,
+    pseudonym: generatePseudonym(),
+    verified: false,
+    verificationStatus: 'offen',
+    verifiedAt: null,
+    phone: null,
+    profile: { ...DEFAULT_PROFILE },
+  })
+}
 
 export async function getSession(): Promise<Session> {
   await delay(between(120, 260))
   return {
     user: readUser(),
     storageAvailable: isStorageAvailable(),
-    codexAccepted: readJson<boolean>(KEYS.codex, false) === true,
-    selfBlocked: readJson<string[]>(KEYS.selfBlocked, []),
+    codexAccepted: readJson<boolean>(accountKey(KEYS.codex), false) === true,
+    selfBlocked: readJson<string[]>(accountKey(KEYS.selfBlocked), []),
   }
 }
 
 /** Verhaltenskodex bestätigen – einmalig vor dem ersten Chat. */
 export async function acceptCodex(): Promise<void> {
   await delay(between(120, 240))
-  writeJson(KEYS.codex, true)
+  writeJson(accountKey(KEYS.codex), true)
 }
 
 /**
@@ -122,21 +145,21 @@ export async function acceptCodex(): Promise<void> {
  */
 export async function blockPartner(partnerId: string): Promise<string[]> {
   await delay(between(150, 300))
-  const list = new Set(readJson<string[]>(KEYS.selfBlocked, []))
+  const list = new Set(readJson<string[]>(accountKey(KEYS.selfBlocked), []))
   list.add(partnerId)
   const next = [...list]
-  writeJson(KEYS.selfBlocked, next)
+  writeJson(accountKey(KEYS.selfBlocked), next)
   return next
 }
 
 export async function listSelfBlocked(): Promise<string[]> {
   await delay(between(100, 200))
-  return readJson<string[]>(KEYS.selfBlocked, [])
+  return readJson<string[]>(accountKey(KEYS.selfBlocked), [])
 }
 
 export async function clearSelfBlocked(): Promise<void> {
   await delay(between(150, 300))
-  remove(KEYS.selfBlocked)
+  remove(accountKey(KEYS.selfBlocked))
 }
 
 /* ------------------------------------------------------- Verifizierung (SMS) */
@@ -185,7 +208,7 @@ export async function requestSmsCode(input: string): Promise<{ phone: string; co
     expiresAt: Date.now() + CODE_GUELTIG_MS,
     attempts: 0,
   }
-  if (!writeJson(KEYS.sms, state)) {
+  if (!writeJson(accountKey(KEYS.sms), state)) {
     throw new ApiError('Der Code konnte nicht hinterlegt werden.', 'speicher')
   }
   return { phone, code: state.code, expiresAt: state.expiresAt }
@@ -193,25 +216,25 @@ export async function requestSmsCode(input: string): Promise<{ phone: string; co
 
 export async function confirmSmsCode(input: string): Promise<string> {
   await delay(between(400, 900))
-  const state = readJson<SmsState | null>(KEYS.sms, null)
+  const state = readJson<SmsState | null>(accountKey(KEYS.sms), null)
   if (!state) throw new ApiError('Kein Code angefordert.', 'ungueltig')
   if (Date.now() > state.expiresAt) {
-    remove(KEYS.sms)
+    remove(accountKey(KEYS.sms))
     throw new ApiError('Der Code ist abgelaufen. Bitte einen neuen anfordern.', 'ungueltig')
   }
   if (state.attempts >= MAX_CODE_VERSUCHE) {
-    remove(KEYS.sms)
+    remove(accountKey(KEYS.sms))
     throw new ApiError('Zu viele Fehlversuche. Bitte einen neuen Code anfordern.', 'ungueltig')
   }
   if (input.replace(/\s/g, '') !== state.code) {
-    writeJson(KEYS.sms, { ...state, attempts: state.attempts + 1 })
+    writeJson(accountKey(KEYS.sms), { ...state, attempts: state.attempts + 1 })
     const offen = MAX_CODE_VERSUCHE - state.attempts - 1
     throw new ApiError(
       offen > 0 ? `Code stimmt nicht. Noch ${offen} Versuch${offen === 1 ? '' : 'e'}.` : 'Code stimmt nicht.',
       'ungueltig',
     )
   }
-  remove(KEYS.sms)
+  remove(accountKey(KEYS.sms))
   return state.phone
 }
 
@@ -364,6 +387,26 @@ export async function regeneratePseudonym(): Promise<User> {
   return persistUser({ ...user, pseudonym: generatePseudonym() })
 }
 
+/**
+ * TESTHILFE – kein Teil des Produkts.
+ *
+ * Setzt den Verifizierungsstand direkt, damit sich Chat und Moderation
+ * prüfen lassen, ohne jedes Mal Nummer, Ausweisfoto und Selfie durchzugehen.
+ * Erreichbar nur über die Testübersicht unter /test. Beim Umzug auf den
+ * Server entfällt diese Funktion – dort entscheidet allein die Moderation.
+ */
+export async function overrideVerificationForTesting(verified: boolean): Promise<User> {
+  await delay(between(120, 240))
+  const user = readUser()
+  if (!user) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+  return persistUser({
+    ...user,
+    verified,
+    verificationStatus: verified ? 'verifiziert' : 'offen',
+    verifiedAt: verified ? new Date().toISOString() : null,
+  })
+}
+
 /** Nur für die Demo: setzt Identität und Verifizierung zurück. */
 export async function resetIdentity(): Promise<void> {
   await delay(between(150, 300))
@@ -384,10 +427,10 @@ export async function resetIdentity(): Promise<void> {
       readJson<AccessLogEntry[]>(KEYS.accessLog, []).filter((e) => !eigene.has(e.transcriptId)),
     )
   }
-  remove(KEYS.user)
-  remove(KEYS.codex)
-  remove(KEYS.selfBlocked)
-  remove(KEYS.sms)
+  remove(accountKey(KEYS.user))
+  remove(accountKey(KEYS.codex))
+  remove(accountKey(KEYS.selfBlocked))
+  remove(accountKey(KEYS.sms))
 }
 
 /* ----------------------------------------------------------------- Matching */
@@ -398,7 +441,7 @@ export async function findMatch(filter: MatchFilter, signal?: AbortSignal): Prom
   // Gesperrt durch die Moderation oder selbst blockiert – beides schliesst aus.
   const blocked = new Set([
     ...readJson<string[]>(KEYS.blocked, []),
-    ...readJson<string[]>(KEYS.selfBlocked, []),
+    ...readJson<string[]>(accountKey(KEYS.selfBlocked), []),
   ])
   const candidates = PARTNER_POOL.filter((partner) => {
     if (blocked.has(partner.id)) return false
@@ -597,9 +640,9 @@ export async function submitReport(input: ReportInput, reporter: User): Promise<
   }
 
   // Wer meldet, will dem Konto in aller Regel nicht gleich wieder begegnen.
-  const selfBlocked = new Set(readJson<string[]>(KEYS.selfBlocked, []))
+  const selfBlocked = new Set(readJson<string[]>(accountKey(KEYS.selfBlocked), []))
   selfBlocked.add(input.partner.id)
-  writeJson(KEYS.selfBlocked, [...selfBlocked])
+  writeJson(accountKey(KEYS.selfBlocked), [...selfBlocked])
 
   const reports = readJson<Report[]>(KEYS.reports, [])
   if (!writeJson(KEYS.reports, [report, ...reports].slice(0, MAX_REPORTS))) {
@@ -648,6 +691,6 @@ export async function clearReports(): Promise<void> {
 /** Nur für die Demo: setzt Kodex-Bestätigung und eigene Blockierungen zurück. */
 export async function resetLocalPreferences(): Promise<void> {
   await delay(between(120, 240))
-  remove(KEYS.codex)
-  remove(KEYS.selfBlocked)
+  remove(accountKey(KEYS.codex))
+  remove(accountKey(KEYS.selfBlocked))
 }

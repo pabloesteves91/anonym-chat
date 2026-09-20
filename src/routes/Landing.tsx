@@ -1,70 +1,77 @@
 import { Link } from 'react-router-dom'
-import { Note, Panel } from '../components/ui'
+import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
+import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
-const SCHRITTE = [
+const ABLAUF = [
   {
-    titel: 'Einmal ausweisen',
-    text: 'Mobilnummer per SMS, Foto des Ausweises, Selfie dazu – einmalig, bevor der erste Chat möglich ist.',
+    titel: 'Konto und Ausweis',
+    text: 'Einmal anmelden, Mobilnummer bestätigen, Ausweisfoto und Selfie hochladen. Ein Mensch prüft die Angaben.',
   },
   {
     titel: 'Anonym auftreten',
-    text: 'Nach aussen nur ein zufälliger Anzeigename. Kein Klarname, kein Foto, kein Profilbesuch.',
+    text: 'Im Chat siehst du nur einen zufälligen Anzeigenamen – und dass dein Gegenüber dieselbe Prüfung bestanden hat.',
   },
   {
+    titel: 'Reden, wechseln, melden',
+    text: 'Ein Klick verbindet dich mit jemandem. Passt es nicht, gehst du weiter. Wird jemand übergriffig, meldest du ihn.',
+  },
+]
+
+const SICHERHEIT = [
+  {
     titel: 'Sperren, die halten',
-    text: 'Weil im Hintergrund eine von Hand geprüfte Identität steht, trifft eine Sperre die Person – nicht nur ein Konto.',
+    text: 'Hinter jedem Konto steht eine geprüfte Person. Wer gesperrt wird, kommt nicht mit einem neuen Konto zurück.',
+  },
+  {
+    titel: 'Niemand liest mit',
+    text: 'Verläufe sind für beide Seiten nach dem Chat weg. Zur Missbrauchsprüfung bleiben sie 72 Stunden einsehbar, dann werden sie gelöscht – jeder Zugriff wird protokolliert.',
+  },
+  {
+    titel: 'Du bestimmst, mit wem',
+    text: 'Sprache und Interessen steuern, wer dir zugelost wird. Einzelne Konten kannst du dauerhaft ausschliessen, ohne jemanden zu melden.',
   },
 ]
 
 export function Landing() {
+  const konto = useAuth((s) => s.user)
   const user = useSession((s) => s.user)
-  const verified = Boolean(user?.verified)
+
+  const ziel = !konto ? '/anmelden' : user?.verified ? '/chat' : '/verifizierung'
+  const label = !konto ? 'Konto anlegen' : user?.verified ? 'Chat starten' : 'Verifizierung abschliessen'
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-14">
       <section>
         <p className="label-caps mb-3">Zufallschat mit Ausweispflicht</p>
         <h1 className="font-display text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
-          Anonym gegenüber einander. Eindeutig gegenüber dem System.
+          Reden mit Fremden, ohne mit jedem zu reden.
         </h1>
         <p className="prose-column mt-5 text-lg text-muted">
-          Wer hier mitschreibt, hat sich einmal ausgewiesen – bestätigte Mobilnummer, Ausweisfoto, Selfie, von einem
-          Menschen geprüft. Gesehen wird davon nichts ausser einem Siegel: Das Gegenüber erfährt nur einen zufälligen
-          Anzeigenamen, während das System die Person kennt. Genau deshalb wirkt eine Sperre dauerhaft und nicht nur
-          bis zum nächsten neuen Konto.
+          Jede Person hier hat sich ausgewiesen. Gesehen wird davon nichts ausser einem Siegel – das Gegenüber kennt
+          nur einen zufälligen Anzeigenamen. Genau deshalb bleibt es ruhig: Wer sich danebenbenimmt, ist weg und
+          kommt nicht wieder.
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
-          {verified ? (
-            <Link
-              to="/chat"
-              className="inline-flex items-center gap-2 rounded-sm border border-accent bg-accent px-4 py-2.5 font-medium text-accent-ink transition-opacity hover:opacity-90"
-            >
-              Chat starten
-            </Link>
-          ) : (
-            <Link
-              to="/verifizierung"
-              className="inline-flex items-center gap-2 rounded-sm border border-accent bg-accent px-4 py-2.5 font-medium text-accent-ink transition-opacity hover:opacity-90"
-            >
-              <ShieldMark />
-              Verifizierung starten
-            </Link>
-          )}
-          <Link to="/profil" className="rounded-sm px-3 py-2.5 text-muted transition-colors hover:text-ink">
-            {verified ? 'Profil ansehen' : 'Zuerst umschauen'}
+          <Link
+            to={ziel}
+            className="inline-flex items-center gap-2 rounded-sm border border-accent bg-accent px-5 py-3 font-medium text-accent-ink transition-opacity hover:opacity-90"
+          >
+            <ShieldMark />
+            {label}
           </Link>
+          <span className="text-sm text-muted">Kostenlos · Keine Profile · Kein Klarname</span>
         </div>
       </section>
 
       <section aria-labelledby="ablauf">
         <h2 id="ablauf" className="label-caps mb-4">
-          Ablauf
+          So läuft es
         </h2>
         <ol className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">
-          {SCHRITTE.map((schritt, index) => (
+          {ABLAUF.map((schritt, index) => (
             <li key={schritt.titel} className="flex flex-col gap-2 bg-surface p-5">
               <span className="font-mono text-xs text-accent">{String(index + 1).padStart(2, '0')}</span>
               <h3 className="font-display text-xl font-semibold">{schritt.titel}</h3>
@@ -74,44 +81,55 @@ export function Landing() {
         </ol>
       </section>
 
-      <Panel className="border-accent/40 p-5">
-        <h2 className="font-display text-xl font-semibold">So testest du das hier</h2>
-        <ol className="mt-3 flex flex-col gap-2 text-sm">
-          <li>
-            <span className="font-mono text-xs text-accent">01</span> Mobilnummer eingeben – der SMS-Code erscheint
-            direkt auf dem Bildschirm, es geht keine echte SMS raus.
-          </li>
-          <li>
-            <span className="font-mono text-xs text-accent">02</span> Beim Ausweisfoto und beim Selfie auf
-            „Demo-Bild einsetzen" tippen. Für den Test braucht es kein echtes Foto von dir.
-          </li>
-          <li>
-            <span className="font-mono text-xs text-accent">03</span> Nach dem Einreichen auf „Im Demo-Modus
-            freigeben" tippen – sonst wartest du auf eine Moderation, die deinen Antrag gar nicht sieht.
-          </li>
-          <li>
-            <span className="font-mono text-xs text-accent">04</span> Nochmal von vorn? Im Profil ganz unten
-            „Zurücksetzen".
-          </li>
-        </ol>
-      </Panel>
-
-      <Panel className="p-5">
-        <h2 className="font-display text-xl font-semibold">Was dieser Prototyp nicht tut</h2>
-        <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">
-          <li>— Keine echte SMS: der Code steht im Prototyp direkt auf dem Bildschirm.</li>
-          <li>— Keine echte Ausweisprüfung. Die Fotos bleiben auf diesem Gerät und werden nach dem Entscheid gelöscht.</li>
-          <li>— Kein Server, keine anderen Menschen: die Gegenüber sind Skript-Attrappen.</li>
-          <li>— Kein Video, kein Audio, keine Bezahlung.</li>
-        </ul>
-        <div className="mt-4">
-          <Note>
-            Alles bleibt in diesem Browser. Verifizierungsstatus, Profil, Meldungen und die 72 Stunden aufbewahrten
-            Chatverläufe liegen in localStorage, die Ausweisbilder nur im Sitzungsspeicher – zurücksetzen lässt sich
-            alles im Profil.
-          </Note>
+      <section aria-labelledby="sicherheit">
+        <h2 id="sicherheit" className="font-display text-2xl font-semibold">
+          Warum es hier anders zugeht
+        </h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          {SICHERHEIT.map((punkt) => (
+            <Panel key={punkt.titel} className="p-5">
+              <h3 className="font-display text-lg font-semibold">{punkt.titel}</h3>
+              <p className="mt-2 text-sm text-muted">{punkt.text}</p>
+            </Panel>
+          ))}
         </div>
-      </Panel>
+      </section>
+
+      <section className="rounded-sm border border-line bg-surface p-6">
+        <h2 className="font-display text-2xl font-semibold">Was wir über dich wissen</h2>
+        <div className="mt-4 grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="label-caps mb-2">Andere sehen</p>
+            <ul className="flex flex-col gap-1.5 text-sm">
+              <li>Deinen zufälligen Anzeigenamen</li>
+              <li>Dass du verifiziert bist</li>
+              <li>Sprache und gemeinsame Interessen</li>
+            </ul>
+          </div>
+          <div>
+            <p className="label-caps mb-2">Andere sehen nicht</p>
+            <ul className="flex flex-col gap-1.5 text-sm text-muted">
+              <li>Deinen Namen, dein Konto, deine Adresse</li>
+              <li>Deine Mobilnummer</li>
+              <li>Dein Ausweisfoto oder dein Selfie</li>
+              <li>Frühere Chats – auch du siehst sie nicht mehr</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-accent/40 bg-accent-soft p-6">
+        <div>
+          <h2 className="font-display text-2xl font-semibold">Bereit?</h2>
+          <p className="mt-1 text-sm text-muted">Die Verifizierung dauert wenige Minuten und ist einmalig.</p>
+        </div>
+        <Link
+          to={ziel}
+          className="inline-flex items-center gap-2 rounded-sm border border-accent bg-accent px-5 py-3 font-medium text-accent-ink transition-opacity hover:opacity-90"
+        >
+          {label}
+        </Link>
+      </section>
     </div>
   )
 }

@@ -12,7 +12,7 @@ import {
   type AuthProvider,
   type User,
 } from 'firebase/auth'
-import { MODERATOR_UID, getFirebaseAuth } from './firebase'
+import { EMULATOR_MODE, MODERATOR_UID, getFirebaseAuth } from './firebase'
 
 /**
  * Zugangskontrolle für die Moderationsansicht.
@@ -122,23 +122,27 @@ const BRAUCHT_WEITERLEITUNG = new Set([
  * Browser Richtung Anbieter und kommt danach zurück, wo
  * `completeRedirectSignIn()` sie wieder aufnimmt.
  */
-export async function signInWithProvider(anbieter: OAuthAnbieter): Promise<ModeratorAccess> {
+async function oauthSignIn(anbieter: OAuthAnbieter): Promise<User> {
   const provider = providerFor(anbieter)
   try {
     await setPersistence(getFirebaseAuth(), browserLocalPersistence)
     const { user } = await signInWithPopup(getFirebaseAuth(), provider)
-    return await pruefeOderAbmelden(user)
+    return user
   } catch (error) {
-    if (error instanceof AuthError) throw error
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
 
     if (BRAUCHT_WEITERLEITUNG.has(code)) {
       await signInWithRedirect(getFirebaseAuth(), provider)
       // Die Seite ist ab hier unterwegs; dieses Versprechen löst sich nie ein.
-      return new Promise<ModeratorAccess>(() => {})
+      return new Promise<User>(() => {})
     }
     throw new AuthError(FEHLERTEXT[code] ?? 'Anmeldung fehlgeschlagen.')
   }
+}
+
+export async function signInWithProvider(anbieter: OAuthAnbieter): Promise<ModeratorAccess> {
+  const user = await oauthSignIn(anbieter)
+  return await pruefeOderAbmelden(user)
 }
 
 /**
@@ -154,6 +158,82 @@ export async function completeRedirectSignIn(): Promise<ModeratorAccess | null> 
     if (error instanceof AuthError) throw error
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
     throw new AuthError(FEHLERTEXT[code] ?? 'Anmeldung fehlgeschlagen.')
+  }
+}
+
+/* ------------------------------------------------- Anmeldung für Nutzende */
+
+/**
+ * Das angemeldete Konto, wie die App es braucht.
+ *
+ * Die Adresse dient nur der Zuordnung im System und wird anderen Nutzenden
+ * nie gezeigt – im Chat sieht man ausschliesslich das Pseudonym.
+ */
+export interface AppUser {
+  uid: string
+  email: string | null
+  /** 'google.com' oder 'apple.com' – für die Anzeige in den Einstellungen. */
+  providerId: string | null
+}
+
+function toAppUser(user: User | null): AppUser | null {
+  if (!user) return null
+  return {
+    uid: user.uid,
+    email: user.email,
+    providerId: user.providerData[0]?.providerId ?? null,
+  }
+}
+
+/** Meldet das angemeldete Konto und jede spätere Änderung. */
+export function watchUser(onChange: (user: AppUser | null) => void): () => void {
+  try {
+    return onAuthStateChanged(
+      getFirebaseAuth(),
+      (user) => onChange(toAppUser(user)),
+      () => onChange(null),
+    )
+  } catch {
+    onChange(null)
+    return () => {}
+  }
+}
+
+/** Anmeldung mit Google oder Apple, mit Rückfall auf Weiterleitung. */
+export async function signInUser(anbieter: OAuthAnbieter): Promise<AppUser> {
+  const user = await oauthSignIn(anbieter)
+  return toAppUser(user) as AppUser
+}
+
+/** Nimmt eine Anmeldung per Weiterleitung wieder auf. */
+export async function completeUserRedirect(): Promise<AppUser | null> {
+  try {
+    const ergebnis = await getRedirectResult(getFirebaseAuth())
+    return ergebnis ? toAppUser(ergebnis.user) : null
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+    throw new AuthError(FEHLERTEXT[code] ?? 'Anmeldung fehlgeschlagen.')
+  }
+}
+
+/**
+ * Anmeldung mit einem festen Testkonto – nur gegen den Auth-Emulator.
+ *
+ * Die Anbieter-Anmeldung braucht Google-Infrastruktur, die in automatisierten
+ * Durchläufen nicht erreichbar ist. Damit der Rest der App trotzdem prüfbar
+ * bleibt, gibt es diesen Weg; im Produktionsbuild ist er abgeschaltet.
+ */
+export async function signInTestAccount(email = 'testperson@example.ch'): Promise<AppUser> {
+  if (!EMULATOR_MODE) throw new AuthError('Testkonten gibt es nur im Emulator.')
+  const { user } = await signInWithEmailAndPassword(getFirebaseAuth(), email, 'testtest')
+  return toAppUser(user) as AppUser
+}
+
+export async function signOutUser(): Promise<void> {
+  try {
+    await signOut(getFirebaseAuth())
+  } catch {
+    /* Abmelden darf nie fehlschlagen lassen */
   }
 }
 

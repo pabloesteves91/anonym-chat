@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { ThemeToggle } from './ThemeToggle'
@@ -9,6 +10,8 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function AppShell() {
+  const konto = useAuth((s) => s.user)
+  const signOut = useAuth((s) => s.signOut)
   const user = useSession((s) => s.user)
   const storageAvailable = useSession((s) => s.storageAvailable)
 
@@ -21,15 +24,16 @@ export function AppShell() {
             <span className="font-display text-lg leading-none font-semibold">Anonymchat</span>
           </NavLink>
 
-          <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
-            <NavLink to="/chat" className={navClass}>
-              Chat
-            </NavLink>
-            <NavLink to="/profil" className={navClass}>
-              Profil
-            </NavLink>
-
-          </nav>
+          {konto ? (
+            <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
+              <NavLink to="/chat" className={navClass}>
+                Chat
+              </NavLink>
+              <NavLink to="/profil" className={navClass}>
+                Profil
+              </NavLink>
+            </nav>
+          ) : null}
 
           <div className="ml-auto flex items-center gap-2">
             {user ? (
@@ -37,7 +41,20 @@ export function AppShell() {
                 {user.pseudonym}
               </span>
             ) : null}
-            <VerifiedBadge status={user?.verificationStatus ?? 'offen'} size="sm" />
+            {konto ? <VerifiedBadge status={user?.verificationStatus ?? 'offen'} size="sm" /> : null}
+            {konto ? (
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="rounded-sm px-2 py-1 text-sm text-muted transition-colors hover:text-ink"
+              >
+                Abmelden
+              </button>
+            ) : (
+              <NavLink to="/anmelden" className={navClass}>
+                Anmelden
+              </NavLink>
+            )}
             <ThemeToggle />
           </div>
         </div>
@@ -54,10 +71,12 @@ export function AppShell() {
       </main>
 
       <footer className="border-t border-line px-4 py-4">
-        <p className="mx-auto max-w-5xl text-xs text-muted">
-          Prototyp, Phase 1. Simulierte SMS, manuelle Freigabe in der eigenen Moderationsansicht, simulierte
-          Gesprächspartner, keine Serververbindung. Ausweisbilder bleiben im Sitzungsspeicher dieses Browsers.
-        </p>
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+          <p>Anonymchat · Testbetrieb: Gesprächspartner sind simuliert, es schreibt niemand zurück.</p>
+          <Link to="/test" className="ml-auto underline underline-offset-2 hover:text-ink">
+            Testübersicht
+          </Link>
+        </div>
       </footer>
     </div>
   )

@@ -11,6 +11,8 @@ import type { Profile, User } from '../services/types'
 
 interface SessionState {
   ready: boolean
+  /** Läuft gerade ein Laden für ein Konto? Dann noch nichts entscheiden. */
+  loading: boolean
   user: User | null
   storageAvailable: boolean
   codexAccepted: boolean
@@ -18,7 +20,8 @@ interface SessionState {
   error: string | null
   busy: boolean
 
-  load: () => Promise<void>
+  load: (uid: string) => Promise<void>
+  clear: () => void
   /** Nur Nutzer und Status neu lesen, ohne Ladezustand zurückzusetzen. */
   refreshUser: () => Promise<void>
   acceptCodex: () => Promise<void>
@@ -31,6 +34,7 @@ interface SessionState {
 
 export const useSession = create<SessionState>((set) => ({
   ready: false,
+  loading: false,
   user: null,
   storageAvailable: true,
   codexAccepted: false,
@@ -38,7 +42,11 @@ export const useSession = create<SessionState>((set) => ({
   error: null,
   busy: false,
 
-  async load() {
+  async load(uid) {
+    // Bis das Profil dieses Kontos geladen ist, darf keine Weiche gestellt
+    // werden – sonst landet eine verifizierte Person wieder im Antrag.
+    set({ loading: true })
+    await api.ensureIdentity(uid)
     const session = await api.getSession()
     set({
       ready: true,
@@ -46,7 +54,12 @@ export const useSession = create<SessionState>((set) => ({
       storageAvailable: session.storageAvailable,
       codexAccepted: session.codexAccepted,
       selfBlocked: session.selfBlocked,
+      loading: false,
     })
+  },
+
+  clear() {
+    set({ ready: true, loading: false, user: null, codexAccepted: false, selfBlocked: [], error: null })
   },
 
   async refreshUser() {

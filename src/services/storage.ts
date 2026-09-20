@@ -24,6 +24,25 @@ export const KEYS = {
   theme: `${PREFIX}theme`,
 } as const
 
+/**
+ * Das angemeldete Konto. Alles, was einer Person gehört – Identität,
+ * Profil, eigene Blockierungen –, wird unter einem Schlüssel mit dieser
+ * Kennung abgelegt. Zwei Konten im selben Browser bekommen dadurch zwei
+ * getrennte Identitäten, so wie es später auf dem Server auch ist.
+ *
+ * Moderationsdaten (Anträge, Meldungen, Verläufe) bleiben kontoübergreifend:
+ * die Moderation sieht alle.
+ */
+let accountId: string | null = null
+
+export function setAccount(uid: string | null): void {
+  accountId = uid
+}
+
+export function accountKey(base: string): string {
+  return accountId ? `${base}.${accountId}` : base
+}
+
 let available: boolean | null = null
 
 export function isStorageAvailable(): boolean {
