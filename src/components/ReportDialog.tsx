@@ -12,6 +12,7 @@ export function ReportDialog({
   excerptCount,
   busy,
   error,
+  defaultReason = 'belaestigung',
 }: {
   open: boolean
   onClose: () => void
@@ -20,9 +21,17 @@ export function ReportDialog({
   excerptCount: number
   busy: boolean
   error?: string | null
+  defaultReason?: ReportReason
 }) {
-  const [reason, setReason] = useState<ReportReason>('belaestigung')
+  const [reason, setReason] = useState<ReportReason>(defaultReason)
   const [note, setNote] = useState('')
+  const [zuletzt, setZuletzt] = useState(defaultReason)
+
+  // Kommt die Meldung aus einer markierten Nachricht, passt der Grund schon.
+  if (defaultReason !== zuletzt) {
+    setZuletzt(defaultReason)
+    setReason(defaultReason)
+  }
 
   return (
     <Dialog

@@ -35,7 +35,7 @@ Laufzeit keinen einzigen Netzwerk-Aufruf.
 | --- | --- |
 | Onboarding | Startseite mit Konzept, Antrag in fünf Schritten (Mobilnummer, SMS-Code, Ausweisfoto, Selfie, Absenden), Status in `localStorage` |
 | Manuelle Freigabe | Antrag geht in eine Warteschlange; ein Mensch sieht beide Bilder und entscheidet über Freigabe oder Ablehnung mit Begründung. Nichts wird automatisch verifiziert |
-| Profil | Zufälliges Pseudonym („Blauer Falke 4417"), Sprache, Altersgruppe, bis zu fünf Interessen – nur fürs Matching |
+| Profil | Anzeigename frei wählbar oder gewürfelt (geprüft auf Kontaktdaten und problematische Begriffe), Sprache, Altersgruppe, bis zu fünf Interessen |
 | Matching | Optionaler Filter, Warteschlange mit Suchlauf, Treffer nach 1–3 s, Fall „niemand passendes erreichbar" |
 | Chat | Textchat mit Tippindikator, Skript-Antworten, „Nächster Chat", „Chat beenden", „Melden" |
 | Chatverläufe | Jeder beendete Chat liegt 72 Stunden im Moderationsspeicher und läuft dann von selbst ab; Öffnen und Löschen werden protokolliert |
@@ -48,6 +48,19 @@ Zwei Arten von Ausschluss, bewusst getrennt:
   ist im Prototyp unter `/admin` sichtbar.
 - **Eigene Blockierung** – betrifft nur das eigene Matching, die Moderation
   erfährt nichts davon. Wer meldet, blockiert automatisch mit.
+
+### Warnen statt blockieren
+Bei einem schweren Treffer – sexuelle Ansprache, Hinweis auf Minderjährige,
+Drohung – erscheint vor dem Senden eine Warnung, die benennt, was auf dem
+Spiel steht, und daran erinnert, dass der Verlauf 72 Stunden einsehbar ist.
+Der Knopf heisst dann „Auf eigene Verantwortung senden": gesendet wird
+trotzdem, aber bewusst. Eingehende markierte Nachrichten bekommen einen
+direkten Melde-Knopf, der den passenden Grund schon auswählt.
+
+Beim **Anzeigenamen** ist es umgekehrt: Dort wird abgelehnt statt gewarnt.
+Der Name steht dauerhaft über jedem Gespräch, und wer ihn liest, hat ihn
+sich nicht ausgesucht – Kontaktdaten, sexuelle und beleidigende Begriffe
+kommen deshalb gar nicht erst durch (`validateDisplayName`).
 
 ### Chatverläufe und Aufbewahrung
 

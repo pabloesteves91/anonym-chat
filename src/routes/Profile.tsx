@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
+import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
 import { useSession } from '../store/useSession'
@@ -13,6 +14,8 @@ export function Profile() {
   const busy = useSession((s) => s.busy)
   const saveProfile = useSession((s) => s.saveProfile)
   const newPseudonym = useSession((s) => s.newPseudonym)
+  const renamePseudonym = useSession((s) => s.renamePseudonym)
+  const error = useSession((s) => s.error)
   const resetIdentity = useSession((s) => s.resetIdentity)
   const selfBlocked = useSession((s) => s.selfBlocked)
   const refreshBlocks = useSession((s) => s.refreshBlocks)
@@ -26,6 +29,8 @@ export function Profile() {
   // er existiert. Nach dem Speichern sind beide wieder deckungsgleich.
   const [draft, setDraft] = useState<ProfileData | null>(null)
   const [saved, setSaved] = useState(false)
+  const [nameEntwurf, setNameEntwurf] = useState<string | null>(null)
+  const [nameMeldung, setNameMeldung] = useState<string | null>(null)
 
   if (!user) return null
 
@@ -61,15 +66,63 @@ export function Profile() {
         </p>
       </div>
 
-      <Panel className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <Panel className="flex flex-col gap-4 p-5">
         <div>
           <p className="label-caps">Anzeigename</p>
-          <p className="mt-1 font-mono text-xl text-ink">{user.pseudonym}</p>
-          <p className="mt-1 text-sm text-muted">Das – und nur das – sieht dein Gegenüber im Chat.</p>
+          <p className="mt-1 text-sm text-muted">
+            Das – und nur das – sieht dein Gegenüber im Chat. Nimm nicht deinen echten Namen, und schreib keine
+            Kontaktdaten hinein: Der Name steht über jedem Gespräch, das du führst.
+          </p>
         </div>
-        <Button onClick={() => void newPseudonym()} disabled={busy}>
-          Neu würfeln
-        </Button>
+
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            const wert = nameEntwurf ?? user.pseudonym
+            const ok = await renamePseudonym(wert)
+            setNameMeldung(ok ? 'Name geändert.' : null)
+            if (ok) setNameEntwurf(null)
+          }}
+        >
+          <div className="flex-1">
+            <label htmlFor="anzeigename" className="sr-only">
+              Anzeigename
+            </label>
+            <input
+              id="anzeigename"
+              className={`${inputClass} font-mono`}
+              maxLength={NAME_MAX}
+              value={nameEntwurf ?? user.pseudonym}
+              onChange={(event) => {
+                setNameEntwurf(event.target.value)
+                setNameMeldung(null)
+              }}
+            />
+          </div>
+          <Button type="submit" variant="primary" disabled={busy || nameEntwurf === null || nameEntwurf === user.pseudonym}>
+            Namen speichern
+          </Button>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              setNameEntwurf(null)
+              setNameMeldung(null)
+              await newPseudonym()
+            }}
+          >
+            Würfeln
+          </Button>
+        </form>
+
+        {nameEntwurf !== null && !validateDisplayName(nameEntwurf).ok ? (
+          <Note tone="warn">{validateDisplayName(nameEntwurf).error}</Note>
+        ) : null}
+        {error ? <Note tone="warn">{error}</Note> : null}
+        <p aria-live="polite" className="text-sm text-muted">
+          {nameMeldung ?? ''}
+        </p>
       </Panel>
 
       <Panel className="p-5">

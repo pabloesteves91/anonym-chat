@@ -1,4 +1,4 @@
-import type { FilterVerdict, FlagLevel } from './types'
+import type { FilterCategory, FilterVerdict, FlagLevel } from './types'
 
 /**
  * Einfacher lokaler Wortfilter.
@@ -12,6 +12,7 @@ import type { FilterVerdict, FlagLevel } from './types'
 
 interface Rule {
   level: FlagLevel
+  category: FilterCategory
   reason: string
   terms?: string[]
   patterns?: RegExp[]
@@ -20,6 +21,7 @@ interface Rule {
 const RULES: Rule[] = [
   {
     level: 'severe',
+    category: 'minderjaehrig',
     reason: 'Hinweis auf minderjährige Person',
     terms: ['minderjährig', 'schülerin', 'schüler', 'noch nicht volljährig'],
     // "bin 15", "ich bin 14 jahre", "16 j."
@@ -27,6 +29,7 @@ const RULES: Rule[] = [
   },
   {
     level: 'severe',
+    category: 'sexuell',
     reason: 'Sexuelle Ansprache oder Aufforderung zu Bildern',
     terms: [
       'nacktbild',
@@ -45,16 +48,19 @@ const RULES: Rule[] = [
   },
   {
     level: 'severe',
+    category: 'drohung',
     reason: 'Drohung oder Gewaltandrohung',
     terms: ['bring dich um', 'ich finde dich', 'töte dich', 'schlag dich'],
   },
   {
     level: 'mild',
+    category: 'beleidigung',
     reason: 'Beleidigung',
     terms: ['idiot', 'idiotin', 'dumme kuh', 'hurensohn', 'wichser', 'arschloch', 'spast', 'depp'],
   },
   {
     level: 'mild',
+    category: 'spam',
     reason: 'Spam, Werbung oder Weiterleitung',
     terms: ['telegram', 'whatsapp', 'onlyfans', 'snapchat', 'krypto', 'bitcoin', 'investiere'],
     patterns: [
@@ -106,7 +112,7 @@ export function scanText(text: string): FilterVerdict | null {
 
     if (terms.length === 0) continue
 
-    const verdict: FilterVerdict = { level: rule.level, reason: rule.reason, terms }
+    const verdict: FilterVerdict = { level: rule.level, category: rule.category, reason: rule.reason, terms }
     // Schwere Treffer gewinnen immer, milde nur, wenn noch nichts gefunden wurde.
     if (rule.level === 'severe') return verdict
     found ??= verdict
@@ -118,4 +124,38 @@ export function scanText(text: string): FilterVerdict | null {
 /** Anzahl markierter Nachrichten – für die Meldung mitgeschickt. */
 export function countFlags(texts: { flag?: FilterVerdict }[]): number {
   return texts.filter((entry) => entry.flag).length
+}
+
+/* ------------------------------------------------------------ Anzeigenamen */
+
+export const NAME_MIN = 3
+export const NAME_MAX = 24
+
+/**
+ * Prüft einen selbst gewählten Anzeigenamen.
+ *
+ * Anders als bei Nachrichten wird hier abgelehnt statt gewarnt: Der Name
+ * steht dauerhaft über jedem Chat, und wer ihn liest, hat ihn sich nicht
+ * ausgesucht. Kontaktdaten sind deshalb ebenso ausgeschlossen wie sexuelle
+ * oder beleidigende Begriffe.
+ */
+export function validateDisplayName(name: string): { ok: boolean; error?: string } {
+  const wert = name.trim()
+
+  if (wert.length < NAME_MIN) return { ok: false, error: `Mindestens ${NAME_MIN} Zeichen.` }
+  if (wert.length > NAME_MAX) return { ok: false, error: `Höchstens ${NAME_MAX} Zeichen.` }
+  if (!/^[\p{L}\p{N} .'\-_]+$/u.test(wert)) {
+    return { ok: false, error: 'Erlaubt sind Buchstaben, Zahlen, Leerzeichen und . - _' }
+  }
+  if (/(.)\1{3,}/u.test(wert)) return { ok: false, error: 'Bitte keine langen Zeichenwiederholungen.' }
+
+  const verdict = scanText(wert)
+  if (verdict) {
+    if (verdict.category === 'spam') {
+      return { ok: false, error: 'Keine Kontaktdaten oder Verweise auf andere Plattformen im Namen.' }
+    }
+    return { ok: false, error: `Dieser Name geht nicht: ${verdict.reason.toLowerCase()}.` }
+  }
+
+  return { ok: true }
 }

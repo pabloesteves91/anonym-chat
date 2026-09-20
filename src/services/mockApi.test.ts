@@ -25,7 +25,7 @@ const nachricht = (author: Message['author'], text: string, flagged = false): Me
   author,
   text,
   ts: Date.now(),
-  flag: flagged ? { level: 'mild', reason: 'Beleidigung', terms: ['x'] } : undefined,
+  flag: flagged ? { level: 'mild', category: 'beleidigung', reason: 'Beleidigung', terms: ['x'] } : undefined,
 })
 
 beforeEach(() => {

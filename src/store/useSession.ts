@@ -29,6 +29,7 @@ interface SessionState {
   unblockAll: () => Promise<void>
   saveProfile: (profile: Profile) => Promise<void>
   newPseudonym: () => Promise<void>
+  renamePseudonym: (name: string) => Promise<boolean>
   resetIdentity: () => Promise<void>
 }
 
@@ -90,6 +91,18 @@ export const useSession = create<SessionState>((set) => ({
       set({ user, busy: false, error: null })
     } catch {
       set({ busy: false, error: 'Profil konnte nicht gespeichert werden.' })
+    }
+  },
+
+  async renamePseudonym(name) {
+    set({ busy: true, error: null })
+    try {
+      const user = await api.setPseudonym(name)
+      set({ user, busy: false })
+      return true
+    } catch (error) {
+      set({ busy: false, error: error instanceof api.ApiError ? error.message : 'Name konnte nicht gespeichert werden.' })
+      return false
     }
   },
 

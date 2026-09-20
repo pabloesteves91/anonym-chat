@@ -14,7 +14,7 @@ function FlagHinweis({ text, level }: { text: string; level: 'mild' | 'severe' }
   )
 }
 
-function Bubble({ message }: { message: Message }) {
+function Bubble({ message, onReport }: { message: Message; onReport?: (message: Message) => void }) {
   if (message.author === 'system') {
     return (
       <li className="my-2 text-center">
@@ -34,6 +34,15 @@ function Bubble({ message }: { message: Message }) {
         <p className="text-[0.9375rem] whitespace-pre-wrap">{message.text}</p>
         {message.flag ? <FlagHinweis text={message.flag.reason} level={message.flag.level} /> : null}
       </div>
+      {!mine && message.flag?.level === 'severe' && onReport ? (
+        <button
+          type="button"
+          onClick={() => onReport(message)}
+          className="mt-1 rounded-[2px] border border-signal/50 px-2 py-0.5 text-xs text-signal transition-colors hover:bg-signal-soft"
+        >
+          Diese Nachricht melden
+        </button>
+      ) : null}
       <span className="mt-1 font-mono text-[0.6875rem] text-muted">
         {mine ? 'Du' : 'Gegenüber'} · {zeit(message.ts)}
       </span>
@@ -62,10 +71,12 @@ export function MessageList({
   messages,
   typing,
   partnerPseudonym,
+  onReport,
 }: {
   messages: Message[]
   typing: boolean
   partnerPseudonym: string
+  onReport?: (message: Message) => void
 }) {
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -77,7 +88,7 @@ export function MessageList({
     <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
       <ol className="mt-auto flex flex-col gap-3" role="log" aria-live="polite" aria-label="Chatverlauf">
         {messages.map((message) => (
-          <Bubble key={message.id} message={message} />
+          <Bubble key={message.id} message={message} onReport={onReport} />
         ))}
         {typing ? <TypingIndicator pseudonym={partnerPseudonym} /> : null}
       </ol>

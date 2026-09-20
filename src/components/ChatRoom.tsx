@@ -5,7 +5,16 @@ import { MessageList } from './MessageList'
 import { Composer } from './Composer'
 import { ReportDialog } from './ReportDialog'
 import { languageLabelShort } from '../services/partnerScript'
-import type { Partner, ReportReason, User } from '../services/types'
+import type { FilterCategory, Message, Partner, ReportReason, User } from '../services/types'
+
+/** Aus einem Filtertreffer den passenden Meldegrund ableiten. */
+const GRUND_ZU: Record<FilterCategory, ReportReason> = {
+  sexuell: 'sexuell',
+  minderjaehrig: 'minderjaehrig',
+  drohung: 'belaestigung',
+  beleidigung: 'belaestigung',
+  spam: 'spam',
+}
 import { useChat } from '../store/useChat'
 
 export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
@@ -21,6 +30,13 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [grund, setGrund] = useState<ReportReason>('belaestigung')
+
+  const meldeNachricht = (message: Message) => {
+    if (message.flag) setGrund(GRUND_ZU[message.flag.category])
+    clearError()
+    setDialogOpen(true)
+  }
 
   const submitReport = async (reason: ReportReason, note: string) => {
     setBusy(true)
@@ -69,7 +85,12 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
           </div>
         </header>
 
-        <MessageList messages={messages} typing={typing} partnerPseudonym={partner.pseudonym} />
+        <MessageList
+          messages={messages}
+          typing={typing}
+          partnerPseudonym={partner.pseudonym}
+          onReport={meldeNachricht}
+        />
         <Composer onSend={sendMessage} />
       </Panel>
 
@@ -81,6 +102,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
         }}
         onSubmit={(reason, note) => void submitReport(reason, note)}
         partnerPseudonym={partner.pseudonym}
+        defaultReason={grund}
         excerptCount={Math.min(8, messages.filter((m) => m.author !== 'system').length)}
         busy={busy}
         error={error}

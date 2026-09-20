@@ -72,8 +72,12 @@ export type MessageAuthor = 'me' | 'partner' | 'system'
 /** Ergebnis des lokalen Wortfilters. */
 export type FlagLevel = 'mild' | 'severe'
 
+/** Worum es beim Treffer geht – steuert Warnung und Meldegrund. */
+export type FilterCategory = 'minderjaehrig' | 'sexuell' | 'drohung' | 'beleidigung' | 'spam'
+
 export interface FilterVerdict {
   level: FlagLevel
+  category: FilterCategory
   /** Kurze, für Nutzer lesbare Begründung. */
   reason: string
   terms: string[]

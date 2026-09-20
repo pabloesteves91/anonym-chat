@@ -11,7 +11,7 @@ import {
 } from './storage'
 import { generateId, generatePseudonym } from './pseudonym'
 import { PARTNER_POOL, openerFor, replyFor, typingDurationFor } from './partnerScript'
-import { scanText } from './wordFilter'
+import { scanText, validateDisplayName } from './wordFilter'
 import type {
   FilterVerdict,
   MatchFilter,
@@ -378,6 +378,18 @@ export async function updateProfile(profile: Profile): Promise<User> {
   const user = readUser()
   if (!user) throw new ApiError('Keine verifizierte Identität vorhanden.', 'nicht-verifiziert')
   return persistUser({ ...user, profile })
+}
+
+/** Setzt einen selbst gewählten Anzeigenamen. */
+export async function setPseudonym(name: string): Promise<User> {
+  await delay(between(200, 400))
+  const user = readUser()
+  if (!user) throw new ApiError('Keine verifizierte Identität vorhanden.', 'nicht-verifiziert')
+
+  const pruefung = validateDisplayName(name)
+  if (!pruefung.ok) throw new ApiError(pruefung.error ?? 'Dieser Name geht nicht.', 'ungueltig')
+
+  return persistUser({ ...user, pseudonym: name.trim() })
 }
 
 export async function regeneratePseudonym(): Promise<User> {
