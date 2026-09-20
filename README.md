@@ -110,6 +110,7 @@ src/
                 ReportDialog, CodexDialog, Dialog, VerifiedBadge,
                 ThemeToggle, ui
   services/     mockApi.ts   ← einzige "Backend"-Grenze
+                auth.ts      ← einzige Stelle für den Moderationszugang
                 *.test.ts    Vitest-Tests für Filter, Storage und mockApi
                 storage.ts   defensive localStorage-Hülle (try/catch)
                 types.ts · wordFilter.ts · pseudonym.ts · partnerScript.ts
@@ -212,6 +213,22 @@ herausverlangt werden. Ob als Kommunikationsdienst zusätzlich Pflichten aus
 dem BÜPF-Umfeld greifen, gehört anwaltlich abgeklärt. Ende-zu-Ende-
 Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
 bewusste Entscheidung, keine Lücke.
+
+### Zugang zur Moderation
+`/admin` ist im Prototyp offen erreichbar, damit Testpersonen den ganzen
+Ablauf durchspielen können; die Ansicht weist selbst darauf hin. Entschieden
+wird das an einer einzigen Stelle: `getModeratorAccess()` in
+`src/services/auth.ts` gibt heute `{ erlaubt: true, mode: 'offen' }` zurück.
+Sobald dort eine echte Anmeldung geprüft wird (Firebase Auth oder was sonst
+das Backend mitbringt), greift der bestehende Guard `RequireModerator` und
+zeigt statt der Ansicht einen Hinweis. Route, Guard und UI bleiben
+unverändert.
+
+Zu beachten: Eine Prüfung im Browser ist eine Anzeige, keine Sicherung. In
+Phase 1 ist das unkritisch, weil alle Daten ohnehin lokal im Browser der
+betrachtenden Person liegen. Sobald es einen Server gibt, muss die
+Rollenprüfung dort passieren – Moderationsdaten dürfen nur auf
+authentifizierte Aufrufe hin ausgeliefert werden.
 
 ### Moderation
 Serverseitige Klassifikation statt Wortliste, Eskalationsstufen,

@@ -3,6 +3,7 @@ import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { REPORT_REASONS } from '../services/types'
 import type { Report, ReportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
+import { useAdminAccess } from '../store/useAdminAccess'
 import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 
@@ -99,6 +100,7 @@ function ReportCard({ report }: { report: Report }) {
 }
 
 export function Admin() {
+  const mode = useAdminAccess((s) => s.mode)
   const ready = useModeration((s) => s.ready)
   const reports = useModeration((s) => s.reports)
   const blocked = useModeration((s) => s.blocked)
@@ -121,10 +123,18 @@ export function Admin() {
       <div className="prose-column">
         <PageTitle kicker="Mock-Ansicht">Moderation</PageTitle>
         <p className="text-muted">
-          Verifizierungsanträge, gespeicherte Chatverläufe und Meldungen aus diesem Browser. In einer echten Version läge diese Seite hinter
-          Anmeldung und Rollenprüfung und würde nie im Auslieferungs-Bundle der App stecken.
+          Verifizierungsanträge, gespeicherte Chatverläufe und Meldungen aus diesem Browser.
         </p>
       </div>
+
+      {mode === 'offen' ? (
+        <Note tone="warn">
+          <strong>Offen erreichbar.</strong> Diese Ansicht hat noch keine Anmeldung – wer die Adresse kennt, kommt
+          hinein. Für den Prototyp ist das Absicht, damit Testpersonen den ganzen Ablauf durchspielen können. Der
+          Zugang wird an einer einzigen Stelle entschieden (<span className="font-mono text-xs">services/auth.ts</span>);
+          sobald dort ein Konto geprüft wird, ist die Seite zu.
+        </Note>
+      ) : null}
 
       <VerificationQueue />
 

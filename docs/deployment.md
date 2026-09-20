@@ -92,8 +92,9 @@ Vorher nicht: unter `…github.io/anonym-chat/` würden die Pfade brechen.
 - Das Repository ist öffentlich, der Quellcode also ohnehin einsehbar.
 - Mit Pages wird auch die laufende App öffentlich – **inklusive der Route
   `/admin`**. Das ist unkritisch, weil dort nur Daten aus dem Browser der
-  betrachtenden Person stehen, wirkt aber erklärungsbedürftig. Vor einem
-  Launch gehört diese Route hinter eine echte Anmeldung oder aus dem Bundle.
+  betrachtenden Person stehen, und die Ansicht sagt es selbst. Zugesperrt
+  wird sie später an einer einzigen Stelle: `getModeratorAccess()` in
+  `src/services/auth.ts`.
 - `public/robots.txt` hält Suchmaschinen fern, solange es ein Prototyp ist.
 - Es gibt weiterhin keinen Server: keine Anmeldung, keine Daten, keine
   Kosten ausser der Domain.
