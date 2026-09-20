@@ -87,6 +87,23 @@ der Wechsel von `beispiel.ch/#/chat` auf `beispiel.ch/chat`:
 
 Vorher nicht: unter `…github.io/anonym-chat/` würden die Pfade brechen.
 
+## Alternative: Firebase Hosting
+
+Schneller als GitHub Pages, wenn die Anmeldung getestet werden soll: Die
+Adresse `anonym-chat-223af.web.app` steht bei Firebase **automatisch** auf
+der Liste der autorisierten Domains – Google- und Apple-Anmeldung
+funktionieren dort ohne weitere Einstellung.
+
+```bash
+npm run build          # normaler Build: saubere Pfade, kein Hash-Routing nötig
+npx firebase-tools login
+npx firebase-tools deploy --only hosting
+```
+
+Die Rewrite-Regel in `firebase.json` leitet alle Pfade auf `index.html`, die
+App kommt damit ohne `#` aus. Für GitHub Pages bleibt `npm run build:static`
+mit Hash-Routing richtig, weil dort keine Rewrites möglich sind.
+
 ## Firebase
 
 Die Anmeldung für die Moderation läuft über Firebase Auth. Damit sie auf der
