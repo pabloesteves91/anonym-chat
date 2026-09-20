@@ -215,20 +215,31 @@ Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
 bewusste Entscheidung, keine Lücke.
 
 ### Zugang zur Moderation
-`/admin` ist im Prototyp offen erreichbar, damit Testpersonen den ganzen
-Ablauf durchspielen können; die Ansicht weist selbst darauf hin. Entschieden
-wird das an einer einzigen Stelle: `getModeratorAccess()` in
-`src/services/auth.ts` gibt heute `{ erlaubt: true, mode: 'offen' }` zurück.
-Sobald dort eine echte Anmeldung geprüft wird (Firebase Auth oder was sonst
-das Backend mitbringt), greift der bestehende Guard `RequireModerator` und
-zeigt statt der Ansicht einen Hinweis. Route, Guard und UI bleiben
-unverändert.
+`/admin` verlangt eine Anmeldung über Firebase Auth. Berechtigt ist genau
+eine Kennung (`MODERATOR_UID` in `src/services/firebase.ts`); jedes andere
+Konto wird nach der Anmeldung sofort wieder abgemeldet. Anmeldearten:
+E-Mail/Passwort und Google, Apple vorbereitet – welche davon angeboten
+werden, steht in `ANMELDEARTEN` und muss mit der Firebase-Konsole
+übereinstimmen.
 
-Zu beachten: Eine Prüfung im Browser ist eine Anzeige, keine Sicherung. In
-Phase 1 ist das unkritisch, weil alle Daten ohnehin lokal im Browser der
-betrachtenden Person liegen. Sobald es einen Server gibt, muss die
-Rollenprüfung dort passieren – Moderationsdaten dürfen nur auf
-authentifizierte Aufrufe hin ausgeliefert werden.
+Der Moderationsbereich wird als eigener Chunk nachgeladen (`AdminArea`), das
+Firebase-SDK landet also nicht im Bundle für normale Nutzer.
+
+Zu beachten: Eine Prüfung im Browser ist eine Anzeige, keine Sicherung.
+Solange alle Daten lokal liegen, ist das unkritisch. Sobald sie in Firestore
+stehen, entscheiden die Security Rules (`firestore.rules`, `storage.rules`) –
+und nur die. Beide Dateien liegen im Repo und sind auf dieselbe UID gemünzt.
+
+Die Firebase-Konfiguration steht offen im Quellcode. Das ist bei Web-Apps
+richtig so: Sie ist ein öffentlicher Bezeichner, kein Geheimnis. Der
+Service-Account-Schlüssel dagegen gehört nie ins Repo.
+
+### Freigabe im Demo-Modus
+Solange die Anträge nur im Browser der antragstellenden Person liegen, sieht
+die Moderation sie gar nicht. Damit der Prototyp trotzdem durchspielbar
+bleibt, kann man sich auf der Warteseite selbst freigeben – deutlich als
+Demo-Weg gekennzeichnet. Er entfällt, sobald die Anträge in Firestore
+stehen.
 
 ### Moderation
 Serverseitige Klassifikation statt Wortliste, Eskalationsstufen,

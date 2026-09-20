@@ -34,6 +34,8 @@ interface VerificationState {
   useDemoImage: (kind: 'ausweis' | 'selfie') => void
   submit: () => Promise<boolean>
   loadRequest: () => Promise<void>
+  /** Nur für die Demo: eigenen Antrag ohne Moderation freigeben. */
+  selfApprove: () => Promise<void>
   startOver: () => Promise<void>
   reset: () => void
 }
@@ -127,6 +129,26 @@ export const useVerification = create<VerificationState>((set, get) => ({
 
   async loadRequest() {
     set({ request: await api.getMyVerification() })
+  },
+
+  /**
+   * Freigabe ohne Moderation.
+   *
+   * Existiert nur, solange alle Daten lokal im Browser der testenden Person
+   * liegen – die Moderation sieht diese Anträge gar nicht. Sobald die Anträge
+   * in Firestore stehen, entfällt dieser Weg ersatzlos.
+   */
+  async selfApprove() {
+    const request = get().request
+    if (!request) return
+    set({ busy: true })
+    try {
+      await api.decideVerification(request.id, 'freigegeben')
+      await useSession.getState().refreshUser()
+      set({ busy: false, request: await api.getMyVerification() })
+    } catch {
+      set({ busy: false, error: 'Freigabe im Demo-Modus fehlgeschlagen.' })
+    }
   },
 
   async startOver() {

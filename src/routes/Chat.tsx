@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { Lobby } from '../components/Lobby'
 import { Queue } from '../components/Queue'
@@ -39,11 +38,7 @@ function Ended() {
           </p>
           <Note>
             Vorgangsnummer <span className="font-mono">{report.id}</span>. Mitgeschickt wurden {report.excerpt.length}{' '}
-            Nachrichten. Im Prototyp landet die Meldung in der{' '}
-            <Link to="/admin" className="text-accent underline underline-offset-2">
-              Moderationsansicht
-            </Link>
-            .
+            Nachrichten. Die Moderation sieht sie sich an; im Prototyp bleibt die Meldung in diesem Browser.
           </Note>
         </div>
       ) : blockiert ? (

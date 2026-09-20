@@ -87,6 +87,24 @@ der Wechsel von `beispiel.ch/#/chat` auf `beispiel.ch/chat`:
 
 Vorher nicht: unter `…github.io/anonym-chat/` würden die Pfade brechen.
 
+## Firebase
+
+Die Anmeldung für die Moderation läuft über Firebase Auth. Damit sie auf der
+veröffentlichten Seite funktioniert, muss die Domain in der Firebase-Konsole
+freigegeben sein:
+
+**Authentication → Settings → Authorized domains**, dort eintragen:
+`pabloesteves91.github.io` und später die eigene Domain.
+
+Ohne diesen Eintrag meldet die Anmeldung `auth/unauthorized-domain`.
+
+Die Security Rules liegen als `firestore.rules` und `storage.rules` im Repo
+und werden mit der Firebase CLI ausgerollt:
+
+```bash
+npx firebase-tools deploy --only firestore:rules,storage
+```
+
 ## Was öffentlich wird
 
 - Das Repository ist öffentlich, der Quellcode also ohnehin einsehbar.

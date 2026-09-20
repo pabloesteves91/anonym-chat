@@ -100,7 +100,8 @@ function ReportCard({ report }: { report: Report }) {
 }
 
 export function Admin() {
-  const mode = useAdminAccess((s) => s.mode)
+  const email = useAdminAccess((s) => s.email)
+  const signOut = useAdminAccess((s) => s.signOut)
   const ready = useModeration((s) => s.ready)
   const reports = useModeration((s) => s.reports)
   const blocked = useModeration((s) => s.blocked)
@@ -127,14 +128,13 @@ export function Admin() {
         </p>
       </div>
 
-      {mode === 'offen' ? (
-        <Note tone="warn">
-          <strong>Offen erreichbar.</strong> Diese Ansicht hat noch keine Anmeldung – wer die Adresse kennt, kommt
-          hinein. Für den Prototyp ist das Absicht, damit Testpersonen den ganzen Ablauf durchspielen können. Der
-          Zugang wird an einer einzigen Stelle entschieden (<span className="font-mono text-xs">services/auth.ts</span>);
-          sobald dort ein Konto geprüft wird, ist die Seite zu.
-        </Note>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-line bg-surface px-4 py-3">
+        <span className="label-caps">Angemeldet</span>
+        <span className="font-mono text-sm">{email ?? 'unbekannt'}</span>
+        <Button size="sm" className="ml-auto" onClick={() => void signOut()}>
+          Abmelden
+        </Button>
+      </div>
 
       <VerificationQueue />
 

@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { getModeratorAccess } from './auth'
+import { evaluateAccess } from './auth'
+import { MODERATOR_UID } from './firebase'
 
 describe('Moderationszugang', () => {
-  it('ist im Prototyp offen und sagt das auch', async () => {
-    // Wenn dieser Test rot wird, weil eine Anmeldung eingebaut wurde:
-    // erwarteten Wert anpassen – und den Hinweis in der Ansicht entfernen.
-    await expect(getModeratorAccess()).resolves.toEqual({ erlaubt: true, mode: 'offen' })
+  it('lässt nur die hinterlegte Kennung durch', () => {
+    expect(evaluateAccess({ uid: MODERATOR_UID, email: 'mod@example.ch' })).toEqual({
+      erlaubt: true,
+      mode: 'konto',
+      email: 'mod@example.ch',
+    })
+  })
+
+  it('sperrt fremde Konten und nicht angemeldete Besucher', () => {
+    const gesperrt = { erlaubt: false, mode: 'gesperrt', email: null }
+    expect(evaluateAccess({ uid: 'irgendwer', email: 'wer@example.ch' })).toEqual(gesperrt)
+    expect(evaluateAccess(null)).toEqual(gesperrt)
   })
 })

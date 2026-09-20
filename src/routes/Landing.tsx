@@ -86,8 +86,8 @@ export function Landing() {
             „Demo-Bild einsetzen" tippen. Für den Test braucht es kein echtes Foto von dir.
           </li>
           <li>
-            <span className="font-mono text-xs text-accent">03</span> Du bist gleichzeitig die Moderation: den eigenen
-            Antrag unter <span className="text-ink">Moderation</span> freigeben, dann ist der Chat offen.
+            <span className="font-mono text-xs text-accent">03</span> Nach dem Einreichen auf „Im Demo-Modus
+            freigeben" tippen – sonst wartest du auf eine Moderation, die deinen Antrag gar nicht sieht.
           </li>
           <li>
             <span className="font-mono text-xs text-accent">04</span> Nochmal von vorn? Im Profil ganz unten
@@ -101,7 +101,7 @@ export function Landing() {
         <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">
           <li>— Keine echte SMS: der Code steht im Prototyp direkt auf dem Bildschirm.</li>
           <li>— Keine echte Ausweisprüfung. Die Fotos bleiben auf diesem Gerät und werden nach dem Entscheid gelöscht.</li>
-          <li>— Kein Server, keine anderen Menschen: die Gegenüber sind Skript-Attrappen, und du bist gleichzeitig die Moderation.</li>
+          <li>— Kein Server, keine anderen Menschen: die Gegenüber sind Skript-Attrappen.</li>
           <li>— Kein Video, kein Audio, keine Bezahlung.</li>
         </ul>
         <div className="mt-4">

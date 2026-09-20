@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// Security Rules für den verifizierten Anonymchat.
+//
+// Stand: vorbereitet für Phase 2. Heute liegen noch keine Daten in Firestore –
+// die App arbeitet lokal im Browser. Diese Datei beschreibt, wer worauf Zugriff
+// bekommt, sobald die Daten umziehen. Was hier nicht ausdrücklich erlaubt ist,
+// ist verboten.
+//
+// Deployen mit: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Die eine Kennung mit Moderationsrechten. Sobald es mehr als eine gibt:
+    // auf Custom Claims (request.auth.token.moderator == true) umstellen.
+    function isModerator() {
+      return request.auth != null
+        && request.auth.uid == 'RwwpyDrsJldCIx38BcBHVsgTXc32';
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Verifizierungsanträge: einreichen darf man für sich selbst, lesen den
+    // eigenen Stand – entscheiden nur die Moderation.
+    match /verifications/{requestId} {
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.status == 'wartet';
+      allow read: if isModerator() || isOwner(resource.data.userId);
+      allow update, delete: if isModerator();
+    }
+
+    // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.
+    match /reports/{reportId} {
+      allow create: if isOwner(request.resource.data.reporterId);
+      allow read, update, delete: if isModerator();
+    }
+
+    // Chatverläufe: nur die Moderation liest, und nur solange die Frist läuft.
+    // Die TTL-Policy löscht abgelaufene Dokumente nachträglich – bis dahin
+    // sperrt diese Bedingung den Zugriff.
+    match /chats/{chatId} {
+      allow create: if isSignedIn()
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time;
+      allow read: if isModerator() && resource.data.expiresAt > request.time;
+      allow delete: if isModerator();
+      allow update: if false; // Verläufe werden nie nachträglich geändert
+    }
+
+    // Sperrliste: gepflegt von der Moderation, gelesen vom Matching.
+    match /blocked/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isModerator();
+    }
+
+    // Zugriffsprotokoll: schreibt der Server, liest die Moderation.
+    // Bewusst nicht vom Client beschreibbar – sonst wäre es kein Protokoll.
+    match /accessLog/{entryId} {
+      allow read: if isModerator();
+      allow write: if false;
+    }
+  }
+}

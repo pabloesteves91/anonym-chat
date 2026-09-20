@@ -28,9 +28,7 @@ export function AppShell() {
             <NavLink to="/profil" className={navClass}>
               Profil
             </NavLink>
-            <NavLink to="/admin" className={navClass}>
-              Moderation
-            </NavLink>
+
           </nav>
 
           <div className="ml-auto flex items-center gap-2">

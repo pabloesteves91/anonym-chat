@@ -328,6 +328,7 @@ export function Verify() {
   const request = useVerification((s) => s.request)
   const loadRequest = useVerification((s) => s.loadRequest)
   const startOver = useVerification((s) => s.startOver)
+  const selfApprove = useVerification((s) => s.selfApprove)
   const busy = useVerification((s) => s.busy)
 
   const status = user?.verificationStatus ?? 'offen'
@@ -406,15 +407,15 @@ export function Verify() {
           </dl>
           <div className="mt-5">
             <Note>
-              Im Prototyp bist du gleichzeitig die Moderation: unter{' '}
-              <Link to="/admin" className="text-accent underline underline-offset-2">
-                Meldungen
-              </Link>{' '}
-              liegt dein Antrag zur Entscheidung. In der echten Version wären das zwei verschiedene Personen, und die
-              Bilder lägen nie im Browser des Antragstellers.
+              <strong>Im Prototyp wartest du vergeblich:</strong> Dein Antrag liegt nur in diesem Browser, die
+              Moderation sieht ihn nicht. Zum Weitertesten gibst du dich unten selbst frei – in der echten Version
+              entscheidet das ein Mensch, und die Bilder lägen nie auf dem Gerät des Antragstellers.
             </Note>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
+            <Button variant="primary" disabled={busy} onClick={() => void selfApprove()}>
+              Im Demo-Modus freigeben
+            </Button>
             <Button onClick={() => void refreshUser()}>Status aktualisieren</Button>
             <Button variant="danger" disabled={busy} onClick={() => void startOver()}>
               Antrag zurückziehen

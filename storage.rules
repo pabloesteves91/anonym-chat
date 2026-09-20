@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// Security Rules für Ausweisfotos und Selfies.
+//
+// Grundsatz: Diese Bilder sind das Heikelste im ganzen System. Hochladen darf
+// sie nur die Person selbst, ansehen nur die Moderation, und nach dem Entscheid
+// werden sie gelöscht (Lebenszyklusregel im Bucket, zusätzlich zum Löschen
+// durch die App).
+//
+// Deployen mit: firebase deploy --only storage
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isModerator() {
+      return request.auth != null
+        && request.auth.uid == 'RwwpyDrsJldCIx38BcBHVsgTXc32';
+    }
+
+    match /verifications/{userId}/{datei} {
+      // Nur eigene Bilder, nur Bilder, höchstens 12 MB.
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      // Die hochladende Person sieht ihre eigene Vorschau, sonst nur die Moderation.
+      allow read: if isModerator() || (request.auth != null && request.auth.uid == userId);
+      allow delete: if isModerator();
+    }
+
+    // Alles andere ist gesperrt.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
