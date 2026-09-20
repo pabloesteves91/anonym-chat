@@ -2,10 +2,12 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   browserLocalPersistence,
+  getRedirectResult,
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   type AuthProvider,
   type User,
@@ -104,12 +106,50 @@ function providerFor(anbieter: OAuthAnbieter): AuthProvider {
   return apple
 }
 
-/** Anmeldung über Google oder Apple im Popup-Fenster. */
+/** Gründe, bei denen ein eigenes Fenster nicht geht – dann per Weiterleitung. */
+const BRAUCHT_WEITERLEITUNG = new Set([
+  'auth/popup-blocked',
+  'auth/operation-not-supported-in-this-environment',
+  'auth/cancelled-popup-request',
+])
+
+/**
+ * Anmeldung über Google oder Apple.
+ *
+ * Zuerst im eigenen Fenster, weil man danach dort bleibt, wo man war.
+ * Blockiert der Browser das – auf iPhones und in eingebetteten Seiten
+ * häufig –, läuft es über eine Weiterleitung: die Seite verlässt den
+ * Browser Richtung Anbieter und kommt danach zurück, wo
+ * `completeRedirectSignIn()` sie wieder aufnimmt.
+ */
 export async function signInWithProvider(anbieter: OAuthAnbieter): Promise<ModeratorAccess> {
+  const provider = providerFor(anbieter)
   try {
     await setPersistence(getFirebaseAuth(), browserLocalPersistence)
-    const { user } = await signInWithPopup(getFirebaseAuth(), providerFor(anbieter))
+    const { user } = await signInWithPopup(getFirebaseAuth(), provider)
     return await pruefeOderAbmelden(user)
+  } catch (error) {
+    if (error instanceof AuthError) throw error
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+
+    if (BRAUCHT_WEITERLEITUNG.has(code)) {
+      await signInWithRedirect(getFirebaseAuth(), provider)
+      // Die Seite ist ab hier unterwegs; dieses Versprechen löst sich nie ein.
+      return new Promise<ModeratorAccess>(() => {})
+    }
+    throw new AuthError(FEHLERTEXT[code] ?? 'Anmeldung fehlgeschlagen.')
+  }
+}
+
+/**
+ * Nimmt eine Anmeldung per Weiterleitung wieder auf. Beim normalen Laden
+ * ohne vorherige Weiterleitung gibt sie `null` zurück.
+ */
+export async function completeRedirectSignIn(): Promise<ModeratorAccess | null> {
+  try {
+    const ergebnis = await getRedirectResult(getFirebaseAuth())
+    if (!ergebnis) return null
+    return await pruefeOderAbmelden(ergebnis.user)
   } catch (error) {
     if (error instanceof AuthError) throw error
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   AuthError,
+  completeRedirectSignIn,
   signInModerator,
   signInWithProvider,
   signOutModerator,
@@ -37,6 +38,11 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
   error: null,
 
   watch() {
+    // Eine Anmeldung per Weiterleitung landet beim Laden hier wieder an.
+    void completeRedirectSignIn().catch((error) =>
+      set({ error: error instanceof AuthError ? error.message : 'Anmeldung fehlgeschlagen.' }),
+    )
+
     return watchModeratorAccess((access) =>
       set({ geprueft: true, erlaubt: access.erlaubt, mode: access.mode, email: access.email }),
     )
