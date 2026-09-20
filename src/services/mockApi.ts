@@ -374,6 +374,15 @@ export async function resetIdentity(): Promise<void> {
       removeSession(previewKey(request.id, 'selfie'))
     }
     writeJson(KEYS.requests, readRequests().filter((r) => r.userId !== user.id))
+
+    // Auch die eigenen Chatverläufe und die dazugehörigen Protokolleinträge –
+    // sonst stimmt das Versprechen "zurücksetzen löscht alles" nicht.
+    const eigene = new Set(readTranscripts().filter((t) => t.ownerId === user.id).map((t) => t.id))
+    writeJson(KEYS.transcripts, readTranscripts().filter((t) => !eigene.has(t.id)))
+    writeJson(
+      KEYS.accessLog,
+      readJson<AccessLogEntry[]>(KEYS.accessLog, []).filter((e) => !eigene.has(e.transcriptId)),
+    )
   }
   remove(KEYS.user)
   remove(KEYS.codex)
@@ -453,6 +462,9 @@ export async function requestReply(
  */
 export const RETENTION_MS = 72 * 60 * 60 * 1000
 
+/** Obergrenze wie bei den Meldungen, damit der Speicher nicht überläuft. */
+const MAX_TRANSCRIPTS = 200
+
 function pruneTranscripts(list: ChatTranscript[]): ChatTranscript[] {
   const jetzt = Date.now()
   return list.filter((t) => t && typeof t.id === 'string' && t.expiresAt > jetzt)
@@ -509,7 +521,7 @@ export async function saveTranscript(input: TranscriptInput): Promise<ChatTransc
   }
 
   const bisher = readTranscripts()
-  if (!writeJson(KEYS.transcripts, [transcript, ...bisher])) return null
+  if (!writeJson(KEYS.transcripts, [transcript, ...bisher].slice(0, MAX_TRANSCRIPTS))) return null
   return transcript
 }
 
@@ -529,7 +541,11 @@ export async function openTranscript(id: string): Promise<ChatTranscript | null>
 
 export async function deleteTranscript(id: string): Promise<ChatTranscript[]> {
   await delay(between(150, 320))
-  const rest = readTranscripts().filter((t) => t.id !== id)
+  const alle = readTranscripts()
+  const rest = alle.filter((t) => t.id !== id)
+  // Nur protokollieren, was tatsächlich gelöscht wurde: ein Eintrag über eine
+  // Löschung, die nie stattfand, macht das Protokoll wertlos.
+  if (rest.length === alle.length) return alle
   writeJson(KEYS.transcripts, rest)
   logAccess(id, 'geloescht')
   return rest

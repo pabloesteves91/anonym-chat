@@ -295,3 +295,38 @@ describe('Chatverläufe', () => {
     expect(alle[0].reported).toBe(true)
   })
 })
+
+describe('Korrekturen aus dem Review', () => {
+  const owner: User = {
+    id: 'usr_self',
+    pseudonym: 'Blauer Falke 1234',
+    verified: true,
+    verificationStatus: 'verifiziert',
+    verifiedAt: new Date().toISOString(),
+    phone: '+41791234567',
+    profile: { language: 'de', ageGroup: '25–34', interests: [] },
+  }
+
+  const verlauf = () =>
+    api.saveTranscript({ owner, partner, messages: [nachricht('me', 'hallo'), nachricht('partner', 'hi')] })
+
+  it('protokolliert keine Löschung, die nicht stattgefunden hat', async () => {
+    await settle(verlauf())
+    await settle(api.deleteTranscript('chat_gibtsnicht'))
+    expect(((await settle(api.listAccessLog())) as unknown[]).length).toBe(0)
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(1)
+  })
+
+  it('löscht beim Zurücksetzen der Identität auch Verläufe und Protokoll', async () => {
+    const t = (await settle(verlauf())) as { id: string }
+    await settle(api.openTranscript(t.id))
+    expect(((await settle(api.listAccessLog())) as unknown[]).length).toBe(1)
+
+    // Identität anlegen, die zu den Verläufen passt.
+    window.localStorage.setItem(KEYS.user, JSON.stringify(owner))
+    await settle(api.resetIdentity())
+
+    expect(((await settle(api.listTranscripts())) as unknown[]).length).toBe(0)
+    expect(((await settle(api.listAccessLog())) as unknown[]).length).toBe(0)
+  })
+})

@@ -46,6 +46,8 @@ let runToken = 0
 let turn = 0
 /** Verhindert, dass mehrere Partnerantworten gleichzeitig laufen. */
 let partnerTurnActive = false
+/** Der Verlauf dieses Chats wird genau einmal gesichert, auch bei Wiederholungen. */
+let savedTranscriptId: string | null = null
 
 interface Timer {
   id: number
@@ -94,12 +96,16 @@ export const useChat = create<ChatState>((set, get) => {
    * laufen, solange der Zustand noch steht.
    */
   async function persistTranscript(): Promise<string | null> {
+    // Ein fehlgeschlagener Meldeversuch darf keine zweite Kopie desselben
+    // Gesprächs anlegen – jede hätte ihre eigene 72-Stunden-Uhr.
+    if (savedTranscriptId) return savedTranscriptId
     const { partner, messages } = get()
     const user = useSession.getState().user
     if (!partner || !user) return null
     try {
       const transcript = await api.saveTranscript({ owner: user, partner, messages })
-      return transcript?.id ?? null
+      savedTranscriptId = transcript?.id ?? null
+      return savedTranscriptId
     } catch {
       return null
     }
@@ -162,6 +168,7 @@ export const useChat = create<ChatState>((set, get) => {
       const token = runToken
       turn = 0
       partnerTurnActive = false
+      savedTranscriptId = null
 
       set({
         status: 'suche',

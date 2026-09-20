@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button, Note, Panel } from './ui'
 import type { ChatTranscript } from '../services/types'
 import { useModeration } from '../store/useModeration'
@@ -8,16 +9,16 @@ const zeit = (iso: string) =>
 const uhrzeit = (ts: number) =>
   new Date(ts).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
 
-/** Restlaufzeit bis zur automatischen Löschung. */
-function restzeit(expiresAt: number): string {
-  const ms = expiresAt - Date.now()
+/** Restlaufzeit bis zur automatischen Löschung, gemessen am übergebenen Jetzt. */
+function restzeit(expiresAt: number, now: number): string {
+  const ms = expiresAt - now
   if (ms <= 0) return 'läuft ab'
   const stunden = Math.floor(ms / 3_600_000)
   if (stunden >= 1) return `noch ${stunden} h`
   return `noch ${Math.max(1, Math.round(ms / 60_000))} min`
 }
 
-function Verlauf({ transcript }: { transcript: ChatTranscript }) {
+function Verlauf({ transcript, now }: { transcript: ChatTranscript; now: number }) {
   const openTranscript = useModeration((s) => s.openTranscript)
   const deleteTranscript = useModeration((s) => s.deleteTranscript)
   const opened = useModeration((s) => s.opened[transcript.id])
@@ -47,7 +48,7 @@ function Verlauf({ transcript }: { transcript: ChatTranscript }) {
             </span>
           ) : null}
           <span className="rounded-[2px] border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-            {restzeit(transcript.expiresAt)}
+            {restzeit(transcript.expiresAt, now)}
           </span>
         </div>
       </div>
@@ -86,8 +87,18 @@ function Verlauf({ transcript }: { transcript: ChatTranscript }) {
 
 /** Moderationsspeicher: Verläufe mit Frist und Zugriffsprotokoll. */
 export function TranscriptList() {
-  const transcripts = useModeration((s) => s.transcripts)
+  const alle = useModeration((s) => s.transcripts)
   const accessLog = useModeration((s) => s.accessLog)
+
+  // Die Frist läuft auch ohne Neuladen weiter: die Uhr liegt im Zustand,
+  // damit die Restzeit stimmt und Abgelaufenes von selbst verschwindet.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const transcripts = alle.filter((t) => t.expiresAt > now)
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="verlaeufe">
@@ -111,7 +122,7 @@ export function TranscriptList() {
           </p>
         </Panel>
       ) : (
-        transcripts.map((transcript) => <Verlauf key={transcript.id} transcript={transcript} />)
+        transcripts.map((transcript) => <Verlauf key={transcript.id} transcript={transcript} now={now} />)
       )}
 
       {accessLog.length > 0 ? (

@@ -31,7 +31,7 @@ interface ModerationState {
   clearAll: () => Promise<void>
 }
 
-export const useModeration = create<ModerationState>((set) => ({
+export const useModeration = create<ModerationState>((set, get) => ({
   ready: false,
   busy: false,
   reports: [],
@@ -60,11 +60,18 @@ export const useModeration = create<ModerationState>((set) => ({
   },
 
   async openTranscript(id) {
+    // Sperren, solange der Zugriff läuft: ein Doppelklick wäre sonst zwei
+    // Einträge im Protokoll für ein einziges Mitlesen.
+    if (get().busy) return
+    set({ busy: true })
     const transcript = await api.openTranscript(id)
-    if (!transcript) return
-    set((state) => ({ opened: { ...state.opened, [id]: transcript } }))
-    // Das Protokoll ist erst mit dem neuen Eintrag vollständig.
-    set({ accessLog: await api.listAccessLog() })
+    if (!transcript) {
+      // Abgelaufen oder bereits gelöscht – Liste auffrischen statt ins Leere zeigen.
+      set({ transcripts: await api.listTranscripts(), busy: false })
+      return
+    }
+    const accessLog = await api.listAccessLog()
+    set((state) => ({ opened: { ...state.opened, [id]: transcript }, accessLog, busy: false }))
   },
 
   async deleteTranscript(id) {
