@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Note, PageTitle, Panel } from '../components/ui'
-import * as api from '../services/mockApi'
+import * as api from '../services/api'
+import { BACKEND } from '../services/api'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
@@ -68,15 +69,17 @@ export function TestBoard() {
           <Button size="sm" disabled={!konto} onClick={() => navigate('/verifizierung')}>
             Öffnen
           </Button>
-          {status === 'verifiziert' ? (
-            <Button size="sm" variant="danger" disabled={busy} onClick={() => void setzeVerifiziert(false)}>
-              Zurücksetzen
-            </Button>
-          ) : (
-            <Button size="sm" variant="primary" disabled={busy || !konto} onClick={() => void setzeVerifiziert(true)}>
-              Überspringen
-            </Button>
-          )}
+          {BACKEND === 'local' ? (
+            status === 'verifiziert' ? (
+              <Button size="sm" variant="danger" disabled={busy} onClick={() => void setzeVerifiziert(false)}>
+                Zurücksetzen
+              </Button>
+            ) : (
+              <Button size="sm" variant="primary" disabled={busy || !konto} onClick={() => void setzeVerifiziert(true)}>
+                Überspringen
+              </Button>
+            )
+          ) : null}
         </div>
       ),
     },
@@ -139,6 +142,14 @@ export function TestBoard() {
       </ol>
 
       {meldung ? <Note>{meldung}</Note> : null}
+
+      {BACKEND === 'firestore' ? (
+        <Note>
+          Die Daten liegen in Firestore. Überspringen gibt es hier nicht mehr: Wer sich verifizieren will, reicht ein
+          und wartet auf die Moderation – die Security Rules lassen niemanden den eigenen Status setzen. Genau das
+          soll so sein.
+        </Note>
+      ) : null}
 
       <Panel className="flex flex-col gap-3 p-5">
         <h2 className="font-display text-xl font-semibold">Zurücksetzen</h2>

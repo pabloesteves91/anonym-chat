@@ -1,3 +1,7 @@
+import { ApiError, EXCERPT_LENGTH, RETENTION_MS, between, delay, maskPhone, normalizePhone } from './shared'
+
+export { ApiError, RETENTION_MS, maskPhone, normalizePhone } from './shared'
+export type { ApiErrorCode } from './shared'
 import {
   KEYS,
   accountKey,
@@ -8,10 +12,10 @@ import {
   removeSession,
   writeJson,
   writeSessionString,
-} from './storage'
-import { generateId, generatePseudonym } from './pseudonym'
-import { PARTNER_POOL, openerFor, replyFor, typingDurationFor } from './partnerScript'
-import { scanText, validateDisplayName } from './wordFilter'
+} from '../storage'
+import { generateId, generatePseudonym } from '../pseudonym'
+import { PARTNER_POOL, openerFor, replyFor, typingDurationFor } from '../partnerScript'
+import { scanText, validateDisplayName } from '../wordFilter'
 import type {
   FilterVerdict,
   MatchFilter,
@@ -29,10 +33,10 @@ import type {
   User,
   VerificationImages,
   VerificationRequest,
-} from './types'
+} from '../types'
 
 /**
- * Die einzige "Backend"-Grenze des Prototyps.
+ * Datenquelle im Browser.
  *
  * Alles hier ist simuliert: künstliche Latenz, lokaler Datenbestand in
  * localStorage, erfundene Gesprächspartner. Komponenten und Stores rufen
@@ -44,37 +48,8 @@ import type {
  * ein AbortSignal.
  */
 
-export type ApiErrorCode = 'abgebrochen' | 'kein-treffer' | 'nicht-verifiziert' | 'ungueltig' | 'speicher'
 
-export class ApiError extends Error {
-  readonly code: ApiErrorCode
 
-  constructor(message: string, code: ApiErrorCode) {
-    super(message)
-    this.name = 'ApiError'
-    this.code = code
-  }
-}
-
-function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new ApiError('Vorgang abgebrochen.', 'abgebrochen'))
-      return
-    }
-    const timer = window.setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-    function onAbort() {
-      window.clearTimeout(timer)
-      reject(new ApiError('Vorgang abgebrochen.', 'abgebrochen'))
-    }
-    signal?.addEventListener('abort', onAbort, { once: true })
-  })
-}
-
-const between = (min: number, max: number) => min + Math.random() * (max - min)
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
 
@@ -174,19 +149,7 @@ interface SmsState {
   attempts: number
 }
 
-/** Sehr grosszügige Prüfung – Formate unterscheiden sich pro Land. */
-export function normalizePhone(input: string): string | null {
-  const roh = input.replace(/[\s/.-]/g, '')
-  if (/^0\d{9}$/.test(roh)) return `+41${roh.slice(1)}` // CH-Mobilnummer ohne Vorwahl
-  if (/^\+\d{9,15}$/.test(roh)) return roh
-  return null
-}
 
-export function maskPhone(phone: string): string {
-  const sichtbar = phone.slice(-2)
-  const prefix = phone.slice(0, 3)
-  return `${prefix} •• ••• •• ${sichtbar}`
-}
 
 /**
  * Verschickt den SMS-Code.
@@ -515,7 +478,6 @@ export async function requestReply(
  * abgelaufene Verläufe auch dann verschwinden, wenn die App tagelang nicht
  * offen war.
  */
-export const RETENTION_MS = 72 * 60 * 60 * 1000
 
 /** Obergrenze wie bei den Meldungen, damit der Speicher nicht überläuft. */
 const MAX_TRANSCRIPTS = 200
@@ -623,7 +585,6 @@ function markReported(transcriptId: string | null): void {
 
 /* --------------------------------------------------------------- Moderation */
 
-const EXCERPT_LENGTH = 8
 /** Obergrenze, damit der lokale Speicher nicht unbegrenzt volläuft. */
 const MAX_REPORTS = 200
 

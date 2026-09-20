@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import * as api from '../services/mockApi'
+import * as api from '../services/api'
 import type {
   AccessLogEntry,
   ChatTranscript,

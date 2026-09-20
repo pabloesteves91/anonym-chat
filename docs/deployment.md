@@ -116,10 +116,21 @@ freigegeben sein:
 Ohne diesen Eintrag meldet die Anmeldung `auth/unauthorized-domain`.
 
 Die Security Rules liegen als `firestore.rules` und `storage.rules` im Repo
-und werden mit der Firebase CLI ausgerollt:
+und **müssen ausgerollt sein, bevor echte Daten hineingehen**:
 
 ```bash
 npx firebase-tools deploy --only firestore:rules,storage
+```
+
+Ohne sie gilt, was in der Konsole steht – im Produktionsmodus ist das
+„alles verboten", und die App bekommt bei jedem Zugriff „Dafür fehlen die
+Rechte".
+
+### Emulator für die Entwicklung
+
+```bash
+npm run emulator      # Auth, Firestore und Storage lokal
+npm run dev:emulator  # Dev-Server, der sie statt Firebase benutzt
 ```
 
 ## Was öffentlich wird

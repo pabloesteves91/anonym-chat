@@ -51,8 +51,16 @@ export default function App() {
       // Eine Anmeldung schaltet den Speicherbereich um; danach wird das
       // Profil dieses Kontos geladen.
       useAuth.getState().watch((uid) => {
-        if (uid) void useSession.getState().load(uid)
-        else useSession.getState().clear()
+        if (uid) {
+          // Scheitert das Laden, muss es sichtbar sein – sonst hängt die App
+          // stumm im Ladezustand.
+          void useSession
+            .getState()
+            .load(uid)
+            .catch((error: unknown) => console.error('Profil konnte nicht geladen werden:', error))
+        } else {
+          useSession.getState().clear()
+        }
       }),
     [],
   )

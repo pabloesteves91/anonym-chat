@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import * as api from '../services/mockApi'
+import * as api from '../services/api'
 import { generateId } from '../services/pseudonym'
 import { useSession } from './useSession'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'

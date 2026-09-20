@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import * as api from '../services/mockApi'
+import * as api from '../services/api'
 import { ImageError, createDemoPreview, createPreview, type Preview } from '../services/image'
 import { useSession } from './useSession'
 import type { VerificationRequest, VerifyStep } from '../services/types'

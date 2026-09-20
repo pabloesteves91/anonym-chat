@@ -122,8 +122,12 @@ src/
   components/   AppShell, Lobby, Queue, ChatRoom, MessageList, Composer,
                 ReportDialog, CodexDialog, Dialog, VerifiedBadge,
                 ThemeToggle, ui
-  services/     mockApi.ts   ← einzige "Backend"-Grenze
+  services/     api.ts       ← einzige Datengrenze, schaltet zwischen:
+                backend/firestore.ts   Daten auf dem Server (Standard)
+                backend/local.ts       Daten im Browser (Tests, Emulator)
+                backend/shared.ts      ApiError und gemeinsame Bausteine
                 auth.ts      ← einzige Stelle für den Moderationszugang
+                firebase.ts  ← App, Auth, Firestore, Storage
                 *.test.ts    Vitest-Tests für Filter, Storage und mockApi
                 storage.ts   defensive localStorage-Hülle (try/catch)
                 types.ts · wordFilter.ts · pseudonym.ts · partnerScript.ts
@@ -131,8 +135,8 @@ src/
   styles/       index.css – Tailwind v4 und alle Farbtokens
 ```
 
-**Regel:** Komponenten sprechen nie direkt mit `localStorage` und enthalten
-keine Mock-Logik. Sie rufen Stores auf, Stores rufen `mockApi` auf. Alle
+**Regel:** Komponenten sprechen nie direkt mit `localStorage` oder Firestore.
+Sie rufen Stores auf, Stores rufen `services/api` auf. Alle
 Funktionen in `mockApi.ts` sind `Promise`-basiert, haben künstliche Latenz
 und akzeptieren dort, wo gewartet wird, ein `AbortSignal`. Für Phase 2 wird
 diese eine Datei gegen einen HTTP-/WebSocket-Client getauscht; Typen,
@@ -227,6 +231,21 @@ dem BÜPF-Umfeld greifen, gehört anwaltlich abgeklärt. Ende-zu-Ende-
 Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
 bewusste Entscheidung, keine Lücke.
 
+### Wo die Daten liegen
+Standard ist **Firestore**: Konten, Verifizierungsanträge, Meldungen,
+Chatverläufe und die Sperrliste liegen auf dem Server, Ausweisbilder in
+Firebase Storage. Damit sieht die Moderation, was alle einreichen – nicht
+nur den eigenen Browser.
+
+`VITE_BACKEND=local` schaltet auf die Browser-Variante um; sie bleibt für
+Tests und Durchläufe ohne Server erhalten. Beide Umsetzungen liegen unter
+`src/services/backend/` und haben dieselbe Oberfläche; `api.ts` prüft das
+beim Übersetzen.
+
+Sammlungen: `users/{uid}`, `verifications/{id}`, `reports/{id}`,
+`chats/{id}` (mit `expiresAt` als Timestamp für die TTL-Richtlinie),
+`blocked/{uid}`, `accessLog/{id}`.
+
 ### Konten und Identität
 Nutzende melden sich mit Google oder Apple an (`/anmelden`). Das Konto ist die
 Klammer um alles Persönliche: Pseudonym, Profil, Verifizierungsstand und
@@ -274,12 +293,12 @@ die Anbieter-Anmeldung braucht Google-Infrastruktur, die in einer
 abgeschotteten Umgebung nicht erreichbar ist. Im Produktionsbuild ist dieser
 Weg abgeschaltet.
 
-### Freigabe im Demo-Modus
-Solange die Anträge nur im Browser der antragstellenden Person liegen, sieht
-die Moderation sie gar nicht. Damit der Prototyp trotzdem durchspielbar
-bleibt, kann man sich auf der Warteseite selbst freigeben – deutlich als
-Demo-Weg gekennzeichnet. Er entfällt, sobald die Anträge in Firestore
-stehen.
+### Keine Selbstfreigabe mehr
+Mit Firestore kann sich niemand mehr selbst verifizieren: Die Regel für
+`users` lässt eine Person alles an ihrem Konto ändern **ausser** `verified`
+und `verificationStatus` – die setzt nur die Moderation. Die frühere
+Selbstfreigabe und das Überspringen in der Testübersicht erscheinen deshalb
+nur noch mit `VITE_BACKEND=local`.
 
 ### Moderation
 Serverseitige Klassifikation statt Wortliste, Eskalationsstufen,

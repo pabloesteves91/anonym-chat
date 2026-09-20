@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import * as api from './mockApi'
-import { KEYS } from './storage'
-import type { Message, Partner, User } from './types'
+import * as api from './local'
+import { KEYS } from '../storage'
+import type { Message, Partner, User } from '../types'
 
 /**
  * Die simulierte Latenz wird mit falschen Timern übersprungen – die Tests

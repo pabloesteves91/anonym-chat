@@ -2,10 +2,8 @@ rules_version = '2';
 
 // Security Rules für den verifizierten Anonymchat.
 //
-// Stand: vorbereitet für Phase 2. Heute liegen noch keine Daten in Firestore –
-// die App arbeitet lokal im Browser. Diese Datei beschreibt, wer worauf Zugriff
-// bekommt, sobald die Daten umziehen. Was hier nicht ausdrücklich erlaubt ist,
-// ist verboten.
+// In Betrieb: Konten, Anträge, Meldungen und Chatverläufe liegen in Firestore.
+// Was hier nicht ausdrücklich erlaubt ist, ist verboten.
 //
 // Deployen mit: firebase deploy --only firestore:rules
 
@@ -27,18 +25,34 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Das eigene Konto: anlegen und pflegen darf man es selbst, lesen darf
+    // es zusätzlich die Moderation (Pseudonym, Status, Sperrliste).
+    // Den Verifizierungsstand setzt ausschliesslich die Moderation.
+    match /users/{userId} {
+      allow create: if isOwner(userId);
+      allow read: if isModerator() || isOwner(userId);
+      allow update: if isModerator()
+        || (isOwner(userId)
+            && request.resource.data.verified == resource.data.verified
+            && request.resource.data.verificationStatus == resource.data.verificationStatus);
+      allow delete: if false;
+    }
+
     // Verifizierungsanträge: einreichen darf man für sich selbst, lesen den
-    // eigenen Stand – entscheiden nur die Moderation.
+    // eigenen Stand – entscheiden nur die Moderation. Zurückziehen ist
+    // erlaubt, solange noch nicht entschieden wurde.
     match /verifications/{requestId} {
       allow create: if isOwner(request.resource.data.userId)
         && request.resource.data.status == 'wartet';
       allow read: if isModerator() || isOwner(resource.data.userId);
-      allow update, delete: if isModerator();
+      allow update: if isModerator();
+      allow delete: if isModerator() || (isOwner(resource.data.userId) && resource.data.status == 'wartet');
     }
 
     // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.
     match /reports/{reportId} {
-      allow create: if isOwner(request.resource.data.reporterId);
+      allow create: if isOwner(request.resource.data.reporterId)
+        && request.resource.data.status == 'offen';
       allow read, update, delete: if isModerator();
     }
 
@@ -46,12 +60,22 @@ service cloud.firestore {
     // Die TTL-Policy löscht abgelaufene Dokumente nachträglich – bis dahin
     // sperrt diese Bedingung den Zugriff.
     match /chats/{chatId} {
-      allow create: if isSignedIn()
+      allow create: if isOwner(request.resource.data.ownerId)
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt > request.time;
-      allow read: if isModerator() && resource.data.expiresAt > request.time;
+      // Einzelabruf: nach Ablauf der Frist nicht mehr lesbar, Punkt.
+      allow get: if isModerator() && resource.data.expiresAt > request.time;
+      // Auflisten: Die Bedingung oben lässt sich für eine Abfrage nicht
+      // prüfen – Firestore kann den Zeitwert des Clients nicht verifizieren
+      // und würde jede Liste ablehnen. Die Übersicht ist deshalb der
+      // Moderation ohne Zeitbedingung erlaubt; abgelaufene Verläufe filtert
+      // die App heraus und die TTL-Richtlinie löscht sie.
+      allow list: if isModerator();
       allow delete: if isModerator();
-      allow update: if false; // Verläufe werden nie nachträglich geändert
+      // Eine Meldung markiert den Verlauf – sonst wird nie etwas geändert.
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reported'])
+        && request.resource.data.reported == true;
     }
 
     // Sperrliste: gepflegt von der Moderation, gelesen vom Matching.
@@ -60,11 +84,18 @@ service cloud.firestore {
       allow write: if isModerator();
     }
 
-    // Zugriffsprotokoll: schreibt der Server, liest die Moderation.
-    // Bewusst nicht vom Client beschreibbar – sonst wäre es kein Protokoll.
+    // Zugriffsprotokoll: Einträge entstehen beim Öffnen und Löschen eines
+    // Verlaufs. Anlegen darf sie nur die Moderation, ändern und löschen
+    // niemand – ein Protokoll, das sich aufräumen lässt, ist keines.
+    //
+    // Solange es keinen Server gibt, schreibt der Client die Einträge. Das ist
+    // die schwächste Stelle dieser Regeln: Wer die Moderationsrechte hat,
+    // könnte den Eintrag umgehen. Mit einer Cloud Function gehört das
+    // Schreiben auf die Serverseite.
     match /accessLog/{entryId} {
       allow read: if isModerator();
-      allow write: if false;
+      allow create: if isModerator();
+      allow update, delete: if false;
     }
   }
 }

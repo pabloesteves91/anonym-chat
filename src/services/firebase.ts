@@ -1,5 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore'
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage'
 
 /**
  * Firebase-Anbindung.
@@ -46,6 +48,13 @@ export const ANMELDEARTEN = {
 
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
+let db: Firestore | null = null
+let storage: FirebaseStorage | null = null
+
+function getApp(): FirebaseApp {
+  app ??= initializeApp(firebaseConfig)
+  return app
+}
 
 /**
  * Adresse des Auth-Emulators, etwa `http://127.0.0.1:9099`.
@@ -62,10 +71,32 @@ export const EMULATOR_MODE = Boolean(EMULATOR)
 /** Lädt Firebase erst, wenn es gebraucht wird – der Chat läuft ohne. */
 export function getFirebaseAuth(): Auth {
   if (auth) return auth
-  app ??= initializeApp(firebaseConfig)
-  auth = getAuth(app)
+  auth = getAuth(getApp())
   if (EMULATOR) {
     connectAuthEmulator(auth, EMULATOR, { disableWarnings: true })
   }
   return auth
+}
+
+/** Datenbank. Emulatorports kommen aus der Umgebung, sonst echtes Firebase. */
+export function getDb(): Firestore {
+  if (db) return db
+  db = getFirestore(getApp())
+  const host = import.meta.env.VITE_FIRESTORE_EMULATOR as string | undefined
+  if (host) {
+    const [name, port] = host.split(':')
+    connectFirestoreEmulator(db, name, Number(port))
+  }
+  return db
+}
+
+export function getFileStorage(): FirebaseStorage {
+  if (storage) return storage
+  storage = getStorage(getApp())
+  const host = import.meta.env.VITE_STORAGE_EMULATOR as string | undefined
+  if (host) {
+    const [name, port] = host.split(':')
+    connectStorageEmulator(storage, name, Number(port))
+  }
+  return storage
 }

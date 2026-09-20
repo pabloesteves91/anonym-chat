@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "build:static": "tsc -b && vite build --mode static --base ./",
     "dev:emulator": "vite --mode emulator",
-    "emulator": "firebase emulators:start --only auth --project demo-anonym-chat"
+    "emulator": "firebase emulators:start --only auth,firestore,storage --project demo-anonym-chat"
   },
   "dependencies": {
     "@fontsource-variable/source-serif-4": "^5.3.0",

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
-import { maskPhone } from '../services/mockApi'
+import { BACKEND, maskPhone } from '../services/api'
 import { VERIFY_STEPS } from '../services/types'
 import type { VerifyStep } from '../services/types'
 import { useSession } from '../store/useSession'
@@ -406,16 +406,24 @@ export function Verify() {
             </div>
           </dl>
           <div className="mt-5">
-            <Note>
-              <strong>Im Prototyp wartest du vergeblich:</strong> Dein Antrag liegt nur in diesem Browser, die
-              Moderation sieht ihn nicht. Zum Weitertesten gibst du dich unten selbst frei – in der echten Version
-              entscheidet das ein Mensch, und die Bilder lägen nie auf dem Gerät des Antragstellers.
-            </Note>
+            {BACKEND === 'firestore' ? (
+              <Note>
+                Dein Antrag liegt bei der Moderation. Sobald jemand entschieden hat, ändert sich der Status hier von
+                selbst – die Seite fragt alle paar Sekunden nach.
+              </Note>
+            ) : (
+              <Note>
+                <strong>Ohne Server wartest du vergeblich:</strong> Dein Antrag liegt nur in diesem Browser, die
+                Moderation sieht ihn nicht. Zum Weitertesten gibst du dich unten selbst frei.
+              </Note>
+            )}
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button variant="primary" disabled={busy} onClick={() => void selfApprove()}>
-              Im Demo-Modus freigeben
-            </Button>
+            {BACKEND === 'local' ? (
+              <Button variant="primary" disabled={busy} onClick={() => void selfApprove()}>
+                Im Demo-Modus freigeben
+              </Button>
+            ) : null}
             <Button onClick={() => void refreshUser()}>Status aktualisieren</Button>
             <Button variant="danger" disabled={busy} onClick={() => void startOver()}>
               Antrag zurückziehen
