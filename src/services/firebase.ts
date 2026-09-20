@@ -41,7 +41,7 @@ export const MODERATOR_UID = 'RwwpyDrsJldCIx38BcBHVsgTXc32'
 export const ANMELDEARTEN = {
   passwort: true,
   google: true,
-  apple: false,
+  apple: true,
 } as const
 
 let app: FirebaseApp | null = null
