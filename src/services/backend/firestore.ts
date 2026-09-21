@@ -2,6 +2,7 @@ import {
   Timestamp,
   collection,
   collectionGroup,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -21,6 +22,7 @@ import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
   ChatTranscript,
+  PlanRequest,
   Profile,
   Report,
   ReportInput,
@@ -46,6 +48,7 @@ export type { ApiErrorCode } from './shared'
 
 const PFAD = {
   users: 'users',
+  planRequests: 'planRequests',
   verifications: 'verifications',
   reports: 'reports',
   chats: 'chats',
@@ -102,6 +105,7 @@ interface UserDoc {
   profile: Profile
   membership: Membership
   usage: Verbrauch
+  planChosen: boolean
   codexAccepted: boolean
   selfBlocked: string[]
 }
@@ -115,6 +119,7 @@ const leererUser = (): UserDoc => ({
   profile: { ...DEFAULT_PROFILE },
   membership: { ...GRATIS_MITGLIEDSCHAFT, seit: new Date().toISOString() },
   usage: { tag: heute(), chats: 0 },
+  planChosen: false,
   codexAccepted: false,
   selfBlocked: [],
 })
@@ -130,6 +135,7 @@ function toUser(id: string, data: UserDoc): User {
     profile: { ...DEFAULT_PROFILE, ...(data.profile ?? {}) },
     membership: data.membership ?? GRATIS_MITGLIEDSCHAFT,
     usage: data.usage ?? { tag: heute(), chats: 0 },
+    planChosen: Boolean(data.planChosen),
   }
 }
 
@@ -244,7 +250,48 @@ export async function setMembership(userId: string, plan: PlanId, laufzeitTage: 
       bis: laufzeitTage === null ? null : new Date(Date.now() + laufzeitTage * 86_400_000).toISOString(),
     }
     await updateDoc(doc(getDb(), PFAD.users, userId), { membership })
+    // Der Wunsch ist erfüllt und verschwindet aus der Liste der offenen.
+    await updateDoc(doc(getDb(), PFAD.planRequests, userId), { erledigt: true }).catch(() => {})
   }, 'Tarif konnte nicht gesetzt werden.')
+}
+
+/**
+ * Hält fest, wofür sich jemand entschieden hat.
+ *
+ * Ein Gratistarif gilt sofort – dafür muss niemand etwas freischalten. Ein
+ * bezahlter kann der Browser nicht selbst setzen, also wird daraus ein
+ * Wunsch, den die Moderation sieht. Das ist der ehrliche Zwischenschritt,
+ * solange die Kasse fehlt: kein Knopf, der Bezahlung vortäuscht.
+ */
+export async function choosePlan(plan: PlanId): Promise<void> {
+  await fuehreAus(async () => {
+    const id = uid()
+    const data = await ladeUserDoc(id)
+    await updateDoc(doc(getDb(), PFAD.users, id), { planChosen: true })
+
+    if (plan === 'frei') {
+      // Ein früherer Wunsch ist damit gegenstandslos.
+      await deleteDoc(doc(getDb(), PFAD.planRequests, id)).catch(() => {})
+      return
+    }
+
+    const wunsch: PlanRequest = {
+      userId: id,
+      pseudonym: data?.pseudonym ?? 'Unbekannt',
+      plan,
+      at: new Date().toISOString(),
+      erledigt: false,
+    }
+    await setDoc(doc(getDb(), PFAD.planRequests, id), wunsch)
+  }, 'Die Auswahl konnte nicht gespeichert werden.')
+}
+
+/** Offene und erledigte Tarifwünsche – für die Moderation. */
+export async function listPlanRequests(): Promise<PlanRequest[]> {
+  return fuehreAus(async () => {
+    const treffer = await getDocs(query(collection(getDb(), PFAD.planRequests), orderBy('at', 'desc')))
+    return treffer.docs.map((eintrag) => eintrag.data() as PlanRequest)
+  }, 'Tarifwünsche nicht lesbar.')
 }
 
 /**

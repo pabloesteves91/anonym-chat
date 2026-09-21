@@ -36,6 +36,7 @@ const konto = (patch: Record<string, unknown> = {}) => ({
   profile: { language: 'de', ageGroup: '25–34', interests: [] },
   membership: { plan: 'frei', seit: '2026-01-01T00:00:00.000Z', bis: null },
   usage: { tag: '2026-01-01', chats: 0 },
+  planChosen: false,
   codexAccepted: false,
   selfBlocked: [],
   ...patch,
@@ -320,6 +321,47 @@ describe('Verifizierungsanträge', () => {
     await setDoc(doc(als(ANNA), 'verifications', 'ver-1'), antrag(ANNA))
     await assertFails(updateDoc(doc(als(ANNA), 'verifications', 'ver-1'), { status: 'freigegeben' }))
     await assertSucceeds(updateDoc(doc(als(MODERATOR), 'verifications', 'ver-1'), { status: 'freigegeben' }))
+  })
+})
+
+describe('Tarifwünsche', () => {
+  const wunsch = (userId: string, patch: Record<string, unknown> = {}) => ({
+    userId,
+    pseudonym: 'Anna',
+    plan: 'lifetime',
+    at: '2026-01-01T00:00:00.000Z',
+    erledigt: false,
+    ...patch,
+  })
+
+  it('lässt jeden den eigenen Wunsch eintragen und lesen', async () => {
+    await assertSucceeds(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA)))
+    await assertSucceeds(getDoc(doc(als(ANNA), 'planRequests', ANNA)))
+  })
+
+  it('lässt niemanden im fremden Namen wünschen oder mitlesen', async () => {
+    await assertFails(setDoc(doc(als(BEN), 'planRequests', ANNA), wunsch(ANNA)))
+    await setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA))
+    await assertFails(getDoc(doc(als(BEN), 'planRequests', ANNA)))
+  })
+
+  it('lässt niemanden den eigenen Wunsch als erledigt ausgeben', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA, { erledigt: true })))
+  })
+
+  it('macht aus einem Wunsch keinen Zugang', async () => {
+    await setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA))
+    await assertFails(
+      updateDoc(doc(als(ANNA), 'users', ANNA), {
+        membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+      }),
+    )
+  })
+
+  it('lässt die Moderation lesen und erledigen', async () => {
+    await setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA))
+    await assertSucceeds(getDoc(doc(als(MODERATOR), 'planRequests', ANNA)))
+    await assertSucceeds(updateDoc(doc(als(MODERATOR), 'planRequests', ANNA), { erledigt: true }))
   })
 })
 

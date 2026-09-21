@@ -67,6 +67,7 @@ und lesen darf sie nur, wer selbst verifiziert und nicht gesperrt ist.
 | Ort | Inhalt | Wer darf lesen |
 | --- | --- | --- |
 | `users/{uid}` | Pseudonym, Profil, Verifizierungsstand, Tarif | Konto selbst, Moderation |
+| `planRequests/{uid}` | Wer welchen Tarif möchte | Konto selbst, Moderation |
 | `verifications/{id}` | Antrag mit maskierter Nummer | Konto selbst, Moderation |
 | `queue/{uid}` | Wer gerade sucht | alle Suchenden |
 | `chats/{roomId}` | Beteiligte, Zähler, Frist | beide Beteiligten, Moderation |
@@ -113,8 +114,9 @@ Firestore. Wird der Unterbau getauscht, ändert sich genau eine Datei.
   und die Moderation lesbar und werden nach dem Entscheid gelöscht. In
   dauerhaftem Browserspeicher liegen sie nie.
 - **Chatverläufe** laufen nach 72 Stunden ab. Die Frist steht als
-  `expiresAt` im Dokument; gelöscht wird von einer TTL-Richtlinie in
-  Firestore, nicht von der App.
+  `expiresAt` im Dokument; gelöscht wird von zwei TTL-Richtlinien in
+  Firestore, nicht von der App. Sie stehen in `firestore.indexes.json` und
+  werden mit den Regeln ausgerollt.
 - **Jeder Blick** der Moderation in einen Verlauf schreibt einen Eintrag in
   `accessLog`, der sich nicht ändern und nicht löschen lässt.
 - **Der Wortfilter** läuft im Browser, schon beim Tippen. Er blockiert nichts,
@@ -146,8 +148,9 @@ Details und der Weg zur Kasse: [docs/tarife.md](docs/tarife.md).
 ## Was noch offen ist
 
 - **Die Kasse.** Bezahlen lässt sich nichts. Eine Zahlung braucht einen
-  Server, der die Quittung des Anbieters prüft; bis dahin trägt die
-  Moderation einen Tarif von Hand ein (`/admin`).
+  Server, der die Quittung des Anbieters prüft. Bis dahin hinterlässt eine
+  Auswahl auf `/preise` oder im Fenster nach der Anmeldung einen Wunsch, den
+  die Moderation unter `/admin` sieht und von Hand freischaltet.
 - **Die Tagesgrenze** wird im Browser geprüft. Wer den Code umschreibt,
   umgeht sie. Ein Riegel wird daraus erst mit einer Serverfunktion.
 - **Das Zugriffsprotokoll** schreibt der Client. Wer Moderationsrechte hat,

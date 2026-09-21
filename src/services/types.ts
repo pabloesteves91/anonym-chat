@@ -64,6 +64,24 @@ export interface User {
   membership: Membership
   /** Chats des heutigen Tages – Grundlage der Gratisgrenze. */
   usage: Verbrauch
+  /** Hat die Person den Tarif schon einmal bewusst gewählt? */
+  planChosen: boolean
+}
+
+/**
+ * Ein Tarifwunsch.
+ *
+ * Solange die Kasse fehlt, ist das der Weg von „ich will Plus" zur
+ * Moderation: Die Person trägt ihren Wunsch ein, die Moderation sieht ihn
+ * und schaltet frei, sobald bezahlt wurde. Mit einer Kasse entfällt das
+ * ersatzlos.
+ */
+export interface PlanRequest {
+  userId: string
+  pseudonym: string
+  plan: string
+  at: string
+  erledigt: boolean
 }
 
 /**

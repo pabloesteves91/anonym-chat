@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
+import type { PlanId } from '../services/plans'
 import type { Profile, User } from '../services/types'
 
 /**
@@ -25,6 +26,8 @@ interface SessionState {
   /** Nur Nutzer und Status neu lesen, ohne Ladezustand zurückzusetzen. */
   refreshUser: () => Promise<void>
   acceptCodex: () => Promise<void>
+  /** Tarif auswählen: gratis gilt sofort, bezahlt wird ein Wunsch daraus. */
+  choosePlan: (plan: PlanId) => Promise<boolean>
   refreshBlocks: () => Promise<void>
   unblockAll: () => Promise<void>
   saveProfile: (profile: Profile) => Promise<void>
@@ -33,7 +36,7 @@ interface SessionState {
   resetIdentity: () => Promise<void>
 }
 
-export const useSession = create<SessionState>((set) => ({
+export const useSession = create<SessionState>((set, get) => ({
   ready: false,
   loading: false,
   user: null,
@@ -71,6 +74,19 @@ export const useSession = create<SessionState>((set) => ({
   async acceptCodex() {
     await api.acceptCodex()
     set({ codexAccepted: true })
+  },
+
+  async choosePlan(plan) {
+    set({ busy: true, error: null })
+    try {
+      await api.choosePlan(plan)
+      await get().refreshUser()
+      set({ busy: false })
+      return true
+    } catch (error) {
+      set({ busy: false, error: error instanceof api.ApiError ? error.message : 'Auswahl nicht gespeichert.' })
+      return false
+    }
   },
 
   async refreshBlocks() {

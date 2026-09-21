@@ -143,17 +143,30 @@ verschickt wird.
 
 ### Ablauffrist der Chats (TTL)
 
-Die 72 Stunden löscht Firestore selbst, aber nur mit einer Richtlinie:
+Die 72 Stunden löscht Firestore selbst, aber nur mit einer Richtlinie. **Zum
+Klicken gibt es dafür in der Firebase-Konsole nichts** – TTL liegt in der
+Google-Cloud-Konsole. Suchen muss man sie trotzdem nicht: Beide Richtlinien
+stehen in `firestore.indexes.json` und werden mit den Regeln zusammen
+ausgerollt.
 
-**Firestore Database → Time-to-live (TTL)**, zwei Richtlinien anlegen:
-
-| Collection group | Feld |
-| --- | --- |
-| `chats` | `expiresAt` |
-| `messages` | `expiresAt` |
+```json
+"fieldOverrides": [
+  { "collectionGroup": "chats",    "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+  { "collectionGroup": "messages", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+]
+```
 
 Die zweite ist leicht zu vergessen und genauso wichtig: Die Nachrichten
 liegen in einer Unterkollektion und verschwinden nicht mit dem Raum.
+
+Nachsehen lässt sich das Ergebnis unter
+[console.cloud.google.com → Firestore → Time-to-live (TTL)](https://console.cloud.google.com/firestore/databases/-default-/ttl?project=anonym-chat-223af).
+Nach dem Anlegen steht eine Richtlinie erst auf „wird erstellt"; bis sie
+greift, können ein paar Minuten vergehen. Gelöscht wird danach laufend, aber
+nicht auf die Sekunde genau – Firestore räumt in Wellen ab. Für die Zusage
+„nach 72 Stunden weg" reicht das; verlassen darf man sich für den Zugriff
+trotzdem nicht darauf, deshalb prüfen die Security Rules die Frist zusätzlich
+bei jedem Einzelabruf.
 
 ### Regeln und Indizes ausrollen
 

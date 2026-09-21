@@ -50,9 +50,19 @@ genau einer Stelle; Preisseite, Profil und Chat lesen von dort.
 
 ## Wie ein Tarif heute vergeben wird
 
-Von Hand, in der Moderationsansicht unter `/admin` → „Tarif vergeben".
-Nötig ist die Kennung des Kontos; sie steht im Profil der Person und in
-jeder Meldung.
+In drei Schritten, weil der mittlere ausserhalb der App stattfindet:
+
+1. **Die Person wählt.** Nach der ersten Anmeldung geht ein Fenster auf; dieselbe
+   Auswahl gibt es jederzeit auf `/preise`. Ein Gratistarif gilt sofort, ein
+   bezahlter wird zu einem Eintrag in `planRequests/{uid}`.
+2. **Das Geld kommt an.** Heute noch von Hand – Überweisung, Twint, was auch
+   immer verabredet ist. Der Wunsch in der App sagt darüber nichts aus.
+3. **Die Moderation schaltet frei.** `/admin` → „Tarif vergeben" zeigt die
+   offenen Wünsche. „Übernehmen" füllt das Formular, „Setzen" schaltet frei
+   und hakt den Wunsch ab.
+
+Wichtig an dieser Trennung: Ein Wunsch ist kein Zahlungseingang. Die Liste
+sagt nur, wer sich was ausgesucht hat.
 
 Die Security Rules lassen das ausschliesslich der Moderationskennung zu:
 

@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Note, PageTitle, Panel } from '../components/ui'
+import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
-import { PLAENE, aktiverPlan, preisText, type Plan } from '../services/plans'
+import { GRATIS_CHATS_PRO_TAG, PLAENE, aktiverPlan, preisText, type Plan, type PlanId } from '../services/plans'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -13,7 +14,63 @@ const taktText: Record<Plan['takt'], string> = {
   einmalig: 'einmalig',
 }
 
-function Karte({ plan, aktiv }: { plan: Plan; aktiv: boolean }) {
+/** Was sich zwischen den Tarifen tatsächlich unterscheidet. */
+const VERGLEICH: { merkmal: string; frei: string; plus: string }[] = [
+  { merkmal: 'Chats pro Tag', frei: `${GRATIS_CHATS_PRO_TAG}`, plus: 'unbegrenzt' },
+  { merkmal: 'Suche nach Sprache', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Suche nach Interessen', frei: '–', plus: 'ja' },
+  { merkmal: 'Platz in der Warteschlange', frei: 'normal', plus: 'bevorzugt' },
+  { merkmal: 'Anzeigename', frei: 'gewürfelt', plus: 'frei wählbar' },
+  { merkmal: 'Verifizierung mit Ausweis', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Wortfilter und Warnungen', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Melden und Blockieren', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Moderation durch Menschen', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Verläufe nach 72 Stunden gelöscht', frei: 'ja', plus: 'ja' },
+]
+
+const FRAGEN: { frage: string; antwort: string }[] = [
+  {
+    frage: 'Ist der Gratistarif eine Testphase?',
+    antwort:
+      'Nein. Er ist dauerhaft und vollständig: dieselbe Verifizierung, dieselbe Moderation, dieselben Meldewege. Begrenzt ist nur die Anzahl Gespräche pro Tag.',
+  },
+  {
+    frage: 'Warum kostet der eigene Anzeigename etwas?',
+    antwort:
+      'Ein gewürfelter Name macht es schwerer, jemanden über mehrere Chats hinweg wiederzuerkennen – das nützt dem Gratistarif eher, als dass es ihm schadet. Wer den Namen selbst setzt, durchläuft weiterhin die Namensprüfung.',
+  },
+  {
+    frage: 'Was passiert, wenn mein Abo ausläuft?',
+    antwort:
+      'Dein Konto bleibt, wie es ist – nur die Grenze von zehn Chats pro Tag gilt wieder. Verifizierung, Pseudonym und Profil bleiben unberührt.',
+  },
+  {
+    frage: 'Wie lange gilt Lifetime?',
+    antwort:
+      'Solange es diesen Dienst gibt. Wird er eingestellt, besteht kein Anspruch auf Rückerstattung – das steht so auch in den Nutzungsbedingungen, damit es niemanden überrascht.',
+  },
+  {
+    frage: 'Bekomme ich mit Plus bevorzugte Behandlung bei einer Meldung?',
+    antwort:
+      'Nein. Meldungen werden in der Reihenfolge ihres Eingangs geprüft, und eine Sperre trifft ein bezahltes Konto genauso wie ein gratis genutztes. Erstattet wird in dem Fall nichts.',
+  },
+]
+
+function Karte({
+  plan,
+  aktiv,
+  gewaehlt,
+  onWaehlen,
+  busy,
+  angemeldet,
+}: {
+  plan: Plan
+  aktiv: boolean
+  gewaehlt: boolean
+  onWaehlen: () => void
+  busy: boolean
+  angemeldet: boolean
+}) {
   return (
     <Panel
       as="article"
@@ -24,7 +81,7 @@ function Karte({ plan, aktiv }: { plan: Plan; aktiv: boolean }) {
           <h2 className="font-display text-xl font-semibold">{plan.name}</h2>
           {plan.empfohlen ? <span className="label-caps text-accent">Beliebt</span> : null}
           {aktiv ? (
-            <span className="rounded-[2px] border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+            <span className="rounded-[2px] border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent uppercase">
               Dein Tarif
             </span>
           ) : null}
@@ -47,18 +104,43 @@ function Karte({ plan, aktiv }: { plan: Plan; aktiv: boolean }) {
           </li>
         ))}
       </ul>
+
+      <div className="mt-auto pt-2">
+        {!angemeldet ? (
+          <Link to="/anmelden" className={buttonClass(plan.empfohlen ? 'primary' : 'secondary', 'sm')}>
+            Konto anlegen
+          </Link>
+        ) : aktiv ? (
+          <p className="text-sm text-muted">Läuft bereits.</p>
+        ) : gewaehlt ? (
+          <p className="text-sm text-accent">Wunsch ist notiert.</p>
+        ) : (
+          <Button size="sm" variant={plan.empfohlen ? 'primary' : 'secondary'} disabled={busy} onClick={onWaehlen}>
+            {plan.id === 'frei' ? 'Gratis nutzen' : 'Diesen Tarif möchte ich'}
+          </Button>
+        )}
+      </div>
     </Panel>
   )
 }
 
-/** Preisübersicht. Gebucht wird noch nicht hier – siehe Hinweis unten. */
+/** Tarifübersicht. Gebucht wird noch nicht hier – siehe Hinweis unten. */
 export function Preise() {
   const konto = useAuth((s) => s.user)
   const user = useSession((s) => s.user)
+  const busy = useSession((s) => s.busy)
+  const choosePlan = useSession((s) => s.choosePlan)
+  const [gewaehlt, setGewaehlt] = useState<PlanId | null>(null)
+
   const meiner = aktiverPlan(user?.membership)
 
+  const waehlen = async (plan: PlanId) => {
+    const ok = await choosePlan(plan)
+    if (ok) setGewaehlt(plan)
+  }
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       <div className="prose-column">
         <PageTitle kicker="Tarife">Gratis nutzbar, bezahlt bequemer</PageTitle>
         <p className="text-muted">
@@ -69,16 +151,76 @@ export function Preise() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {PLAENE.map((plan) => (
-          <Karte key={plan.id} plan={plan} aktiv={plan.id === meiner} />
+          <Karte
+            key={plan.id}
+            plan={plan}
+            aktiv={plan.id === meiner}
+            gewaehlt={gewaehlt === plan.id}
+            busy={busy}
+            angemeldet={Boolean(konto)}
+            onWaehlen={() => void waehlen(plan.id)}
+          />
         ))}
       </div>
+
+      <section aria-labelledby="vergleich">
+        <h2 id="vergleich" className="font-display text-2xl font-semibold">
+          Was sich unterscheidet – und was nicht
+        </h2>
+        <p className="mt-2 max-w-prose text-muted">
+          Die untere Hälfte dieser Tabelle ist der eigentliche Punkt: Sicherheit gibt es nicht gegen Aufpreis.
+        </p>
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[30rem] border-collapse text-sm">
+            <caption className="sr-only">Vergleich von Gratistarif und Plus</caption>
+            <thead>
+              <tr className="border-b border-line-strong text-left">
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Merkmal
+                </th>
+                <th scope="col" className="w-28 py-2 pr-4 font-medium">
+                  Frei
+                </th>
+                <th scope="col" className="w-32 py-2 font-medium text-accent">
+                  Plus
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {VERGLEICH.map((zeile) => (
+                <tr key={zeile.merkmal} className="border-b border-line">
+                  <th scope="row" className="py-2 pr-4 text-left font-normal">
+                    {zeile.merkmal}
+                  </th>
+                  <td className="py-2 pr-4 text-muted">{zeile.frei}</td>
+                  <td className="py-2">{zeile.plus}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="fragen" className="prose-column">
+        <h2 id="fragen" className="font-display text-2xl font-semibold">
+          Häufige Fragen
+        </h2>
+        <dl className="mt-5 flex flex-col gap-5">
+          {FRAGEN.map((eintrag) => (
+            <div key={eintrag.frage}>
+              <dt className="font-medium">{eintrag.frage}</dt>
+              <dd className="mt-1 text-muted">{eintrag.antwort}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <div className="prose-column flex flex-col gap-4">
         <Note tone="warn">
           <strong>Die Kasse fehlt noch.</strong> Zahlen lässt sich hier im Moment nicht: Eine Bezahlung braucht einen
           Server, der die Quittung des Zahlungsanbieters prüft – ein Browser darf über einen bezahlten Zugang nicht
-          selbst entscheiden. Bis dahin trägt die Moderation einen Tarif von Hand ein. Wer jetzt schon Plus möchte,
-          schreibt an <span className="font-mono">{BETREIBER.email}</span>.
+          selbst entscheiden. Wer oben einen bezahlten Tarif wählt, hinterlässt deshalb einen Wunsch; freigeschaltet
+          wird er von Hand. Fragen dazu an <span className="font-mono">{BETREIBER.email}</span>.
         </Note>
 
         <div className="flex flex-wrap gap-3">

@@ -26,6 +26,8 @@ export {
   resetLocalPreferences,
   // Tarif
   setMembership,
+  choosePlan,
+  listPlanRequests,
   registerChatStart,
   // Verifizierung
   submitVerification,

@@ -4,6 +4,7 @@ import type { PlanId } from '../services/plans'
 import type {
   AccessLogEntry,
   ChatTranscript,
+  PlanRequest,
   Report,
   ReportStatus,
   VerificationImages,
@@ -20,6 +21,8 @@ interface ModerationState {
   /** Bildvorschauen je Antrag – nur solange die Browsersitzung läuft. */
   images: Record<string, VerificationImages>
   transcripts: ChatTranscript[]
+  /** Wer welchen Tarif möchte – solange die Kasse fehlt, der einzige Weg dorthin. */
+  planRequests: PlanRequest[]
   /** Geöffnete Verläufe dieser Sitzung, je Eintrag protokolliert. */
   opened: Record<string, ChatTranscript>
   accessLog: AccessLogEntry[]
@@ -42,16 +45,18 @@ export const useModeration = create<ModerationState>((set, get) => ({
   requests: [],
   images: {},
   transcripts: [],
+  planRequests: [],
   opened: {},
   accessLog: [],
 
   async load() {
-    const [reports, blocked, requests, transcripts, accessLog] = await Promise.all([
+    const [reports, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
       api.listReports(),
       api.listBlocked(),
       api.listVerificationRequests(),
       api.listTranscripts(),
       api.listAccessLog(),
+      api.listPlanRequests(),
     ])
 
     // Bilder nur für offene Anträge holen – entschiedene haben keine mehr.
@@ -59,7 +64,16 @@ export const useModeration = create<ModerationState>((set, get) => ({
     const paare = await Promise.all(
       offen.map(async (request) => [request.id, await api.getVerificationImages(request.id)] as const),
     )
-    set({ reports, blocked, requests, transcripts, accessLog, images: Object.fromEntries(paare), ready: true })
+    set({
+      reports,
+      blocked,
+      requests,
+      transcripts,
+      accessLog,
+      planRequests,
+      images: Object.fromEntries(paare),
+      ready: true,
+    })
   },
 
   async openTranscript(id) {
@@ -102,7 +116,7 @@ export const useModeration = create<ModerationState>((set, get) => ({
     set({ busy: true })
     try {
       await api.setMembership(userId, plan, laufzeitTage)
-      set({ busy: false })
+      set({ planRequests: await api.listPlanRequests(), busy: false })
       return true
     } catch {
       set({ busy: false })

@@ -1,8 +1,9 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { ThemeToggle } from './ThemeToggle'
+import { TarifDialog } from './TarifDialog'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-sm px-2.5 py-1.5 text-sm transition-colors ${
@@ -14,6 +15,11 @@ export function AppShell() {
   const signOut = useAuth((s) => s.signOut)
   const user = useSession((s) => s.user)
   const storageAvailable = useSession((s) => s.storageAvailable)
+  const { pathname } = useLocation()
+
+  // Die Moderation ist kein Publikum: Dort hat ein Tarifangebot nichts
+  // verloren, und ein Modal davor macht die Ansicht unbedienbar.
+  const imModerationsbereich = pathname.startsWith('/admin')
 
   return (
     <div className="flex min-h-full flex-col">
@@ -78,6 +84,9 @@ export function AppShell() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         <Outlet />
       </main>
+
+      {/* Einmalige Tarifwahl nach der ersten Anmeldung. */}
+      {konto && !imModerationsbereich ? <TarifDialog /> : null}
 
       <footer className="border-t border-line px-4 py-5">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">

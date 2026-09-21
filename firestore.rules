@@ -74,6 +74,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Tarifwünsche.
+    //
+    // Ein Wunsch ist kein Zugang: Freigeschaltet wird über
+    // `users.membership`, und das kann nur die Moderation. Hier steht
+    // lediglich, wer was möchte – damit die Moderation weiss, wen sie nach
+    // dem Zahlungseingang freischalten muss.
+    match /planRequests/{userId} {
+      allow read: if isModerator() || isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.erledigt == false;
+      allow update, delete: if isModerator();
+      allow delete: if isOwner(userId);
+    }
+
     // Verifizierungsanträge: einreichen darf man für sich selbst, lesen den
     // eigenen Stand – entscheiden nur die Moderation. Zurückziehen ist
     // erlaubt, solange noch nicht entschieden wurde.

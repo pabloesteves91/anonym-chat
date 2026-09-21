@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Button, Field, Note, Panel, inputClass } from './ui'
-import { PLAENE, type PlanId } from '../services/plans'
+import { PLAENE, planById, type PlanId } from '../services/plans'
 import { useModeration } from '../store/useModeration'
+import type { PlanRequest } from '../services/types'
 
 /** Wie lange ein vergebener Tarif gilt. `null` heisst: ohne Ablauf. */
 const LAUFZEIT: Record<PlanId, number | null> = {
@@ -20,6 +21,7 @@ const LAUFZEIT: Record<PlanId, number | null> = {
  */
 export function PlanZuteilung() {
   const setPlan = useModeration((s) => s.setPlan)
+  const wuensche = useModeration((s) => s.planRequests)
   const busy = useModeration((s) => s.busy)
   const [uid, setUid] = useState('')
   const [plan, setPlanAuswahl] = useState<PlanId>('plus-monat')
@@ -52,6 +54,17 @@ export function PlanZuteilung() {
           beziehungsweise 365 Tagen von selbst aus; Lifetime nie.
         </p>
       </div>
+
+      <Wunschliste
+        wuensche={wuensche}
+        busy={busy}
+        onUebernehmen={(userId, gewuenscht) => {
+          setUid(userId)
+          setPlanAuswahl(gewuenscht)
+          setMeldung(null)
+          setFehler(null)
+        }}
+      />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[16rem] flex-1">
@@ -88,5 +101,62 @@ export function PlanZuteilung() {
         {meldung ?? ''}
       </p>
     </Panel>
+  )
+}
+
+/**
+ * Offene Tarifwünsche.
+ *
+ * Ein Wunsch ist kein Zahlungseingang. Die Liste sagt nur, wer sich was
+ * ausgesucht hat – ob bezahlt wurde, steht auf dem Konto, nicht hier.
+ */
+function Wunschliste({
+  wuensche,
+  busy,
+  onUebernehmen,
+}: {
+  wuensche: PlanRequest[]
+  busy: boolean
+  onUebernehmen: (userId: string, plan: PlanId) => void
+}) {
+  const offen = wuensche.filter((wunsch) => !wunsch.erledigt)
+
+  if (offen.length === 0) {
+    return (
+      <p className="text-sm text-muted">
+        Keine offenen Wünsche. Wer auf der Tarifseite einen bezahlten Zugang wählt, erscheint hier.
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <p className="label-caps mb-2">{offen.length} offen</p>
+      <ul className="flex flex-col gap-px overflow-hidden rounded-sm border border-line bg-line">
+        {offen.map((wunsch) => (
+          <li key={wunsch.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-surface px-3 py-2 text-sm">
+            <span className="font-mono">{wunsch.pseudonym}</span>
+            <span className="text-accent">{planById(wunsch.plan as PlanId).name}</span>
+            <span className="text-muted">
+              {new Date(wunsch.at).toLocaleDateString('de-CH', { dateStyle: 'short' })}
+            </span>
+            <span className="font-mono text-xs text-muted">{wunsch.userId}</span>
+            <span className="ml-auto">
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={() => onUebernehmen(wunsch.userId, wunsch.plan as PlanId)}
+              >
+                Übernehmen
+              </Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-sm text-muted">
+        „Übernehmen" füllt das Formular unten aus – freigeschaltet wird erst mit „Setzen", und erst, wenn das Geld da
+        ist.
+      </p>
+    </div>
   )
 }
