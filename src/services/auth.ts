@@ -2,8 +2,11 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   browserLocalPersistence,
+  createUserWithEmailAndPassword,
   getRedirectResult,
   onAuthStateChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -12,7 +15,7 @@ import {
   type AuthProvider,
   type User,
 } from 'firebase/auth'
-import { EMULATOR_MODE, MODERATOR_UID, getFirebaseAuth } from './firebase'
+import { MODERATOR_UID, getFirebaseAuth } from './firebase'
 
 /**
  * Zugangskontrolle für die Moderationsansicht.
@@ -71,6 +74,17 @@ const FEHLERTEXT: Record<string, string> = {
   'auth/user-disabled': 'Dieses Konto ist gesperrt.',
   'auth/too-many-requests': 'Zu viele Versuche. Bitte später erneut probieren.',
   'auth/network-request-failed': 'Keine Verbindung zu Firebase.',
+  'auth/email-already-in-use': 'Zu dieser Adresse gibt es schon ein Konto. Bitte anmelden statt registrieren.',
+  'auth/weak-password': 'Das Passwort ist zu kurz – mindestens acht Zeichen.',
+  'auth/missing-password': 'Bitte ein Passwort eingeben.',
+  'auth/user-not-found': 'Zu dieser Adresse gibt es kein Konto.',
+  'auth/wrong-password': 'E-Mail oder Passwort stimmt nicht.',
+}
+
+function authFehler(error: unknown, fallback: string): AuthError {
+  if (error instanceof AuthError) return error
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+  return new AuthError(FEHLERTEXT[code] ?? fallback)
 }
 
 export async function signInModerator(email: string, password: string): Promise<ModeratorAccess> {
@@ -216,17 +230,52 @@ export async function completeUserRedirect(): Promise<AppUser | null> {
   }
 }
 
+/** Mindestlänge, die auch Firebase noch akzeptiert. */
+export const MIN_PASSWORT_LAENGE = 8
+
+/** Anmeldung mit E-Mail und Passwort. */
+export async function signInUserWithPassword(email: string, passwort: string): Promise<AppUser> {
+  try {
+    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
+    const { user } = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), passwort)
+    return toAppUser(user) as AppUser
+  } catch (error) {
+    throw authFehler(error, 'Anmeldung fehlgeschlagen.')
+  }
+}
+
 /**
- * Anmeldung mit einem festen Testkonto – nur gegen den Auth-Emulator.
+ * Neues Konto mit E-Mail und Passwort.
  *
- * Die Anbieter-Anmeldung braucht Google-Infrastruktur, die in automatisierten
- * Durchläufen nicht erreichbar ist. Damit der Rest der App trotzdem prüfbar
- * bleibt, gibt es diesen Weg; im Produktionsbuild ist er abgeschaltet.
+ * Im Anschluss geht eine Bestätigungsmail raus. Sie ist kein Tor – der Zugang
+ * zum Chat hängt an der Verifizierung mit Ausweis, nicht an der Adresse –,
+ * aber sie hilft, wenn jemand sein Passwort vergisst.
  */
-export async function signInTestAccount(email = 'testperson@example.ch'): Promise<AppUser> {
-  if (!EMULATOR_MODE) throw new AuthError('Testkonten gibt es nur im Emulator.')
-  const { user } = await signInWithEmailAndPassword(getFirebaseAuth(), email, 'testtest')
-  return toAppUser(user) as AppUser
+export async function registerUserWithPassword(email: string, passwort: string): Promise<AppUser> {
+  if (passwort.length < MIN_PASSWORT_LAENGE) {
+    throw new AuthError(`Das Passwort braucht mindestens ${MIN_PASSWORT_LAENGE} Zeichen.`)
+  }
+  try {
+    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
+    const { user } = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), passwort)
+    try {
+      await sendEmailVerification(user)
+    } catch {
+      /* Ohne Bestätigungsmail geht es auch weiter. */
+    }
+    return toAppUser(user) as AppUser
+  } catch (error) {
+    throw authFehler(error, 'Konto konnte nicht angelegt werden.')
+  }
+}
+
+/** Schickt den Link zum Zurücksetzen des Passworts. */
+export async function sendPasswordReset(email: string): Promise<void> {
+  try {
+    await sendPasswordResetEmail(getFirebaseAuth(), email.trim())
+  } catch (error) {
+    throw authFehler(error, 'Die E-Mail konnte nicht verschickt werden.')
+  }
 }
 
 export async function signOutUser(): Promise<void> {

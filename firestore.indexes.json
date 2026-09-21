@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "queue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roomId", "order": "ASCENDING" },
+        { "fieldPath": "since", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

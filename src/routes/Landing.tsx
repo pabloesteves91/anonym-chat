@@ -30,7 +30,7 @@ const SICHERHEIT = [
   },
   {
     titel: 'Du bestimmst, mit wem',
-    text: 'Sprache und Interessen steuern, wer dir zugelost wird. Einzelne Konten kannst du dauerhaft ausschliessen, ohne jemanden zu melden.',
+    text: 'Die Sprache steuert, wer dir zugelost wird, mit Plus zusätzlich die Interessen. Einzelne Konten kannst du dauerhaft ausschliessen, ohne jemanden zu melden.',
   },
 ]
 
@@ -67,7 +67,12 @@ export function Landing() {
               Ich habe schon ein Konto
             </Link>
           ) : null}
-          <span className="text-sm text-muted">Kostenlos · Keine Profile · Kein Klarname</span>
+          <span className="text-sm text-muted">
+            Ab 18 · Gratis nutzbar ·{' '}
+            <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+              Tarife
+            </Link>
+          </span>
         </div>
       </section>
 
@@ -106,9 +111,9 @@ export function Landing() {
           <div>
             <p className="label-caps mb-2">Andere sehen</p>
             <ul className="flex flex-col gap-1.5 text-sm">
-              <li>Deinen zufälligen Anzeigenamen</li>
+              <li>Deinen Anzeigenamen</li>
               <li>Dass du verifiziert bist</li>
-              <li>Sprache und gemeinsame Interessen</li>
+              <li>Ob du gerade am Gerät bist und schreibst</li>
             </ul>
           </div>
           <div>
@@ -117,10 +122,23 @@ export function Landing() {
               <li>Deinen Namen, dein Konto, deine Adresse</li>
               <li>Deine Mobilnummer</li>
               <li>Dein Ausweisfoto oder dein Selfie</li>
+              <li>Deine Sprache, Altersgruppe und Interessen</li>
               <li>Frühere Chats – auch du siehst sie nicht mehr</li>
             </ul>
           </div>
         </div>
+      </section>
+
+      <section aria-labelledby="offenheit" className="prose-column">
+        <h2 id="offenheit" className="font-display text-2xl font-semibold">
+          Was wir nicht versprechen
+        </h2>
+        <p className="mt-3 text-muted">
+          Die Verifizierung sagt, dass am anderen Ende eine volljährige, ausgewiesene Person sitzt. Sie sagt nichts
+          darüber, wie diese Person sich verhält. Trotz Wortfilter und Moderation können dir sexuelle, verstörende
+          oder beleidigende Nachrichten begegnen – die Teilnahme geschieht auf eigene Verantwortung. Melden dauert
+          zwei Klicks, und jede Meldung wird von einem Menschen angesehen.
+        </p>
       </section>
 
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-accent/40 bg-accent-soft p-6">

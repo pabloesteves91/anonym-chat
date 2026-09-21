@@ -31,7 +31,16 @@ const WARNUNG: Record<FilterCategory, { titel: string; text: string }> = {
  * Eingabezeile. Der Wortfilter läuft schon beim Tippen und warnt vorab –
  * gesendet wird trotzdem, markiert wird hinterher.
  */
-export function Composer({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
+export function Composer({
+  onSend,
+  onTyping,
+  disabled,
+}: {
+  onSend: (text: string) => void
+  /** Meldet, dass gerade geschrieben wird – gedrosselt vom Aufrufer. */
+  onTyping?: () => void
+  disabled?: boolean
+}) {
   const [text, setText] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const verdict = text.trim().length > 2 ? scanText(text) : null
@@ -91,6 +100,7 @@ export function Composer({ onSend, disabled }: { onSend: (text: string) => void;
           onChange={(event) => {
             setText(event.target.value)
             setConfirmed(false)
+            if (event.target.value.trim()) onTyping?.()
           }}
           onKeyDown={onKeyDown}
           placeholder="Nachricht schreiben – Enter sendet, Shift+Enter macht eine neue Zeile"

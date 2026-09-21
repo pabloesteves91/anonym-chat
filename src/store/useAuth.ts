@@ -2,8 +2,10 @@ import { create } from 'zustand'
 import {
   AuthError,
   completeUserRedirect,
-  signInTestAccount,
+  registerUserWithPassword,
+  sendPasswordReset,
   signInUser,
+  signInUserWithPassword,
   signOutUser,
   watchUser,
   type AppUser,
@@ -27,7 +29,9 @@ interface AuthState {
 
   watch: (onAccountChange: (uid: string | null) => void) => () => void
   signIn: (anbieter: OAuthAnbieter) => Promise<void>
-  signInTest: (email?: string) => Promise<void>
+  signInWithPassword: (email: string, passwort: string) => Promise<void>
+  register: (email: string, passwort: string) => Promise<void>
+  resetPassword: (email: string) => Promise<boolean>
   signOut: () => Promise<void>
   clearError: () => void
 }
@@ -62,12 +66,34 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 
-  async signInTest(email) {
+  async signInWithPassword(email, passwort) {
     set({ busy: true, error: null })
     try {
-      await signInTestAccount(email)
+      await signInUserWithPassword(email, passwort)
+      // Der Beobachter übernimmt ab hier.
     } catch (error) {
-      set({ busy: false, error: error instanceof AuthError ? error.message : 'Testanmeldung fehlgeschlagen.' })
+      set({ busy: false, error: error instanceof AuthError ? error.message : 'Anmeldung fehlgeschlagen.' })
+    }
+  },
+
+  async register(email, passwort) {
+    set({ busy: true, error: null })
+    try {
+      await registerUserWithPassword(email, passwort)
+    } catch (error) {
+      set({ busy: false, error: error instanceof AuthError ? error.message : 'Konto konnte nicht angelegt werden.' })
+    }
+  },
+
+  async resetPassword(email) {
+    set({ busy: true, error: null })
+    try {
+      await sendPasswordReset(email)
+      set({ busy: false })
+      return true
+    } catch (error) {
+      set({ busy: false, error: error instanceof AuthError ? error.message : 'Die E-Mail konnte nicht raus.' })
+      return false
     }
   },
 

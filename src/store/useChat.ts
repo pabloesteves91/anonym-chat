@@ -1,37 +1,44 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
 import { generateId } from '../services/pseudonym'
+import { grenzen } from '../services/plans'
 import { useSession } from './useSession'
+import type { LiveMessage } from '../services/api'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'
 
 /**
- * Chat-Ablauf: Suche, aktives Gespräch, Beenden, Melden.
+ * Chat-Ablauf: Suche, laufendes Gespräch, Beenden, Melden.
  *
- * Der Verlauf lebt im Arbeitsspeicher und ist für beide Seiten weg, sobald
- * der Chat endet. Beim Beenden wandert er einmal in den Moderationsspeicher,
- * wo er nach 72 Stunden automatisch abläuft – nachlesen kann ihn dort nur
- * die Moderation, und jeder Zugriff wird protokolliert.
+ * Geschrieben wird in einen gemeinsamen Raum auf dem Server; beide Seiten
+ * hören auf denselben Raum. Nach dem Ende ist der Verlauf für beide weg –
+ * einsehbar bleibt er 72 Stunden ausschliesslich für die Moderation, und
+ * jeder Blick dorthin wird protokolliert.
  */
 
-const MAX_MESSAGE_LENGTH = 2000
-
 export type ChatStatus = 'idle' | 'suche' | 'aktiv' | 'beendet'
-export type EndReason = 'selbst' | 'gemeldet' | 'naechster' | 'blockiert'
+export type EndReason = 'selbst' | 'gemeldet' | 'naechster' | 'blockiert' | 'partner'
 
 interface ChatState {
   status: ChatStatus
+  roomId: string | null
   partner: Partner | null
   messages: Message[]
   partnerTyping: boolean
+  partnerOnline: boolean
   filter: MatchFilter
   error: string | null
+  /** Setzt die Oberfläche auf den Hinweis "Tarifgrenze erreicht". */
+  grenzeErreicht: boolean
   endReason: EndReason | null
   lastReport: Report | null
+  /** Wie viele Leute gerade sonst noch warten – Anzeige in der Warteschlange. */
+  wartende: number
 
   setFilter: (filter: MatchFilter) => void
   startSearch: () => Promise<void>
   cancelSearch: () => void
-  sendMessage: (text: string) => void
+  sendMessage: (text: string) => Promise<void>
+  notifyTyping: () => void
   endChat: (reason: EndReason) => void
   blockAndEnd: () => Promise<void>
   nextChat: () => Promise<void>
@@ -43,200 +50,170 @@ interface ChatState {
 /** Laufzeit-Handles bewusst ausserhalb des States: sie sind kein UI-Zustand. */
 let controller: AbortController | null = null
 let runToken = 0
-let turn = 0
-/** Verhindert, dass mehrere Partnerantworten gleichzeitig laufen. */
-let partnerTurnActive = false
-/** Der Verlauf dieses Chats wird genau einmal gesichert, auch bei Wiederholungen. */
-let savedTranscriptId: string | null = null
-
-interface Timer {
-  id: number
-  resolve: () => void
-}
-
-const timers = new Set<Timer>()
-
-/** Bricht laufende Wartezeiten ab und löst ihre Promises auf, damit keine
- *  hängenden Fortsetzungen zurückbleiben. */
-function clearTimers() {
-  timers.forEach((timer) => {
-    window.clearTimeout(timer.id)
-    timer.resolve()
-  })
-  timers.clear()
-}
-
-function stopRun() {
-  controller?.abort()
-  controller = null
-  clearTimers()
-  partnerTurnActive = false
-  runToken += 1
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timer: Timer = { id: 0, resolve }
-    timer.id = window.setTimeout(() => {
-      timers.delete(timer)
-      resolve()
-    }, ms)
-    timers.add(timer)
-  })
-}
+let unsubMessages: (() => void) | null = null
+let unsubRoom: (() => void) | null = null
+let heartbeat: number | null = null
+let letztesTippen = 0
 
 function systemMessage(text: string): Message {
   return { id: generateId('sys'), author: 'system', text, ts: Date.now() }
 }
 
-export const useChat = create<ChatState>((set, get) => {
-  /**
-   * Legt den Verlauf in den Moderationsspeicher, bevor er aus dem
-   * Arbeitsspeicher verschwindet. Muss synchron bis zum ersten `await`
-   * laufen, solange der Zustand noch steht.
-   */
-  async function persistTranscript(): Promise<string | null> {
-    // Ein fehlgeschlagener Meldeversuch darf keine zweite Kopie desselben
-    // Gesprächs anlegen – jede hätte ihre eigene 72-Stunden-Uhr.
-    if (savedTranscriptId) return savedTranscriptId
-    const { partner, messages } = get()
-    const user = useSession.getState().user
-    if (!partner || !user) return null
-    try {
-      const transcript = await api.saveTranscript({ owner: user, partner, messages })
-      savedTranscriptId = transcript?.id ?? null
-      return savedTranscriptId
-    } catch {
-      return null
-    }
+function toMessage(live: LiveMessage): Message {
+  return { id: live.id, author: live.author, text: live.text, ts: live.ts, flag: live.flag }
+}
+
+function stopRun() {
+  controller?.abort()
+  controller = null
+  unsubMessages?.()
+  unsubRoom?.()
+  unsubMessages = null
+  unsubRoom = null
+  if (heartbeat !== null) {
+    window.clearInterval(heartbeat)
+    heartbeat = null
   }
+  runToken += 1
+}
 
-  /** Holt eine Partnerantwort und spielt vorher den Tippindikator ab. */
-  async function playPartnerTurn(token: number, first: boolean, ownInterests: string[]) {
-    const partner = get().partner
-    if (!partner || token !== runToken || partnerTurnActive) return
-    partnerTurnActive = true
-
-    try {
-      const utterance = first
-        ? await api.requestOpener(partner, ownInterests, controller?.signal)
-        : await api.requestReply(partner, get().messages, turn, controller?.signal)
+export const useChat = create<ChatState>((set, get) => {
+  /** Hängt sich an den Raum: Nachrichten, Tippen, Anwesenheit, Verlassen. */
+  function betrete(roomId: string, token: number, begruessung: Message) {
+    unsubMessages = api.watchMessages(roomId, (live) => {
       if (token !== runToken) return
+      set({ messages: [begruessung, ...live.map(toMessage)] })
+    })
 
-      set({ partnerTyping: true })
-      await sleep(utterance.typingMs)
+    unsubRoom = api.watchRoom(roomId, (zustand) => {
       if (token !== runToken) return
+      set({ partnerTyping: zustand.partnerTyping, partnerOnline: zustand.partnerOnline })
+      if (zustand.partnerLeft && get().status === 'aktiv') {
+        get().endChat('partner')
+      }
+    })
 
-      turn += 1
-      set((state) => ({
-        partnerTyping: false,
-        messages: [
-          ...state.messages,
-          {
-            id: generateId('msg'),
-            author: 'partner',
-            text: utterance.text,
-            ts: Date.now(),
-            flag: api.scanMessage(utterance.text) ?? undefined,
-          },
-        ],
-      }))
-    } catch {
-      if (token === runToken) set({ partnerTyping: false })
-    } finally {
-      if (token === runToken) partnerTurnActive = false
-    }
+    void api.markSeen(roomId)
+    heartbeat = window.setInterval(() => void api.markSeen(roomId), api.HEARTBEAT_MS)
   }
 
   return {
     status: 'idle',
+    roomId: null,
     partner: null,
     messages: [],
     partnerTyping: false,
+    partnerOnline: true,
     filter: { language: 'egal', interests: [] },
     error: null,
+    grenzeErreicht: false,
     endReason: null,
     lastReport: null,
+    wartende: 0,
 
     setFilter(filter) {
       set({ filter })
     },
 
     async startSearch() {
+      const ich = useSession.getState().user
+      if (!ich) return
+
       stopRun()
       controller = new AbortController()
       const token = runToken
-      turn = 0
-      partnerTurnActive = false
-      savedTranscriptId = null
 
       set({
         status: 'suche',
+        roomId: null,
         partner: null,
         messages: [],
         partnerTyping: false,
+        partnerOnline: true,
         error: null,
+        grenzeErreicht: false,
         endReason: null,
         lastReport: null,
+        wartende: 0,
       })
 
       try {
-        const partner = await api.findMatch(get().filter, controller.signal)
+        // Erst zählen, dann suchen: sonst verbraucht ein abgebrochener
+        // Suchlauf ein Guthaben, das nie zu einem Gespräch geführt hat.
+        const zaehlung = await api.registerChatStart()
+        if (!zaehlung.erlaubt) {
+          set({ status: 'idle', grenzeErreicht: true })
+          return
+        }
+        await useSession.getState().refreshUser()
+
+        const treffer = await api.findMatch(get().filter, ich, {
+          bevorzugt: grenzen(ich.membership).bevorzugt,
+          signal: controller.signal,
+          onWartende: (anzahl) => {
+            if (token === runToken) set({ wartende: anzahl })
+          },
+        })
         if (token !== runToken) return
 
-        set({
-          status: 'aktiv',
-          partner,
-          messages: [
-            systemMessage(
-              `Verbunden mit ${partner.pseudonym}. Beide Seiten sind verifiziert. Der Verlauf wird 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht.`,
-            ),
-          ],
-        })
+        const partner: Partner = { id: treffer.partnerId, pseudonym: treffer.partnerPseudonym }
+        const begruessung = systemMessage(
+          `Verbunden mit ${partner.pseudonym}. Beide Seiten sind verifiziert. Der Verlauf wird 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht.`,
+        )
 
-        const ownInterests = get().filter.interests
-        void playPartnerTurn(token, true, ownInterests)
+        set({ status: 'aktiv', roomId: treffer.roomId, partner, messages: [begruessung] })
+        betrete(treffer.roomId, token, begruessung)
       } catch (error) {
         if (token !== runToken) return
         if (error instanceof api.ApiError && error.code === 'abgebrochen') return
         set({
           status: 'idle',
           error:
-            error instanceof api.ApiError && error.code === 'kein-treffer'
-              ? 'Mit diesen Filtern ist gerade niemand erreichbar. Filter lockern und erneut suchen.'
-              : 'Suche fehlgeschlagen. Bitte erneut versuchen.',
+            error instanceof api.ApiError && error.code === 'verweigert'
+              ? error.message
+              : 'Die Suche ist fehlgeschlagen. Bitte erneut versuchen.',
         })
       }
     },
 
     cancelSearch() {
       stopRun()
-      set({ status: 'idle', partner: null, partnerTyping: false, error: null })
+      void api.leaveQueue()
+      set({ status: 'idle', partner: null, partnerTyping: false, error: null, wartende: 0 })
     },
 
-    sendMessage(text) {
-      // Harte Obergrenze auch abseits des Eingabefelds: der Wortfilter läuft
-      // über jede Nachricht, und der Verlauf soll nicht beliebig wachsen.
-      const trimmed = text.trim().slice(0, MAX_MESSAGE_LENGTH)
-      if (!trimmed || get().status !== 'aktiv') return
-
-      const message: Message = {
-        id: generateId('msg'),
-        author: 'me',
-        text: trimmed,
-        ts: Date.now(),
-        flag: api.scanMessage(trimmed) ?? undefined,
+    async sendMessage(text) {
+      const { roomId, status } = get()
+      if (!roomId || status !== 'aktiv') return
+      try {
+        await api.sendRoomMessage(roomId, text)
+      } catch (error) {
+        set({ error: error instanceof api.ApiError ? error.message : 'Die Nachricht ging nicht raus.' })
       }
-      set((state) => ({ messages: [...state.messages, message] }))
-      void playPartnerTurn(runToken, false, get().filter.interests)
+    },
+
+    /** Der Tippindikator wird gedrosselt – nicht bei jedem Anschlag ein Schreibzugriff. */
+    notifyTyping() {
+      const { roomId, status } = get()
+      if (!roomId || status !== 'aktiv') return
+      const jetzt = Date.now()
+      if (jetzt - letztesTippen < 3_000) return
+      letztesTippen = jetzt
+      void api.setTyping(roomId)
     },
 
     endChat(reason) {
-      // Erst sichern, dann leeren: der Verlauf liegt danach nur noch im
-      // Moderationsspeicher und läuft dort nach 72 Stunden ab.
-      void persistTranscript()
+      const roomId = get().roomId
+      if (roomId) void api.leaveRoom(roomId)
       stopRun()
-      set({ status: 'beendet', endReason: reason, partner: null, messages: [], partnerTyping: false })
+      set({
+        status: 'beendet',
+        endReason: reason,
+        roomId: null,
+        partner: null,
+        messages: [],
+        partnerTyping: false,
+      })
     },
 
     /** Persönliche Blockierung: dieses Konto wird nicht mehr zugelost. */
@@ -245,6 +222,7 @@ export const useChat = create<ChatState>((set, get) => {
       if (!partner) return
       try {
         await api.blockPartner(partner.id)
+        await useSession.getState().refreshBlocks()
       } catch {
         // Blockierung nicht gespeichert – der Chat endet trotzdem.
       }
@@ -257,27 +235,18 @@ export const useChat = create<ChatState>((set, get) => {
     },
 
     async report(reason, note, reporter) {
-      const { partner, messages } = get()
+      const { partner, messages, roomId } = get()
       if (!partner) return null
       try {
-        const transcriptId = await persistTranscript()
-        const report = await api.submitReport({ reason, note, partner, messages, transcriptId }, reporter)
-        stopRun()
-        set({
-          status: 'beendet',
-          endReason: 'gemeldet',
-          partner: null,
-          messages: [],
-          partnerTyping: false,
-          lastReport: report,
-        })
+        const report = await api.submitReport({ reason, note, partner, messages, transcriptId: roomId }, reporter)
+        if (roomId) await api.markReported(roomId)
+        get().endChat('gemeldet')
+        set({ endReason: 'gemeldet', lastReport: report })
+        await useSession.getState().refreshBlocks()
         return report
       } catch (error) {
         set({
-          error:
-            error instanceof Error && error.message
-              ? error.message
-              : 'Meldung konnte nicht gespeichert werden.',
+          error: error instanceof Error && error.message ? error.message : 'Meldung konnte nicht gespeichert werden.',
         })
         return null
       }
@@ -288,7 +257,7 @@ export const useChat = create<ChatState>((set, get) => {
     },
 
     dismissEnded() {
-      set({ status: 'idle', endReason: null, lastReport: null, error: null })
+      set({ status: 'idle', endReason: null, lastReport: null, error: null, grenzeErreicht: false })
     },
   }
 })

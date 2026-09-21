@@ -59,16 +59,14 @@ function getApp(): FirebaseApp {
 /**
  * Adresse des Auth-Emulators, etwa `http://127.0.0.1:9099`.
  *
- * Gesetzt über `VITE_AUTH_EMULATOR` – nur für Entwicklung und automatisierte
- * Durchläufe. Im Produktionsbuild ist die Variable leer, dann spricht die App
- * mit dem echten Firebase.
+ * Gesetzt über `VITE_AUTH_EMULATOR` – nur für die Entwicklung. Im
+ * Produktionsbuild ist die Variable leer, dann spricht die App mit dem
+ * echten Firebase. Testkonten gibt es keine: Wer hier chattet, hat die
+ * Verifizierung durchlaufen.
  */
 const EMULATOR = import.meta.env.VITE_AUTH_EMULATOR as string | undefined
 
-/** Läuft die App gegen den lokalen Emulator? Nur dann gibt es Testkonten. */
-export const EMULATOR_MODE = Boolean(EMULATOR)
-
-/** Lädt Firebase erst, wenn es gebraucht wird – der Chat läuft ohne. */
+/** Lädt Firebase erst beim ersten Zugriff, nicht schon beim Laden der Seite. */
 export function getFirebaseAuth(): Auth {
   if (auth) return auth
   auth = getAuth(getApp())

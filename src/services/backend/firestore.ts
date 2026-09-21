@@ -1,7 +1,7 @@
 import {
   Timestamp,
   collection,
-  deleteDoc,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -15,14 +15,12 @@ import {
 import { deleteObject, getDownloadURL, ref, uploadString } from 'firebase/storage'
 import { getDb, getFileStorage, getFirebaseAuth } from '../firebase'
 import { generateId, generatePseudonym } from '../pseudonym'
-import { PARTNER_POOL } from '../partnerScript'
 import { validateDisplayName } from '../wordFilter'
-import { ApiError, EXCERPT_LENGTH, RETENTION_MS, between, delay, maskPhone } from './shared'
+import { GRATIS_MITGLIEDSCHAFT, grenzen, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
+import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
   ChatTranscript,
-  MatchFilter,
-  Partner,
   Profile,
   Report,
   ReportInput,
@@ -37,19 +35,11 @@ import type {
 export { ApiError, RETENTION_MS, maskPhone, normalizePhone } from './shared'
 export type { ApiErrorCode } from './shared'
 
-// Simulierte Gesprächspartner und der Wortfilter bleiben lokal: Sie sind
-// Attrappen beziehungsweise reine Rechnerei ohne Datenhaltung.
-export { requestOpener, requestReply, scanMessage, requestSmsCode, confirmSmsCode } from './local'
-export type { PartnerUtterance, VerificationInput, TranscriptInput } from './local'
-
 /**
- * Datenquelle Firestore.
+ * Die Datenhaltung.
  *
- * Dieselben Funktionen wie die lokale Variante, nur liegen die Daten auf dem
- * Server: Die Moderation sieht damit Anträge, Meldungen und Verläufe aller
- * Konten, nicht nur die des eigenen Browsers.
- *
- * Was hier steht, ist nur die halbe Miete – durchgesetzt wird der Zugriff von
+ * Alles liegt auf dem Server: Konten, Anträge, Meldungen, Chaträume. Was hier
+ * steht, ist nur die halbe Miete – durchgesetzt wird der Zugriff von
  * `firestore.rules` und `storage.rules`. Eine abgewiesene Regel kommt als
  * `ApiError` mit dem Code 'verweigert' zurück.
  */
@@ -59,6 +49,7 @@ const PFAD = {
   verifications: 'verifications',
   reports: 'reports',
   chats: 'chats',
+  messages: 'messages',
   blocked: 'blocked',
   accessLog: 'accessLog',
 } as const
@@ -81,6 +72,14 @@ function uebersetze(error: unknown, fallback: string): ApiError {
   if (code.includes('unavailable') || code.includes('network')) {
     return new ApiError('Keine Verbindung zur Datenbank.', 'speicher')
   }
+  if (code.startsWith('storage/')) {
+    return new ApiError(
+      code.includes('unauthorized')
+        ? 'Der Dateispeicher hat den Upload abgelehnt.'
+        : 'Die Bilder konnten nicht hochgeladen werden.',
+      'speicher',
+    )
+  }
   return new ApiError(fallback, 'speicher')
 }
 
@@ -101,6 +100,8 @@ interface UserDoc {
   verifiedAt: string | null
   phone: string | null
   profile: Profile
+  membership: Membership
+  usage: Verbrauch
   codexAccepted: boolean
   selfBlocked: string[]
 }
@@ -112,6 +113,8 @@ const leererUser = (): UserDoc => ({
   verifiedAt: null,
   phone: null,
   profile: { ...DEFAULT_PROFILE },
+  membership: { ...GRATIS_MITGLIEDSCHAFT, seit: new Date().toISOString() },
+  usage: { tag: heute(), chats: 0 },
   codexAccepted: false,
   selfBlocked: [],
 })
@@ -125,6 +128,8 @@ function toUser(id: string, data: UserDoc): User {
     verifiedAt: data.verifiedAt ?? null,
     phone: data.phone ?? null,
     profile: { ...DEFAULT_PROFILE, ...(data.profile ?? {}) },
+    membership: data.membership ?? GRATIS_MITGLIEDSCHAFT,
+    usage: data.usage ?? { tag: heute(), chats: 0 },
   }
 }
 
@@ -209,11 +214,61 @@ async function setzePseudonym(name: string): Promise<User> {
 export async function setPseudonym(name: string): Promise<User> {
   const pruefung = validateDisplayName(name)
   if (!pruefung.ok) throw new ApiError(pruefung.error ?? 'Dieser Name geht nicht.', 'ungueltig')
-  return fuehreAus(() => setzePseudonym(name.trim()), 'Name konnte nicht gespeichert werden.')
+  return fuehreAus(async () => {
+    const data = await ladeUserDoc(uid())
+    if (!grenzen(data?.membership).eigenerName) {
+      throw new ApiError('Einen eigenen Namen gibt es mit Plus. Gratis wird gewürfelt.', 'verweigert')
+    }
+    return await setzePseudonym(name.trim())
+  }, 'Name konnte nicht gespeichert werden.')
 }
 
 export async function regeneratePseudonym(): Promise<User> {
   return fuehreAus(() => setzePseudonym(generatePseudonym()), 'Name konnte nicht gewürfelt werden.')
+}
+
+/* ----------------------------------------------------------------- Tarif */
+
+/**
+ * Trägt einen Tarif ein.
+ *
+ * Aufgerufen wird das heute von Hand durch die Moderation – die Kasse fehlt
+ * noch. Die Regeln lassen deshalb nur die Moderation an dieses Feld; ein
+ * Konto, das sich selbst auf Lifetime setzen könnte, wäre kein Tarif.
+ */
+export async function setMembership(userId: string, plan: PlanId, laufzeitTage: number | null): Promise<void> {
+  await fuehreAus(async () => {
+    const membership: Membership = {
+      plan,
+      seit: new Date().toISOString(),
+      bis: laufzeitTage === null ? null : new Date(Date.now() + laufzeitTage * 86_400_000).toISOString(),
+    }
+    await updateDoc(doc(getDb(), PFAD.users, userId), { membership })
+  }, 'Tarif konnte nicht gesetzt werden.')
+}
+
+/**
+ * Zählt einen begonnenen Chat und meldet, ob noch einer drin war.
+ *
+ * Die Grenze wird im Browser geprüft – wer den Code umschreibt, umgeht sie.
+ * Verlässlich wird das erst mit einer Serverfunktion; bis dahin ist es eine
+ * Bremse, kein Riegel. Missbrauch fällt in der Moderation auf.
+ */
+export async function registerChatStart(): Promise<{ erlaubt: boolean; verbleibend: number | null }> {
+  return fuehreAus(async () => {
+    const id = uid()
+    const data = await ladeUserDoc(id)
+    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+
+    const grenze = grenzen(data.membership).chatsProTag
+    const tag = heute()
+    const bisher = data.usage?.tag === tag ? data.usage.chats : 0
+
+    if (grenze !== null && bisher >= grenze) return { erlaubt: false, verbleibend: 0 }
+
+    await updateDoc(doc(getDb(), PFAD.users, id), { usage: { tag, chats: bisher + 1 } })
+    return { erlaubt: true, verbleibend: grenze === null ? null : grenze - bisher - 1 }
+  }, 'Der Chat konnte nicht gestartet werden.')
 }
 
 /* ---------------------------------------------------------- Verifizierung */
@@ -372,26 +427,14 @@ export async function withdrawVerification(): Promise<void> {
   }, 'Antrag konnte nicht zurückgezogen werden.')
 }
 
-/** TESTHILFE – wie in der lokalen Variante, siehe dort. */
-export async function overrideVerificationForTesting(verified: boolean): Promise<User> {
-  return fuehreAus(async () => {
-    const id = uid()
-    await updateDoc(doc(getDb(), PFAD.users, id), {
-      verified,
-      verificationStatus: verified ? 'verifiziert' : 'offen',
-      verifiedAt: verified ? new Date().toISOString() : null,
-    })
-    const data = await ladeUserDoc(id)
-    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
-    return toUser(id, data)
-  }, 'Status konnte nicht gesetzt werden.')
-}
-
 export async function resetIdentity(): Promise<void> {
   await fuehreAus(async () => {
     const id = uid()
     await withdrawVerification()
-    await setDoc(doc(getDb(), PFAD.users, id), leererUser())
+    const alt = await ladeUserDoc(id)
+    const neu = leererUser()
+    // Ein bezahlter Tarif gehört der Person, nicht dem Pseudonym.
+    await setDoc(doc(getDb(), PFAD.users, id), { ...neu, membership: alt?.membership ?? neu.membership })
   }, 'Zurücksetzen fehlgeschlagen.')
 }
 
@@ -402,86 +445,44 @@ export async function resetLocalPreferences(): Promise<void> {
   )
 }
 
-/* -------------------------------------------------------------- Matching */
-
-export async function findMatch(filter: MatchFilter, signal?: AbortSignal): Promise<Partner> {
-  await delay(between(1000, 3000), signal)
-
-  const [gesperrt, eigene] = await Promise.all([listBlocked(), listSelfBlocked()])
-  const raus = new Set([...gesperrt, ...eigene])
-
-  const kandidaten = PARTNER_POOL.filter((partner) => {
-    if (raus.has(partner.id)) return false
-    if (filter.language !== 'egal' && partner.language !== filter.language) return false
-    if (filter.interests.length > 0 && !filter.interests.some((i) => partner.interests.includes(i))) return false
-    return true
-  })
-
-  if (kandidaten.length === 0) throw new ApiError('Gerade niemand passendes erreichbar.', 'kein-treffer')
-  return kandidaten[Math.floor(Math.random() * kandidaten.length)]
-}
-
 /* ----------------------------------------------------------- Chatverläufe */
 
-interface TranscriptDoc extends Omit<ChatTranscript, 'startedAt' | 'endedAt' | 'expiresAt'> {
+interface ChatDoc {
+  id: string
+  participants: string[]
+  pseudonyms: Record<string, string>
   startedAt: Timestamp
-  endedAt: Timestamp
+  endedAt: Timestamp | null
   /** Feld der TTL-Richtlinie: Firestore löscht das Dokument danach selbst. */
   expiresAt: Timestamp
+  messageCount?: number
+  flagCount: number
+  reported: boolean
 }
 
-function toTranscript(id: string, data: TranscriptDoc): ChatTranscript {
+function toTranscript(id: string, data: ChatDoc, messages: TranscriptMessage[] = []): ChatTranscript {
   return {
-    ...data,
     id,
+    participants: data.participants ?? [],
+    pseudonyms: data.pseudonyms ?? {},
     startedAt: data.startedAt?.toDate().toISOString() ?? new Date().toISOString(),
-    endedAt: data.endedAt?.toDate().toISOString() ?? new Date().toISOString(),
+    endedAt: data.endedAt?.toDate().toISOString() ?? null,
     expiresAt: data.expiresAt?.toMillis() ?? 0,
+    messages,
+    messageCount: data.messageCount ?? messages.length,
+    flagCount: data.flagCount ?? 0,
+    reported: Boolean(data.reported),
   }
-}
-
-export async function saveTranscript(input: {
-  owner: User
-  partner: Partner
-  messages: { author: string; text: string; ts: number; flag?: unknown }[]
-}): Promise<ChatTranscript | null> {
-  const relevant = input.messages
-    .filter((m) => m.author !== 'system')
-    .map(({ author, text, ts, flag }) => ({ author, text, ts, ...(flag ? { flag } : {}) })) as TranscriptMessage[]
-  if (relevant.length === 0) return null
-
-  return fuehreAus(async () => {
-    const id = generateId('chat')
-    const transcript: TranscriptDoc = {
-      id,
-      ownerId: input.owner.id,
-      ownerPseudonym: input.owner.pseudonym,
-      partnerId: input.partner.id,
-      partnerPseudonym: input.partner.pseudonym,
-      startedAt: Timestamp.fromMillis(relevant[0].ts),
-      endedAt: Timestamp.now(),
-      expiresAt: Timestamp.fromMillis(Date.now() + RETENTION_MS),
-      messages: relevant,
-      flagCount: relevant.filter((m) => m.flag).length,
-      reported: false,
-    }
-    await setDoc(doc(getDb(), PFAD.chats, id), transcript)
-    return toTranscript(id, transcript)
-  }, 'Verlauf konnte nicht gespeichert werden.')
 }
 
 export async function listTranscripts(): Promise<ChatTranscript[]> {
   return fuehreAus(async () => {
-    // Abgelaufene sind durch die Regeln ohnehin nicht lesbar; die Abfrage
-    // hält sie zusätzlich fern, bis die TTL-Richtlinie sie entfernt.
+    // Abgelaufene sind durch die Regeln ohnehin nicht einzeln lesbar; die
+    // Abfrage hält sie zusätzlich fern, bis die TTL-Richtlinie sie entfernt.
     const treffer = await getDocs(
-      query(
-        collection(getDb(), PFAD.chats),
-        where('expiresAt', '>', Timestamp.now()),
-        orderBy('expiresAt', 'desc'),
-      ),
+      query(collection(getDb(), PFAD.chats), where('expiresAt', '>', Timestamp.now()), orderBy('expiresAt', 'desc')),
     )
-    return treffer.docs.map((eintrag) => toTranscript(eintrag.id, eintrag.data() as TranscriptDoc))
+    return treffer.docs.map((eintrag) => toTranscript(eintrag.id, eintrag.data() as ChatDoc))
   }, 'Verläufe nicht lesbar.')
 }
 
@@ -500,8 +501,20 @@ export async function openTranscript(id: string): Promise<ChatTranscript | null>
   return fuehreAus(async () => {
     const snap = await getDoc(doc(getDb(), PFAD.chats, id))
     if (!snap.exists()) return null
+    const nachrichten = await getDocs(
+      query(collection(getDb(), PFAD.chats, id, PFAD.messages), orderBy('ts', 'asc')),
+    )
     await protokolliere(id, 'geoeffnet')
-    return toTranscript(id, snap.data() as TranscriptDoc)
+    const messages: TranscriptMessage[] = nachrichten.docs.map((eintrag) => {
+      const daten = eintrag.data()
+      return {
+        author: String(daten.author ?? ''),
+        text: String(daten.text ?? ''),
+        ts: (daten.ts as Timestamp | null)?.toMillis() ?? 0,
+        ...(daten.flag ? { flag: daten.flag as TranscriptMessage['flag'] } : {}),
+      }
+    })
+    return toTranscript(id, snap.data() as ChatDoc, messages)
   }, 'Verlauf nicht lesbar.')
 }
 
@@ -509,7 +522,14 @@ export async function deleteTranscript(id: string): Promise<ChatTranscript[]> {
   return fuehreAus(async () => {
     const snap = await getDoc(doc(getDb(), PFAD.chats, id))
     if (!snap.exists()) return await listTranscripts()
-    await deleteDoc(doc(getDb(), PFAD.chats, id))
+
+    // Unterdokumente verschwinden nicht mit dem Raum – sie müssen einzeln weg.
+    const nachrichten = await getDocs(collection(getDb(), PFAD.chats, id, PFAD.messages))
+    const stapel = writeBatch(getDb())
+    nachrichten.forEach((eintrag) => stapel.delete(eintrag.ref))
+    stapel.delete(doc(getDb(), PFAD.chats, id))
+    await stapel.commit()
+
     await protokolliere(id, 'geloescht')
     return await listTranscripts()
   }, 'Verlauf konnte nicht gelöscht werden.')
@@ -524,7 +544,10 @@ export async function listAccessLog(): Promise<AccessLogEntry[]> {
 
 /* ------------------------------------------------------------- Meldungen */
 
-export async function submitReport(input: ReportInput & { transcriptId?: string | null }, reporter: User): Promise<Report> {
+export async function submitReport(
+  input: ReportInput & { transcriptId?: string | null },
+  reporter: User,
+): Promise<Report> {
   return fuehreAus(async () => {
     const id = generateId('rep')
     const report: Report = {
@@ -549,13 +572,6 @@ export async function submitReport(input: ReportInput & { transcriptId?: string 
 
     // Wer meldet, will dem Konto in aller Regel nicht gleich wieder begegnen.
     await blockPartner(input.partner.id)
-    if (input.transcriptId) {
-      try {
-        await updateDoc(doc(getDb(), PFAD.chats, input.transcriptId), { reported: true })
-      } catch {
-        /* Verlauf schon abgelaufen */
-      }
-    }
     return report
   }, 'Meldung konnte nicht gespeichert werden.')
 }
@@ -597,9 +613,18 @@ export async function listBlocked(): Promise<string[]> {
   }, 'Sperrliste nicht lesbar.')
 }
 
+/**
+ * Räumt Meldungen, Sperren, Verläufe und Protokoll ab.
+ *
+ * Gedacht für den Start in den Echtbetrieb, nicht für den Alltag: Wer das
+ * drückt, löscht auch das Zugriffsprotokoll – und damit den Nachweis darüber,
+ * wer was gelesen hat.
+ */
 export async function clearReports(): Promise<void> {
   await fuehreAus(async () => {
+    const nachrichten = await getDocs(collectionGroup(getDb(), PFAD.messages))
     const stapel = writeBatch(getDb())
+    nachrichten.forEach((eintrag) => stapel.delete(eintrag.ref))
     for (const pfad of [PFAD.reports, PFAD.blocked, PFAD.chats, PFAD.accessLog]) {
       const treffer = await getDocs(collection(getDb(), pfad))
       treffer.forEach((eintrag) => stapel.delete(eintrag.ref))

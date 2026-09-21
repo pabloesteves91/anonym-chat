@@ -1,340 +1,168 @@
-# Verifizierter Anonymchat – Prototyp (Phase 1)
+# Verifizierter Anonymchat
 
-Zufalls-Textchat, bei dem sich alle Teilnehmenden einmal ausweisen müssen:
-Mobilnummer per SMS, Foto des Ausweises, Selfie damit – freigegeben wird von
-Hand durch die Moderation. Gegenüber anderen bleibt man anonym, gegenüber dem
-System nicht. Genau deshalb wirkt eine Sperre dauerhaft und nicht nur bis zum
-nächsten Konto.
+Zufallschat für Erwachsene. Jede Person weist sich einmal mit Ausweis aus;
+im Gespräch bleiben beide Seiten anonym. Der Zweck der Verifizierung ist
+nicht, jemanden zu kennen, sondern dafür zu sorgen, dass eine Sperre hält.
 
-**Dieser Prototyp ist vollständig simuliert.** Es gibt kein Backend, keine
-echte Ausweisprüfung und keine anderen Menschen. Der Zweck ist, Flow und UX
-testbar zu machen.
+**Stand: Echtbetrieb.** Es gibt keine simulierten Gesprächspartner, keine
+angezeigten SMS-Codes und keinen Demo-Modus. Wer hier schreibt, schreibt mit
+einem anderen Menschen; wer freigegeben wird, wurde von Hand freigegeben.
 
-## Setup
+Was fehlt, steht in [Was noch offen ist](#was-noch-offen-ist) – vor allem
+die Kasse für die bezahlten Tarife.
 
-Voraussetzung: Node 20 oder neuer (entwickelt mit Node 22).
+## Schnellstart
 
 ```bash
 npm install
-npm run dev           # Entwicklungsserver auf http://localhost:5173
-npm run build         # Typprüfung + Produktionsbuild nach dist/
-npm run build:static  # Build für statische Auslieferung (Hash-Routing,
-                      # relative Pfade – für Hosting ohne Server-Rewrites)
-npm run preview       # Build lokal ausliefern
-npm run test          # Vitest (Wortfilter, Storage, mockApi)
-npm run lint          # oxlint
+npm run dev        # http://localhost:5173
+npm run lint       # oxlint
+npm test           # vitest
+npm run build      # Produktionsbuild nach dist/
 ```
 
-Die App läuft vollständig offline: Schriften sind als npm-Pakete lokal
-gebündelt, es gibt keine CDN-Einbindung, keine Remote-Bilder und zur
-Laufzeit keinen einzigen Netzwerk-Aufruf.
+Die App spricht in der Entwicklung mit dem echten Firebase-Projekt. Für einen
+abgeschotteten Durchlauf gibt es die Emulatoren, siehe
+[docs/deployment.md](docs/deployment.md).
 
-## Funktionsumfang
+## Wie es funktioniert
 
-| Bereich | Enthalten |
-| --- | --- |
-| Onboarding | Startseite mit Konzept, Antrag in fünf Schritten (Mobilnummer, SMS-Code, Ausweisfoto, Selfie, Absenden), Status in `localStorage` |
-| Manuelle Freigabe | Antrag geht in eine Warteschlange; ein Mensch sieht beide Bilder und entscheidet über Freigabe oder Ablehnung mit Begründung. Nichts wird automatisch verifiziert |
-| Profil | Anzeigename frei wählbar oder gewürfelt (geprüft auf Kontaktdaten und problematische Begriffe), Sprache, Altersgruppe, bis zu fünf Interessen |
-| Matching | Optionaler Filter, Warteschlange mit Suchlauf, Treffer nach 1–3 s, Fall „niemand passendes erreichbar" |
-| Chat | Textchat mit Tippindikator, Skript-Antworten, „Nächster Chat", „Chat beenden", „Melden" |
-| Chatverläufe | Jeder beendete Chat liegt 72 Stunden im Moderationsspeicher und läuft dann von selbst ab; Öffnen und Löschen werden protokolliert |
-| Moderation | Lokaler Wortfilter (markiert, blockiert nicht), Warnung vor dem Senden bei schweren Treffern, Melde-Dialog mit fünf Gründen und Freitext, Moderationsansicht unter `/admin` |
-| Selbstschutz | Verhaltenskodex einmalig vor dem ersten Chat, „Nicht mehr verbinden" blockiert ein Konto nur für einen selbst (ohne Meldung), Übersicht und Aufhebung im Profil |
+### Der Weg einer Person
 
-Zwei Arten von Ausschluss, bewusst getrennt:
+1. **Konto** – E-Mail und Passwort, Google oder Apple. Das Konto ist die
+   Klammer um alles Weitere und taucht im Chat nirgends auf.
+2. **Verifizierung** – Mobilnummer per echter SMS bestätigen, Ausweisfoto und
+   Selfie hochladen. Die Nummer wird dabei fest mit dem Konto verbunden:
+   Firebase lässt dieselbe Nummer kein zweites Mal zu.
+3. **Prüfung** – Ein Mensch aus der Moderation sieht sich beide Bilder an und
+   entscheidet. Unmittelbar danach werden die Bilder gelöscht.
+4. **Chat** – Ein Klick stellt in die Warteschlange. Sobald jemand passt,
+   entsteht ein gemeinsamer Raum. Sichtbar ist beidseitig nur das Pseudonym,
+   ob die Gegenseite gerade am Gerät ist und ob sie tippt.
+5. **Ende** – Mit dem Chat ist der Verlauf für beide weg. Für die Moderation
+   bleibt er 72 Stunden lesbar, dann löscht ihn Firestore selbst.
 
-- **Sperre durch die Moderation** – Folge einer Meldung, gilt systemweit und
-  ist im Prototyp unter `/admin` sichtbar.
-- **Eigene Blockierung** – betrifft nur das eigene Matching, die Moderation
-  erfährt nichts davon. Wer meldet, blockiert automatisch mit.
+### Wie zwei Browser zueinander finden
 
-### Warnen statt blockieren
-Bei einem schweren Treffer – sexuelle Ansprache, Hinweis auf Minderjährige,
-Drohung – erscheint vor dem Senden eine Warnung, die benennt, was auf dem
-Spiel steht, und daran erinnert, dass der Verlauf 72 Stunden einsehbar ist.
-Der Knopf heisst dann „Auf eigene Verantwortung senden": gesendet wird
-trotzdem, aber bewusst. Eingehende markierte Nachrichten bekommen einen
-direkten Melde-Knopf, der den passenden Grund schon auswählt.
+Es gibt keinen eigenen Server. Das Zusammenführen machen die Browser deshalb
+unter sich aus:
 
-Beim **Anzeigenamen** ist es umgekehrt: Dort wird abgelehnt statt gewarnt.
-Der Name steht dauerhaft über jedem Gespräch, und wer ihn liest, hat ihn
-sich nicht ausgesucht – Kontaktdaten, sexuelle und beleidigende Begriffe
-kommen deshalb gar nicht erst durch (`validateDisplayName`).
+- Wer sucht, legt `queue/{uid}` an – mit Pseudonym, Sprache und Interessen.
+  Mehr steht dort nicht, weil die Warteschlange für alle Suchenden lesbar
+  sein muss.
+- Derselbe Browser liest die Warteschlange, filtert nach beiden Seiten
+  (`services/matching.ts`) und versucht, einen Eintrag zu greifen.
+- Gegriffen wird in einer Firestore-Transaktion: Sie legt den Raum an und
+  trägt die Raumnummer in beide Warteschlangeneinträge ein. Wer zu spät
+  kommt, sieht dort schon eine Nummer und probiert es beim Nächsten.
+- Alle 20 Sekunden setzt jede Seite ein Lebenszeichen. Einträge, die älter
+  als 90 Sekunden sind, gelten als verlassen und werden übersprungen.
 
-### Chatverläufe und Aufbewahrung
+Der Nachteil: Wer die Warteschlange lesen darf, sieht, wer gerade sucht.
+Deshalb steht dort ausschliesslich, was das Gegenüber gleich ohnehin sieht –
+und lesen darf sie nur, wer selbst verifiziert und nicht gesperrt ist.
 
-Für die Chattenden ist der Verlauf mit dem Beenden weg – weder die eigene
-noch die andere Seite kann etwas nachlesen. Beim Beenden wandert er einmal in
-den **Moderationsspeicher**, wo er nach **72 Stunden automatisch abläuft**.
-Die Frist wird bei jedem Lesezugriff durchgesetzt, nicht nur beim Schreiben:
-abgelaufene Verläufe verschwinden auch dann, wenn die App tagelang nicht
-offen war.
+### Wo die Daten liegen
 
-Die Moderation kann diese Verläufe unter `/admin` öffnen – bei Spamverdacht,
-nach einer Meldung, bei Filtertreffern. **Jedes Öffnen und jedes Löschen wird
-protokolliert** und ist in derselben Ansicht sichtbar. Die blosse Übersicht
-(wer mit wem, wie viele Nachrichten, wie viele Filtertreffer) erzeugt keinen
-Eintrag, das Öffnen des Inhalts schon.
+| Ort | Inhalt | Wer darf lesen |
+| --- | --- | --- |
+| `users/{uid}` | Pseudonym, Profil, Verifizierungsstand, Tarif | Konto selbst, Moderation |
+| `verifications/{id}` | Antrag mit maskierter Nummer | Konto selbst, Moderation |
+| `queue/{uid}` | Wer gerade sucht | alle Suchenden |
+| `chats/{roomId}` | Beteiligte, Zähler, Frist | beide Beteiligten, Moderation |
+| `chats/{roomId}/messages/{id}` | Die Nachrichten | beide Beteiligten, Moderation |
+| `reports/{id}` | Meldungen mit Auszug | Moderation |
+| `blocked/{uid}` | Sperren | Moderation (wirkt über die Rules) |
+| `accessLog/{id}` | Jeder Blick in einen Verlauf | Moderation, unveränderlich |
+| Storage `verifications/{uid}/` | Ausweisfoto und Selfie | Konto selbst, Moderation |
 
-Das ist bewusst so gebaut: Ein Moderationsteam, das jedes Gespräch ohne
-Anlass mitlesen kann, braucht eine Spur, die zeigt, wer wann was angesehen
-hat. Im Prototyp ist das eine Liste in localStorage; im Betrieb wären es
-Rollen, ein unveränderliches Protokoll und ein Vier-Augen-Prinzip.
+Durchgesetzt wird das in `firestore.rules` und `storage.rules`, nicht im
+Browser. Zwei Bedingungen hängen dort an fast allem: Das Konto muss
+verifiziert sein, und es darf nicht in `blocked` stehen. Eine gesperrte
+Person kommt damit auch dann nicht in die Warteschlange, wenn sie den
+Browsercode umschreibt.
 
-### Der Verifizierungsweg
-
-1. **Mobilnummer** – wird normalisiert (`079 …` → `+4179…`) und geprüft.
-2. **SMS-Code** – sechsstellig, zehn Minuten gültig, drei Versuche. Im
-   Prototyp geht keine SMS raus: der Code steht im UI.
-3. **Ausweisfoto** und **Selfie mit Ausweis** – beide Bilder werden im Browser
-   auf 720 px verkleinert (`src/services/image.ts`).
-4. **Absenden** – Status `wartet`, der Chat bleibt gesperrt.
-5. **Entscheid** – unter `/admin` sieht die Moderation beide Bilder und gibt
-   frei oder lehnt mit Begründung ab. Erst das setzt `verifiziert`.
-
-Bei Ablehnung kann mit besseren Aufnahmen neu eingereicht werden.
-
-### Wo die Bilder liegen
-
-Die Originaldateien verlassen das Gerät nicht. Verarbeitet wird nur die
-verkleinerte Vorschau, und die liegt im **`sessionStorage`** – sie übersteht
-einen Reload im selben Tab, aber weder einen Browserneustart noch den Wechsel
-in ein anderes Fenster. Nach dem Entscheid werden beide Bilder gelöscht. In
-den Antragsdaten in `localStorage` stehen nur Metadaten (Dateiname, Grösse,
-Typ), nie Bilddaten.
-
-Ausweisbilder gehören nicht in dauerhaften Browserspeicher – der Prototyp
-macht diese Grenze bewusst sichtbar: Nach einem Browserneustart zeigt die
-Prüfansicht statt des Bildes den Hinweis, dass es weg ist.
-
-### Doppelrolle im Prototyp
-
-Da alles lokal läuft, ist dieselbe Person Antragsteller **und** Moderation.
-In der echten Version sind das zwei getrennte Rollen mit getrennten Zugängen;
-die Bilder lägen nie im Browser des Antragstellers.
-
-## Architektur
+## Aufbau des Codes
 
 ```
 src/
-  routes/       Landing · Verify · Profile · Chat · Admin · NotFound
-  components/   AppShell, Lobby, Queue, ChatRoom, MessageList, Composer,
-                ReportDialog, CodexDialog, Dialog, VerifiedBadge,
-                ThemeToggle, ui
-  services/     api.ts       ← einzige Datengrenze, schaltet zwischen:
-                backend/firestore.ts   Daten auf dem Server (Standard)
-                backend/local.ts       Daten im Browser (Tests, Emulator)
-                backend/shared.ts      ApiError und gemeinsame Bausteine
-                auth.ts      ← einzige Stelle für den Moderationszugang
-                firebase.ts  ← App, Auth, Firestore, Storage
-                *.test.ts    Vitest-Tests für Filter, Storage und mockApi
-                storage.ts   defensive localStorage-Hülle (try/catch)
-                types.ts · wordFilter.ts · pseudonym.ts · partnerScript.ts
-  store/        useSession · useChat · useModeration · useTheme (Zustand)
-  styles/       index.css – Tailwind v4 und alle Farbtokens
+  services/
+    api.ts              Die eine Tür zur Datenhaltung
+    backend/firestore.ts  Gespeichertes: Konten, Anträge, Meldungen, Verläufe
+    backend/live.ts       Laufendes: Warteschlange, Raum, Nachrichten
+    backend/shared.ts     ApiError, Fristen, Nummernformate
+    phone.ts            SMS-Bestätigung über Firebase Phone Auth
+    auth.ts             Anmeldung – für Nutzende und für die Moderation
+    matching.ts         Wer zu wem passt (ohne Firestore, damit prüfbar)
+    plans.ts            Tarife, Grenzen, Tageszähler
+    wordFilter.ts       Wortfilter und Namensprüfung
+  store/                Zustand (zustand): session, chat, verification, …
+  routes/               Seiten
+  components/           Bausteine
+  content/legal.ts      Impressum, Datenschutz, Nutzungsbedingungen
 ```
 
-**Regel:** Komponenten sprechen nie direkt mit `localStorage` oder Firestore.
-Sie rufen Stores auf, Stores rufen `services/api` auf. Alle
-Funktionen in `mockApi.ts` sind `Promise`-basiert, haben künstliche Latenz
-und akzeptieren dort, wo gewartet wird, ein `AbortSignal`. Für Phase 2 wird
-diese eine Datei gegen einen HTTP-/WebSocket-Client getauscht; Typen,
-Stores und UI bleiben unverändert.
+Komponenten sprechen nie direkt mit Firebase. Sie rufen Aktionen eines
+Stores auf, der Store ruft `services/api.ts`, und erst dahinter beginnt
+Firestore. Wird der Unterbau getauscht, ändert sich genau eine Datei.
 
-Persistiert werden unter dem Präfix `vac.v1.` nur: Identität und
-Verifizierungsstatus, Meldungen, Sperrliste, eigene Blockierungen,
-Chatverläufe mit Ablaufzeitpunkt, Zugriffsprotokoll, Kodex-Bestätigung,
-Themenwahl. Jeder Zugriff ist
-gekapselt – bei blockiertem oder leerem Storage startet die App normal und
-weist im Kopfbereich darauf hin.
+## Sicherheit und Datenschutz
 
-## Design
+- **Ausweisbilder** sind das Heikelste im System. Sie gehen verschlüsselt an
+  den Dateispeicher in `europe-west3`, sind nur für die hochladende Person
+  und die Moderation lesbar und werden nach dem Entscheid gelöscht. In
+  dauerhaftem Browserspeicher liegen sie nie.
+- **Chatverläufe** laufen nach 72 Stunden ab. Die Frist steht als
+  `expiresAt` im Dokument; gelöscht wird von einer TTL-Richtlinie in
+  Firestore, nicht von der App.
+- **Jeder Blick** der Moderation in einen Verlauf schreibt einen Eintrag in
+  `accessLog`, der sich nicht ändern und nicht löschen lässt.
+- **Der Wortfilter** läuft im Browser, schon beim Tippen. Er blockiert nichts,
+  sondern warnt vorher und markiert nachher – Filter, die blockieren, werden
+  umgangen, Filter, die markieren, geben der Moderation Anhaltspunkte.
+- **Die Moderationskennung** steht doppelt: in `services/firebase.ts` für die
+  Anzeige und in den Rules für die Entscheidung. Sobald es mehr als eine
+  moderierende Person gibt, gehört das auf Custom Claims umgestellt.
 
-Leitgedanke: Vertrauen und Ruhe statt Dating-App. Die Referenz ist ein
-sauber gesetztes Dokument, nicht eine verspielte Oberfläche – die
-Verifizierung erscheint als nüchternes Siegel, sichtbar, aber nicht
-beworben.
+Was nicht ins Repository gehört: der **Dienstkonto-Schlüssel** (umgeht jede
+Regel) und der **Apple-.p8-Schlüssel**. Die Firebase-Webkonfiguration
+dagegen ist ein öffentlicher Bezeichner und steht bewusst im Code – der
+Schutz kommt aus den Rules und der Domainbeschränkung des API-Schlüssels.
 
-- **Farben** (Light/Dark als Tokens in `src/styles/index.css`): kühles
-  Papier `#EDF0EE`, Fläche `#FFFFFF`, Tiefgrün-Schwarz `#141F1C`, gedeckter
-  Petrol-Akzent `#1F6F63`, Grau mit Grünstich `#5D6B67`, gedämpfter Ziegel
-  `#9E4130` für Meldungen und Warnungen. Ein Akzent, ein Signalton – mehr
-  nicht. Alle Text-Hintergrund-Paare erreichen mindestens 4.5:1.
-- **Typografie**: Source Serif 4 für Überschriften (dokumenthaft, seriös),
-  IBM Plex Sans für Fliesstext, IBM Plex Mono für Pseudonyme, Kennungen,
-  Zeitstempel und Statuslabels. Das ist die inhaltliche Pointe: Was das
-  System über eine Person weiss, ist typografisch als Systemwert markiert.
-- **Layout**: eine zentrierte Spalte, schlanke persistente Statusleiste mit
-  Siegel und Pseudonym, flache Flächen mit Haarlinien statt Schattenkarten.
-  Erhöht wird nur der Melde-Dialog.
+## Tarife
 
-Barrierefreiheit: sichtbarer Fokus auf allem, Tastaturbedienung im ganzen
-Flow (Enter sendet, Shift+Enter macht eine Zeile, Escape schliesst den
-Dialog über das native `<dialog>`), `aria-live` für Verifizierungsschritte,
-Chatverlauf und Speicherstatus, und `prefers-reduced-motion` schaltet
-Suchlauf und Tippindikator ab.
+| Tarif | Preis | Was er ändert |
+| --- | --- | --- |
+| Frei | CHF 0 | 10 Chats pro Tag, Suche nach Sprache, gewürfelter Name |
+| Plus monatlich | CHF 7.90 | unbegrenzt, Interessenfilter, Vorrang, eigener Name |
+| Plus jährlich | CHF 69.– | dasselbe, gut ein Viertel günstiger |
+| Lifetime | CHF 179.– | dasselbe, einmalig, ohne Ablauf |
 
-## Bewusst nicht im Scope
+Verifizierung, Moderation und Meldewege sind in jedem Tarif gleich. Bezahlt
+wird für mehr Gespräche, nicht für mehr Sicherheit.
 
-Video und Audio, echtes Backend, echte Ausweisprüfung, Zahlungen,
-Push-Benachrichtigungen, Mehrsprachigkeit der Oberfläche (UI ist deutsch).
+Details und der Weg zur Kasse: [docs/tarife.md](docs/tarife.md).
 
-## Offene Punkte für Phase 2
+## Was noch offen ist
 
-### Backend
-Identität, Matching, Nachrichtenzustellung und Meldungen gehören auf einen
-Server; Nachrichten laufen über WebSocket statt über ein lokales Skript.
-Einstiegspunkt ist `src/services/mockApi.ts` – die Signaturen sind so
-gewählt, dass sie ein echter Client erfüllen kann.
+- **Die Kasse.** Bezahlen lässt sich nichts. Eine Zahlung braucht einen
+  Server, der die Quittung des Anbieters prüft; bis dahin trägt die
+  Moderation einen Tarif von Hand ein (`/admin`).
+- **Die Tagesgrenze** wird im Browser geprüft. Wer den Code umschreibt,
+  umgeht sie. Ein Riegel wird daraus erst mit einer Serverfunktion.
+- **Das Zugriffsprotokoll** schreibt der Client. Wer Moderationsrechte hat,
+  könnte den Eintrag umgehen. Auch das gehört auf die Serverseite.
+- **Verlassene Räume** werden nicht aufgeräumt, sie laufen nur ab. Bei mehr
+  Verkehr lohnt sich eine geplante Funktion, die Warteschlange und leere
+  Räume putzt.
+- **Mehr als eine moderierende Person** braucht Custom Claims statt der
+  fest eingetragenen Kennung.
+- **Die Rechtstexte** enthalten Platzhalter (mit ⚠︎ markiert) und sind nicht
+  juristisch geprüft.
 
-### SMS-Versand
-Ein Gateway (Twilio, MessageBird, Swisscom) ersetzt den angezeigten Demo-Code.
-Zu klären: Kosten pro SMS, Rate-Limiting gegen SMS-Pumping, Sperrlisten für
-Wegwerf- und VoIP-Nummern, Länderabdeckung, Zustellprobleme, und ob eine
-Nummer pro Person erzwungen wird (sie ist der stärkste Wiedererkennungsanker).
+## Weiterführend
 
-### Manuelle Prüfung im Betrieb
-Die Prüfung von Hand ist eine bewusste Entscheidung – sie braucht aber
-Werkzeug und Regeln: Prüfoberfläche mit Zugriffsprotokoll, Vier-Augen-Prinzip
-bei Ablehnungen, Schulung der Prüfenden, Reaktionszeiten und Bereitschaft,
-Umgang mit Rückfragen, Einspruch gegen eine Ablehnung, Stichproben zur
-Qualitätssicherung. Bilder gehören in einen verschlüsselten Speicher mit
-enger Zugriffskontrolle und automatischer Löschfrist (üblich: Löschung
-unmittelbar nach dem Entscheid, nur Prüfvermerk bleibt).
-
-Bei grösseren Mengen lässt sich die Prüfung mit einem spezialisierten
-Anbieter (Veriff, Sumsub, IDnow) kombinieren: automatische Vorprüfung,
-manuell nur die unklaren Fälle. Selbst gebaut wird die Dokumentenprüfung in
-keinem Fall.
-
-### Datenschutz und Recht
-Ausweisdaten und biometrische Aufnahmen sind besonders schützenswert – DSG
-(CH) und DSGVO (EU) gelten in vollem Umfang, und ein Selfie zum Abgleich ist
-biometrische Verarbeitung. Zu klären: Rechtsgrundlage und Zweckbindung,
-Auftragsverarbeitungsverträge mit SMS-Gateway und Prüfanbieter, Speicherort
-und -dauer, Löschkonzept und Betroffenenrechte, Datenschutzerklärung und AGB,
-Vorgehen bei Behördenanfragen, Protokollierung von Sperrentscheiden,
-Meldewege nach DSA (EU) und Impressumspflichten. Diese Punkte sind
-juristisch zu begleiten, nicht nebenbei zu lösen.
-
-### Aufbewahrung der Chatverläufe
-Die 72-Stunden-Frist ist im Prototyp eine Zahl in `mockApi.ts`; im Betrieb
-braucht sie Infrastruktur: Verschlüsselung im Ruhezustand, ein Löschjob, der
-unabhängig von Nutzerzugriffen läuft, Zugriffskontrolle nach Rollen und ein
-Protokoll, das die Moderation nicht selbst verändern kann. Dazu die
-rechtliche Seite: Inhalte privater Kommunikation sind besonders heikel,
-Nutzer haben ein Auskunftsrecht auf das, was über sie gespeichert ist – auch
-auf Nachrichten des Gegenübers –, und was aufbewahrt wird, kann von Behörden
-herausverlangt werden. Ob als Kommunikationsdienst zusätzlich Pflichten aus
-dem BÜPF-Umfeld greifen, gehört anwaltlich abgeklärt. Ende-zu-Ende-
-Verschlüsselung ist mit dieser Moderationsform nicht vereinbar; das ist eine
-bewusste Entscheidung, keine Lücke.
-
-### Wo die Daten liegen
-Standard ist **Firestore**: Konten, Verifizierungsanträge, Meldungen,
-Chatverläufe und die Sperrliste liegen auf dem Server, Ausweisbilder in
-Firebase Storage. Damit sieht die Moderation, was alle einreichen – nicht
-nur den eigenen Browser.
-
-`VITE_BACKEND=local` schaltet auf die Browser-Variante um; sie bleibt für
-Tests und Durchläufe ohne Server erhalten. Beide Umsetzungen liegen unter
-`src/services/backend/` und haben dieselbe Oberfläche; `api.ts` prüft das
-beim Übersetzen.
-
-Sammlungen: `users/{uid}`, `verifications/{id}`, `reports/{id}`,
-`chats/{id}` (mit `expiresAt` als Timestamp für die TTL-Richtlinie),
-`blocked/{uid}`, `accessLog/{id}`.
-
-### Konten und Identität
-Nutzende melden sich mit Google oder Apple an (`/anmelden`). Das Konto ist die
-Klammer um alles Persönliche: Pseudonym, Profil, Verifizierungsstand und
-eigene Blockierungen hängen daran. Im Chat ist davon nichts sichtbar – dort
-gilt nur das Pseudonym.
-
-Solange die Daten lokal liegen, trennt `setAccount()` in `storage.ts` die
-Speicherbereiche: Schlüssel wie `vac.v1.user` werden um die Kennung des
-Kontos ergänzt. Zwei Anmeldungen im selben Browser teilen sich dadurch
-nichts – so wie später auf dem Server. Moderationsdaten (Anträge, Meldungen,
-Verläufe) bleiben kontoübergreifend, die Moderation sieht alle.
-
-### Zugang zur Moderation
-`/admin` verlangt eine Anmeldung über Firebase Auth. Berechtigt ist genau
-eine Kennung (`MODERATOR_UID` in `src/services/firebase.ts`); jedes andere
-Konto wird nach der Anmeldung sofort wieder abgemeldet. Anmeldearten:
-E-Mail/Passwort und Google, Apple vorbereitet – welche davon angeboten
-werden, steht in `ANMELDEARTEN` und muss mit der Firebase-Konsole
-übereinstimmen.
-
-Der Moderationsbereich wird als eigener Chunk nachgeladen (`AdminArea`), das
-Firebase-SDK landet also nicht im Bundle für normale Nutzer.
-
-Zu beachten: Eine Prüfung im Browser ist eine Anzeige, keine Sicherung.
-Solange alle Daten lokal liegen, ist das unkritisch. Sobald sie in Firestore
-stehen, entscheiden die Security Rules (`firestore.rules`, `storage.rules`) –
-und nur die. Beide Dateien liegen im Repo und sind auf dieselbe UID gemünzt.
-
-Die Firebase-Konfiguration steht offen im Quellcode. Das ist bei Web-Apps
-richtig so: Sie ist ein öffentlicher Bezeichner, kein Geheimnis. Der
-Service-Account-Schlüssel dagegen gehört nie ins Repo.
-
-### Testübersicht und Emulator
-`/test` (nur über die Fusszeile verlinkt) zeigt den Stand aller Phasen und
-springt direkt hinein, inklusive „Verifizierung überspringen". Für
-automatisierte Durchläufe ohne echtes Firebase gibt es den Auth-Emulator:
-
-```bash
-npm run emulator      # startet den Auth-Emulator auf Port 9099
-npm run dev:emulator  # Dev-Server, der ihn statt Firebase benutzt
-```
-
-Im Emulator-Modus erscheint auf der Anmeldeseite zusätzlich ein Testkonto –
-die Anbieter-Anmeldung braucht Google-Infrastruktur, die in einer
-abgeschotteten Umgebung nicht erreichbar ist. Im Produktionsbuild ist dieser
-Weg abgeschaltet.
-
-### Keine Selbstfreigabe mehr
-Mit Firestore kann sich niemand mehr selbst verifizieren: Die Regel für
-`users` lässt eine Person alles an ihrem Konto ändern **ausser** `verified`
-und `verificationStatus` – die setzt nur die Moderation. Die frühere
-Selbstfreigabe und das Überspringen in der Testübersicht erscheinen deshalb
-nur noch mit `VITE_BACKEND=local`.
-
-### Moderation
-Serverseitige Klassifikation statt Wortliste, Eskalationsstufen,
-Wiederholungstäter-Erkennung, Einspruchsverfahren gegen Sperren,
-Aufbewahrungsfristen für Meldeauszüge, echte Rollen- und Rechteverwaltung
-für die Moderationsansicht (die im Prototyp offen erreichbar ist), sowie
-Kennzahlen für Bearbeitungszeiten.
-
-### Bei Live-Inhalten (Video/Audio, Phase 3)
-Dann kommen belastbare Altersprüfung, Aufzeichnungs- und Meldemechanismen
-in Echtzeit, Jugendschutzauflagen und je nach Markt weitere regulatorische
-Anforderungen hinzu. Das ist ein eigener Themenblock, kein Feature.
-
-### Technisch offen
-Mehrsprachige Oberfläche, E2E-Tests für den ganzen Flow (Unit-Tests für
-Wortfilter, Storage und `mockApi` liegen vor: `npm run test`),
-Rate-Limiting, Missbrauchserkennung beim Matching, Skalierung der
-Warteschlange.
-
-## Hosting
-
-`npm run build:static` erzeugt eine rein statische Seite. Der Workflow
-`.github/workflows/pages.yml` baut und veröffentlicht sie bei jedem Push auf
-den Default-Branch über GitHub Pages – Lint, Typprüfung und Tests laufen
-vorher. Einrichtung, eigene Domain und DNS-Einträge stehen in
-`docs/deployment.md`.
-
-## Testrunde
-
-`docs/testrunde.md` enthält Aufgaben, Fragebogen und Auswertungsraster für
-Tests mit echten Personen. In der App gibt es beim Ausweisfoto und beim
-Selfie den Knopf „Demo-Bild einsetzen" – für einen Prototyp-Test soll
-niemand ein echtes Dokument hochladen.
-
-## Entwicklung mit Claude Code
-
-`.claude/hooks/session-start.sh` installiert in Web-Sessions die
-Abhängigkeiten, damit Build, Lint und Tests sofort laufen. Lokal tut der
-Hook nichts.
+- [docs/deployment.md](docs/deployment.md) – Auslieferung, Firebase-Konsole,
+  Rules und Indizes ausrollen
+- [docs/tarife.md](docs/tarife.md) – Tarifmodell und was die Kasse braucht
+- [docs/testrunde.md](docs/testrunde.md) – Durchlauf zu zweit

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
+import type { PlanId } from '../services/plans'
 import type {
   AccessLogEntry,
   ChatTranscript,
@@ -27,6 +28,8 @@ interface ModerationState {
   openTranscript: (id: string) => Promise<void>
   deleteTranscript: (id: string) => Promise<void>
   decide: (requestId: string, decision: 'freigegeben' | 'abgelehnt', reason?: string) => Promise<void>
+  /** Tarif von Hand vergeben, solange es keine Kasse gibt. */
+  setPlan: (userId: string, plan: PlanId, laufzeitTage: number | null) => Promise<boolean>
   setStatus: (id: string, status: ReportStatus) => Promise<void>
   clearAll: () => Promise<void>
 }
@@ -93,6 +96,18 @@ export const useModeration = create<ModerationState>((set, get) => ({
       delete images[requestId]
       return { requests, images, busy: false }
     })
+  },
+
+  async setPlan(userId, plan, laufzeitTage) {
+    set({ busy: true })
+    try {
+      await api.setMembership(userId, plan, laufzeitTage)
+      set({ busy: false })
+      return true
+    } catch {
+      set({ busy: false })
+      return false
+    }
   },
 
   async setStatus(id, status) {

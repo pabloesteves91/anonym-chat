@@ -1,6 +1,7 @@
 # Hosting auf GitHub Pages und eigene Domain
 
-Der Prototyp ist eine rein statische Seite ohne Server. Gebaut wird mit
+Die App ist eine statische Seite ohne eigenen Server; die Daten liegen bei
+Firebase. Gebaut wird mit
 `npm run build:static` – Hash-Routing und relative Pfade, damit er sowohl
 unter einem Unterpfad (`…github.io/anonym-chat/`) als auch auf einer eigenen
 Domain im Wurzelverzeichnis läuft.
@@ -106,19 +107,65 @@ mit Hash-Routing richtig, weil dort keine Rewrites möglich sind.
 
 ## Firebase
 
-Die Anmeldung für die Moderation läuft über Firebase Auth. Damit sie auf der
-veröffentlichten Seite funktioniert, muss die Domain in der Firebase-Konsole
-freigegeben sein:
+Ohne Firebase läuft nichts: Anmeldung, Verifizierung, SMS und Chat hängen
+daran. Diese Einstellungen müssen in der Konsole stimmen.
+
+### Anmeldearten
+
+**Authentication → Sign-in method**, aktiviert sein müssen:
+
+- **E-Mail/Passwort** – für Anmeldung und Registrierung
+- **Google** und **Apple** – die beiden Knöpfe auf der Anmeldeseite
+- **Telefon** – für die SMS in der Verifizierung
+
+Fehlt eine davon, meldet die App `auth/operation-not-allowed`. Welche Knöpfe
+sie anbietet, steht in `ANMELDEARTEN` in `src/services/firebase.ts`; beides
+muss zusammenpassen.
+
+### Freigegebene Domains
 
 **Authentication → Settings → Authorized domains**, dort eintragen:
-`pabloesteves91.github.io` und später die eigene Domain.
+`pabloesteves91.github.io` und später die eigene Domain. Ohne diesen Eintrag
+meldet die Anmeldung `auth/unauthorized-domain` – und die SMS geht ebenfalls
+nicht raus, weil die unsichtbare reCAPTCHA-Prüfung an derselben Liste hängt.
 
-Ohne diesen Eintrag meldet die Anmeldung `auth/unauthorized-domain`.
+### SMS-Kontingent
+
+Firebase Phone Authentication hat ein Freikontingent pro Tag; darüber hinaus
+kostet jede SMS. Unter **Authentication → Settings → SMS region policy**
+lässt sich einschränken, in welche Länder überhaupt verschickt wird – das ist
+die wirksamste Bremse gegen SMS-Betrug. Sinnvoll: nur die Schweiz und die
+Nachbarländer freigeben.
+
+Zum Testen ohne echte SMS gibt es **Phone numbers for testing**: Nummer und
+fester Code eintragen, dann läuft der Ablauf durch, ohne dass etwas
+verschickt wird.
+
+### Ablauffrist der Chats (TTL)
+
+Die 72 Stunden löscht Firestore selbst, aber nur mit einer Richtlinie:
+
+**Firestore Database → Time-to-live (TTL)**, zwei Richtlinien anlegen:
+
+| Collection group | Feld |
+| --- | --- |
+| `chats` | `expiresAt` |
+| `messages` | `expiresAt` |
+
+Die zweite ist leicht zu vergessen und genauso wichtig: Die Nachrichten
+liegen in einer Unterkollektion und verschwinden nicht mit dem Raum.
+
+### Regeln und Indizes ausrollen
 
 Die Security Rules liegen als `firestore.rules` und `storage.rules` im Repo
 und **müssen ausgerollt sein, bevor echte Daten hineingehen**. Ohne sie gilt,
 was in der Konsole steht – im Produktionsmodus ist das „alles verboten", und
 die App bekommt bei jedem Zugriff „Dafür fehlen die Rechte".
+
+Dazu kommt `firestore.indexes.json`: Die Warteschlange fragt nach Einträgen
+ohne Raumnummer, sortiert nach Alter. Ohne den zusammengesetzten Index
+scheitert jede Suche mit `failed-precondition`, und Firestore schreibt einen
+Link zum Anlegen in die Browserkonsole.
 
 Drei Wege, je nachdem was gerade zur Hand ist.
 
@@ -129,6 +176,8 @@ Drei Wege, je nachdem was gerade zur Hand ist.
 2. Firebase-Konsole → **Firestore Database → Regeln**, alles ersetzen,
    **Veröffentlichen**.
 3. Dasselbe mit [storage.rules](../storage.rules) unter **Storage → Regeln**.
+4. Den Index legt die Konsole auf Zuruf an: einmal die Suche starten, in der
+   Browserkonsole dem Link aus der Fehlermeldung folgen, **Erstellen**.
 
 Nachteil: Die Konsole und das Repo können auseinanderlaufen. Nach einer
 Änderung im Repo also daran denken – oder Weg B nehmen.
@@ -152,7 +201,7 @@ im Repo nicht.
 ### C) Lokal, wenn ein Terminal da ist
 
 ```bash
-npx firebase-tools deploy --only firestore:rules,storage
+npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage
 ```
 
 ### Emulator für die Entwicklung
@@ -166,10 +215,11 @@ npm run dev:emulator  # Dev-Server, der sie statt Firebase benutzt
 
 - Das Repository ist öffentlich, der Quellcode also ohnehin einsehbar.
 - Mit Pages wird auch die laufende App öffentlich – **inklusive der Route
-  `/admin`**. Das ist unkritisch, weil dort nur Daten aus dem Browser der
-  betrachtenden Person stehen, und die Ansicht sagt es selbst. Zugesperrt
-  wird sie später an einer einzigen Stelle: `getModeratorAccess()` in
-  `src/services/auth.ts`.
-- `public/robots.txt` hält Suchmaschinen fern, solange es ein Prototyp ist.
-- Es gibt weiterhin keinen Server: keine Anmeldung, keine Daten, keine
-  Kosten ausser der Domain.
+  `/admin`**. Die Ansicht selbst ist erreichbar, die Daten dahinter nicht:
+  Firestore gibt Meldungen, Anträge und Verläufe nur der einen Kennung
+  heraus, die in `firestore.rules` steht. Eine Prüfung im Browser wäre
+  Anzeige, keine Sicherung.
+- `public/robots.txt` lässt Suchmaschinen herein und hält sie von `/admin`
+  fern.
+- Kosten entstehen bei Firebase: Lese- und Schreibzugriffe, Dateispeicher
+  und vor allem **SMS**. Das Kontingent im Blick behalten, siehe oben.

@@ -3,8 +3,12 @@ import { Button, Note, Panel } from './ui'
 import type { ChatTranscript } from '../services/types'
 import { useModeration } from '../store/useModeration'
 
-const zeit = (iso: string) =>
-  new Date(iso).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' })
+const zeit = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' }) : 'läuft noch'
+
+/** Beide Seiten eines Raums, so wie die Moderation sie liest. */
+const beteiligte = (transcript: ChatTranscript) =>
+  transcript.participants.map((id) => transcript.pseudonyms[id] ?? id.slice(0, 6))
 
 const uhrzeit = (ts: number) =>
   new Date(ts).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
@@ -29,10 +33,10 @@ function Verlauf({ transcript, now }: { transcript: ChatTranscript; now: number 
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         <div className="min-w-0">
           <p className="font-mono text-sm text-ink">
-            {transcript.ownerPseudonym} <span className="text-muted">↔</span> {transcript.partnerPseudonym}
+            {beteiligte(transcript)[0] ?? '?'} <span className="text-muted">↔</span> {beteiligte(transcript)[1] ?? '?'}
           </p>
           <p className="text-sm text-muted">
-            Beendet {zeit(transcript.endedAt)} · {transcript.messages.length} Nachrichten
+            Beendet {zeit(transcript.endedAt)} · {transcript.messageCount} Nachrichten
           </p>
         </div>
 
@@ -58,7 +62,7 @@ function Verlauf({ transcript, now }: { transcript: ChatTranscript; now: number 
           {opened.messages.map((message, index) => (
             <li key={`${message.ts}-${index}`} className="text-sm">
               <span className="font-mono text-xs text-muted">
-                {message.author === 'me' ? opened.ownerPseudonym : opened.partnerPseudonym} · {uhrzeit(message.ts)}
+                {opened.pseudonyms[message.author] ?? message.author.slice(0, 6)} · {uhrzeit(message.ts)}
               </span>
               <span className="ml-2">{message.text}</span>
               {message.flag ? (

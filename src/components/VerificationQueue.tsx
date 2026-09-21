@@ -146,7 +146,7 @@ export function VerificationQueue() {
       {offen.length === 0 ? (
         <Panel className="p-5">
           <p className="text-sm text-muted">
-            Keine offenen Anträge. Jede Freigabe hier ist eine menschliche Entscheidung – der Prototyp verifiziert
+            Keine offenen Anträge. Jede Freigabe hier ist eine menschliche Entscheidung – das System verifiziert
             nichts von selbst.
           </p>
         </Panel>

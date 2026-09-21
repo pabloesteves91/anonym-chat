@@ -6,6 +6,7 @@ import { useModeration } from '../store/useModeration'
 import { useAdminAccess } from '../store/useAdminAccess'
 import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
+import { PlanZuteilung } from '../components/PlanZuteilung'
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   offen: 'Offen',
@@ -176,11 +177,15 @@ export function Admin() {
         </div>
       )}
 
+      <PlanZuteilung />
+
       <Panel className="flex flex-col gap-3 p-5">
-        <h2 className="font-display text-xl font-semibold">Demo-Daten löschen</h2>
+        <h2 className="font-display text-xl font-semibold">Alles zurücksetzen</h2>
         <Note tone="warn">
-          Entfernt Meldungen, Sperren, gespeicherte Verläufe und das Zugriffsprotokoll aus dem lokalen Speicher. In der Produktion gäbe es diesen Knopf nicht:
-          Sperren müssen eine verifizierte Person dauerhaft binden, sonst sind sie wirkungslos.
+          Löscht Meldungen, Sperren, Chatverläufe und das Zugriffsprotokoll – für alle Konten, endgültig. Gedacht ist
+          das für den Übergang in den Echtbetrieb, nicht für den Alltag: Mit dem Protokoll verschwindet auch der
+          Nachweis darüber, wer welchen Verlauf gelesen hat, und aufgehobene Sperren lassen gesperrte Konten
+          zurückkommen.
         </Note>
         <div>
           <Button variant="danger" disabled={busy} onClick={() => void clearAll()}>

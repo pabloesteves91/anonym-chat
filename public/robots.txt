@@ -1,4 +1,5 @@
-# Prototyp, nicht für Suchmaschinen gedacht.
-# Beim Start als echtes Produkt entfernen oder auf "Allow: /" ändern.
+# Öffentlicher Dienst – Suchmaschinen sind willkommen.
+# Die Moderationsansicht gehört nicht in den Index.
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /admin

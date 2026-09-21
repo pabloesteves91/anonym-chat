@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
+import { buttonClass } from '../components/buttonClass'
+import { aktiverPlan, grenzen, planById, verbleibend } from '../services/plans'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
@@ -34,6 +36,9 @@ export function Profile() {
 
   if (!user) return null
 
+  const darfUmbenennen = grenzen(user.membership).eigenerName
+  const meinPlan = planById(aktiverPlan(user.membership))
+  const uebrig = verbleibend(user.membership, user.usage)
   const entwurf = draft ?? user.profile
   // Reihenfolge der Interessen ist bedeutungslos – sonst gilt ab- und wieder
   // anwählen fälschlich als Änderung.
@@ -93,6 +98,7 @@ export function Profile() {
               id="anzeigename"
               className={`${inputClass} font-mono`}
               maxLength={NAME_MAX}
+              disabled={!darfUmbenennen}
               value={nameEntwurf ?? user.pseudonym}
               onChange={(event) => {
                 setNameEntwurf(event.target.value)
@@ -100,7 +106,11 @@ export function Profile() {
               }}
             />
           </div>
-          <Button type="submit" variant="primary" disabled={busy || nameEntwurf === null || nameEntwurf === user.pseudonym}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={busy || !darfUmbenennen || nameEntwurf === null || nameEntwurf === user.pseudonym}
+          >
             Namen speichern
           </Button>
           <Button
@@ -116,6 +126,16 @@ export function Profile() {
           </Button>
         </form>
 
+        {darfUmbenennen ? null : (
+          <p className="text-sm text-muted">
+            Im Gratistarif wird der Name gewürfelt – das hält den Namensraum sauber und macht Wiedererkennung
+            schwerer.{' '}
+            <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+              Mit Plus frei wählbar
+            </Link>
+          </p>
+        )}
+
         {nameEntwurf !== null && !validateDisplayName(nameEntwurf).ok ? (
           <Note tone="warn">{validateDisplayName(nameEntwurf).error}</Note>
         ) : null}
@@ -123,6 +143,26 @@ export function Profile() {
         <p aria-live="polite" className="text-sm text-muted">
           {nameMeldung ?? ''}
         </p>
+      </Panel>
+
+      <Panel className="flex flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="font-display text-xl font-semibold">Tarif</h2>
+          <span className="label-caps">{meinPlan.name}</span>
+        </div>
+        <p className="text-sm text-muted">
+          {uebrig === null
+            ? 'Unbegrenzt Chats, Filter nach Interessen, bevorzugt in der Warteschlange.'
+            : `Heute noch ${uebrig} ${uebrig === 1 ? 'Chat' : 'Chats'}. Die Grenze setzt sich um Mitternacht zurück.`}
+          {user.membership.bis
+            ? ` Läuft bis ${new Date(user.membership.bis).toLocaleDateString('de-CH', { dateStyle: 'long' })}.`
+            : ''}
+        </p>
+        <div>
+          <Link to="/preise" className={buttonClass(uebrig === null ? 'secondary' : 'primary', 'sm')}>
+            {uebrig === null ? 'Tarife ansehen' : 'Grenze aufheben'}
+          </Link>
+        </div>
       </Panel>
 
       <Panel className="p-5">
@@ -231,10 +271,11 @@ export function Profile() {
       </Panel>
 
       <Panel className="flex flex-col gap-3 p-5">
-        <h2 className="font-display text-xl font-semibold">Identität zurücksetzen</h2>
+        <h2 className="font-display text-xl font-semibold">Profil zurücksetzen</h2>
         <Note tone="warn">
-          Nur für diesen Prototyp: löscht Verifizierung, Pseudonym und Profil aus dem Browser. In einer echten Version
-          wäre das genau nicht möglich – sonst wären Sperren wertlos.
+          Setzt Pseudonym, Profil und Verifizierung zurück – du müsstest den Ausweis erneut einreichen. Dein Konto
+          bleibt bestehen, und mit ihm alles, was daran hängt: eine Sperre lässt sich so nicht abschütteln. Ein
+          bezahlter Tarif bleibt ebenfalls erhalten.
         </Note>
         <div>
           <Button

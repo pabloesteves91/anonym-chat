@@ -2,10 +2,11 @@ rules_version = '2';
 
 // Security Rules für den verifizierten Anonymchat.
 //
-// In Betrieb: Konten, Anträge, Meldungen und Chatverläufe liegen in Firestore.
-// Was hier nicht ausdrücklich erlaubt ist, ist verboten.
+// Hier wird entschieden, wer was darf – nicht im Browser. Was nicht
+// ausdrücklich erlaubt ist, ist verboten.
 //
-// Deployen mit: firebase deploy --only firestore:rules
+// Deployen: firebase deploy --only firestore:rules,firestore:indexes
+// oder über den GitHub-Ablauf "Firebase-Regeln ausrollen".
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -25,16 +26,51 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Verifiziert und nicht gesperrt: die Bedingung für alles, was mit
+    // anderen Menschen zu tun hat. Beide Prüfungen laufen auf dem Server –
+    // eine gesperrte Person kommt damit auch dann nicht in die
+    // Warteschlange, wenn sie den Browsercode umschreibt.
+    function kontoDa() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function darfChatten() {
+      return kontoDa()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verified == true
+        && !exists(/databases/$(database)/documents/blocked/$(request.auth.uid));
+    }
+
     // Das eigene Konto: anlegen und pflegen darf man es selbst, lesen darf
-    // es zusätzlich die Moderation (Pseudonym, Status, Sperrliste).
-    // Den Verifizierungsstand setzt ausschliesslich die Moderation.
+    // es zusätzlich die Moderation.
+    //
+    // Zwei Felder sind ausgenommen. `verified` setzt ausschliesslich die
+    // Moderation – ein Konto, das sich selbst freigeben könnte, macht die
+    // ganze Prüfung sinnlos. Und `membership` ebenso, solange die Kasse
+    // fehlt: Ein Browser darf über einen bezahlten Zugang nicht selbst
+    // entscheiden.
+    //
+    // Der Antragsstand gehört dagegen halb der Person: Einreichen ('wartet')
+    // und Zurückziehen ('offen') sind ihre Entscheidung. 'verifiziert' und
+    // 'abgelehnt' bleiben der Moderation vorbehalten – und `verified` muss
+    // dabei auf false stehen, sonst wäre der Umweg eine Selbstfreigabe.
+    function eigenerAntragsstand() {
+      return request.resource.data.verified == false
+        && request.resource.data.verificationStatus in ['offen', 'wartet'];
+    }
+
     match /users/{userId} {
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.verified == false
+        && request.resource.data.verificationStatus == 'offen'
+        && request.resource.data.membership.plan == 'frei';
       allow read: if isModerator() || isOwner(userId);
       allow update: if isModerator()
         || (isOwner(userId)
             && request.resource.data.verified == resource.data.verified
-            && request.resource.data.verificationStatus == resource.data.verificationStatus);
+            && request.resource.data.membership == resource.data.membership
+            && (request.resource.data.verificationStatus == resource.data.verificationStatus
+                || eigenerAntragsstand()));
       allow delete: if false;
     }
 
@@ -56,32 +92,93 @@ service cloud.firestore {
       allow read, update, delete: if isModerator();
     }
 
-    // Chatverläufe: nur die Moderation liest, und nur solange die Frist läuft.
-    // Die TTL-Policy löscht abgelaufene Dokumente nachträglich – bis dahin
-    // sperrt diese Bedingung den Zugriff.
+    // Warteschlange.
+    //
+    // Sie ist für alle Suchenden lesbar – anders lässt sich ohne eigenen
+    // Server niemand finden. Darin steht deshalb nur, was das Gegenüber
+    // ohnehin sehen wird: Pseudonym, Sprache, Interessen. Keine Kennung
+    // ausserhalb der Konto-ID, keine Nummer, keine Adresse.
+    //
+    // Den fremden Eintrag darf man genau einmal anfassen: um die Nummer des
+    // gemeinsamen Raums einzutragen, und nur solange dort noch keine steht.
+    match /queue/{userId} {
+      allow read: if darfChatten() || isModerator();
+      allow create: if isOwner(userId)
+        && darfChatten()
+        && request.resource.data.uid == userId
+        && request.resource.data.roomId == null;
+      allow update: if (isOwner(userId) && request.resource.data.uid == userId)
+        || (darfChatten()
+            && resource.data.roomId == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roomId'])
+            && request.resource.data.roomId is string);
+      allow delete: if isOwner(userId) || isModerator();
+    }
+
+    // Chaträume. Lesen und schreiben darf nur, wer darin steht – die
+    // Moderation zusätzlich, solange die 72 Stunden laufen.
     match /chats/{chatId} {
-      allow create: if isOwner(request.resource.data.ownerId)
+      function teilnehmer() {
+        return isSignedIn() && resource.data.participants.hasAny([request.auth.uid]);
+      }
+
+      allow create: if darfChatten()
+        && request.resource.data.participants.hasAny([request.auth.uid])
+        && request.resource.data.participants.size() == 2
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt > request.time;
-      // Einzelabruf: nach Ablauf der Frist nicht mehr lesbar, Punkt.
-      allow get: if isModerator() && resource.data.expiresAt > request.time;
+
+      // Einzelabruf: nach Ablauf der Frist sieht ihn auch die Moderation nicht mehr.
+      allow get: if teilnehmer() || (isModerator() && resource.data.expiresAt > request.time);
+
       // Auflisten: Die Bedingung oben lässt sich für eine Abfrage nicht
       // prüfen – Firestore kann den Zeitwert des Clients nicht verifizieren
       // und würde jede Liste ablehnen. Die Übersicht ist deshalb der
-      // Moderation ohne Zeitbedingung erlaubt; abgelaufene Verläufe filtert
+      // Moderation ohne Zeitbedingung erlaubt; abgelaufene Räume filtert
       // die App heraus und die TTL-Richtlinie löscht sie.
       allow list: if isModerator();
       allow delete: if isModerator();
-      // Eine Meldung markiert den Verlauf – sonst wird nie etwas geändert.
-      allow update: if isSignedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reported'])
-        && request.resource.data.reported == true;
+
+      // Im laufenden Gespräch ändern sich nur Zähler und Zustände. Wer
+      // darin sitzt, kann weder die Beteiligten noch die Frist verschieben.
+      allow update: if isModerator()
+        || (teilnehmer()
+            && request.resource.data.participants == resource.data.participants
+            && request.resource.data.expiresAt == resource.data.expiresAt
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['typing', 'seen', 'left', 'endedAt', 'messageCount', 'flagCount', 'reported']));
+
+      match /messages/{messageId} {
+        function imRaum() {
+          return isSignedIn()
+            && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
+        }
+
+        // Niemand schreibt im fremden Namen, und keine Nachricht ohne Frist.
+        allow create: if imRaum()
+          && request.resource.data.author == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.expiresAt is timestamp;
+        allow read: if imRaum() || isModerator();
+        // Geschriebenes bleibt stehen: Nachträgliches Ändern würde jeden
+        // Verlauf als Beweismittel wertlos machen.
+        allow update: if false;
+        allow delete: if isModerator();
+      }
     }
 
-    // Sperrliste: gepflegt von der Moderation, gelesen vom Matching.
+    // Abfrage über alle Nachrichten hinweg – nur für das Aufräumen durch
+    // die Moderation. Ohne diese Regel scheitert jede Collection-Group-Abfrage.
+    match /{pfad=**}/messages/{messageId} {
+      allow read, delete: if isModerator();
+    }
+
+    // Sperrliste: gepflegt und gelesen von der Moderation. Durchgesetzt wird
+    // sie oben in `darfChatten()`; dafür braucht niemand Leserecht.
     match /blocked/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isModerator();
+      allow read, write: if isModerator();
     }
 
     // Zugriffsprotokoll: Einträge entstehen beim Öffnen und Löschen eines

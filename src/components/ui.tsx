@@ -1,18 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { buttonClass, type Variant } from './buttonClass'
 
 /**
  * Kleines UI-Kit. Alle Farben kommen aus den Tokens in styles/index.css –
  * hier stehen keine Hex-Werte.
  */
-
-type Variant = 'primary' | 'secondary' | 'quiet' | 'danger'
-
-const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-accent text-accent-ink border border-accent hover:opacity-90',
-  secondary: 'bg-surface text-ink border border-line-strong hover:bg-raised',
-  quiet: 'bg-transparent text-muted border border-transparent hover:text-ink hover:bg-raised',
-  danger: 'bg-transparent text-signal border border-signal/50 hover:bg-signal-soft',
-}
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
@@ -20,13 +12,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'secondary', size = 'md', className = '', ...props }: ButtonProps) {
-  const sizing = size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2.5'
-  return (
-    <button
-      {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${sizing} ${VARIANTS[variant]} ${className}`}
-    />
-  )
+  return <button {...props} className={buttonClass(variant, size, className)} />
 }
 
 export function Panel({

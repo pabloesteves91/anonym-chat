@@ -6,7 +6,8 @@ import { Login } from './routes/Login'
 import { Verify } from './routes/Verify'
 import { Profile } from './routes/Profile'
 import { Chat } from './routes/Chat'
-import { TestBoard } from './routes/TestBoard'
+import { Preise } from './routes/Preise'
+import { Datenschutz, Impressum, Nutzungsbedingungen } from './routes/Legal'
 import { NotFound } from './routes/NotFound'
 import { useAuth } from './store/useAuth'
 import { useSession } from './store/useSession'
@@ -70,6 +71,10 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<Landing />} />
         <Route path="anmelden" element={<Login />} />
+        <Route path="preise" element={<Preise />} />
+        <Route path="impressum" element={<Impressum />} />
+        <Route path="datenschutz" element={<Datenschutz />} />
+        <Route path="agb" element={<Nutzungsbedingungen />} />
         <Route
           path="verifizierung"
           element={
@@ -98,7 +103,6 @@ export default function App() {
             </RequireUser>
           }
         />
-        <Route path="test" element={<TestBoard />} />
         <Route
           path="admin"
           element={

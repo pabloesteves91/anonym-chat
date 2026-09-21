@@ -4,7 +4,6 @@ import { VerifiedBadge } from './VerifiedBadge'
 import { MessageList } from './MessageList'
 import { Composer } from './Composer'
 import { ReportDialog } from './ReportDialog'
-import { languageLabelShort } from '../services/partnerScript'
 import type { FilterCategory, Message, Partner, ReportReason, User } from '../services/types'
 
 /** Aus einem Filtertreffer den passenden Meldegrund ableiten. */
@@ -20,6 +19,8 @@ import { useChat } from '../store/useChat'
 export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
   const messages = useChat((s) => s.messages)
   const typing = useChat((s) => s.partnerTyping)
+  const partnerOnline = useChat((s) => s.partnerOnline)
+  const notifyTyping = useChat((s) => s.notifyTyping)
   const sendMessage = useChat((s) => s.sendMessage)
   const endChat = useChat((s) => s.endChat)
   const nextChat = useChat((s) => s.nextChat)
@@ -54,7 +55,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
           <div>
             <p className="font-mono text-ink">{partner.pseudonym}</p>
             <p className="text-xs text-muted">
-              {languageLabelShort(partner.language)} · {partner.interests.join(', ')}
+              {partnerOnline ? 'anwesend' : 'gerade nicht am Gerät'}
             </p>
           </div>
           <VerifiedBadge status="verifiziert" size="sm" />
@@ -91,7 +92,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
           partnerPseudonym={partner.pseudonym}
           onReport={meldeNachricht}
         />
-        <Composer onSend={sendMessage} />
+        <Composer onSend={(text) => void sendMessage(text)} onTyping={notifyTyping} />
       </Panel>
 
       <ReportDialog

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
-import { BACKEND, maskPhone } from '../services/api'
+import { RECAPTCHA_CONTAINER_ID, maskPhone } from '../services/api'
 import { VERIFY_STEPS } from '../services/types'
 import type { VerifyStep } from '../services/types'
 import { useSession } from '../store/useSession'
@@ -37,7 +37,6 @@ function BildFeld({
   hint,
   preview,
   onPick,
-  onDemo,
   busy,
 }: {
   id: string
@@ -45,7 +44,6 @@ function BildFeld({
   hint: string
   preview: { dataUrl: string; meta: { name: string; size: number } } | null
   onPick: (file: File | null) => void
-  onDemo: () => void
   busy: boolean
 }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -68,13 +66,6 @@ function BildFeld({
           onChange={(event) => onPick(event.target.files?.[0] ?? null)}
         />
       </label>
-
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-        Für einen Testdurchlauf kein echtes Foto nötig:
-        <Button size="sm" variant="quiet" type="button" onClick={onDemo} disabled={busy}>
-          Demo-Bild einsetzen
-        </Button>
-      </p>
 
       {preview ? (
         <figure className="flex items-center gap-4 rounded-sm border border-line bg-surface p-3">
@@ -127,10 +118,15 @@ function Antragsformular() {
               onChange={(event) => v.setPhoneInput(event.target.value)}
             />
           </Field>
+          <p className="text-sm text-muted">
+            Es geht eine echte SMS raus. Die Nummer wird dabei fest mit deinem Konto verbunden – dieselbe Nummer lässt
+            sich kein zweites Mal verwenden. Genau daran scheitert der Versuch, eine Sperre mit einem neuen Konto zu
+            umgehen.
+          </p>
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" variant="primary" disabled={v.busy || v.phoneInput.trim().length < 6}>
-              {v.busy ? 'Wird gesendet …' : 'Code senden'}
+              {v.busy ? 'SMS wird gesendet …' : 'Code per SMS senden'}
             </Button>
             <Link to="/" className="rounded-sm px-3 py-2.5 text-sm text-muted transition-colors hover:text-ink">
               Abbrechen
@@ -148,11 +144,10 @@ function Antragsformular() {
           }}
         >
           <Note>
-            Im Prototyp geht keine SMS raus. Dein Code lautet{' '}
-            <span className="font-mono text-ink">{v.demoCode ?? '––––––'}</span> – in der echten Version steht er nur
-            auf dem Telefon.
+            Wir haben eine SMS an <span className="font-mono text-ink">{v.phone ? maskPhone(v.phone) : 'deine Nummer'}</span>{' '}
+            geschickt. Sie kann einen Moment brauchen.
           </Note>
-          <Field label="Sechsstelliger Code" htmlFor="code" hint="Gültig für zehn Minuten, drei Versuche.">
+          <Field label="Sechsstelliger Code" htmlFor="code" hint="Steht in der SMS. Kommt nichts an, sende ihn neu.">
             <input
               id="code"
               inputMode="numeric"
@@ -184,8 +179,7 @@ function Antragsformular() {
             <h2 className="font-display text-xl font-semibold">Foto des Ausweises</h2>
             <p className="mt-1 text-sm text-muted">
               Pass, ID oder Führerausweis, gut ausgeleuchtet und vollständig im Bild. Die Prüfung schaut auf Name,
-              Geburtsdatum und Gültigkeit – nichts davon wird im Profil angezeigt. Zum Ausprobieren des Ablaufs reicht
-              ein beliebiges Bild oder das Demo-Bild.
+              Geburtsdatum und Gültigkeit – nichts davon wird im Profil angezeigt.
             </p>
           </div>
           <BildFeld
@@ -195,7 +189,6 @@ function Antragsformular() {
             preview={v.ausweis}
             busy={v.busy}
             onPick={(file) => void v.pickImage('ausweis', file)}
-            onDemo={() => v.useDemoImage('ausweis')}
           />
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap gap-3">
@@ -215,7 +208,7 @@ function Antragsformular() {
             <h2 className="font-display text-xl font-semibold">Selfie mit Ausweis</h2>
             <p className="mt-1 text-sm text-muted">
               Halte den Ausweis neben dein Gesicht, beides scharf und lesbar. So sieht die Prüfung, dass Dokument und
-              Person zusammengehören. Zum Ausprobieren musst du dich nicht selbst fotografieren – nimm das Demo-Bild.
+              Person zusammengehören.
             </p>
           </div>
           <BildFeld
@@ -225,7 +218,6 @@ function Antragsformular() {
             preview={v.selfie}
             busy={v.busy}
             onPick={(file) => void v.pickImage('selfie', file)}
-            onDemo={() => v.useDemoImage('selfie')}
           />
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap gap-3">
@@ -328,7 +320,6 @@ export function Verify() {
   const request = useVerification((s) => s.request)
   const loadRequest = useVerification((s) => s.loadRequest)
   const startOver = useVerification((s) => s.startOver)
-  const selfApprove = useVerification((s) => s.selfApprove)
   const busy = useVerification((s) => s.busy)
 
   const status = user?.verificationStatus ?? 'offen'
@@ -406,24 +397,12 @@ export function Verify() {
             </div>
           </dl>
           <div className="mt-5">
-            {BACKEND === 'firestore' ? (
-              <Note>
-                Dein Antrag liegt bei der Moderation. Sobald jemand entschieden hat, ändert sich der Status hier von
-                selbst – die Seite fragt alle paar Sekunden nach.
-              </Note>
-            ) : (
-              <Note>
-                <strong>Ohne Server wartest du vergeblich:</strong> Dein Antrag liegt nur in diesem Browser, die
-                Moderation sieht ihn nicht. Zum Weitertesten gibst du dich unten selbst frei.
-              </Note>
-            )}
+            <Note>
+              Dein Antrag liegt bei der Moderation. Sobald jemand entschieden hat, ändert sich der Status hier von
+              selbst – die Seite fragt alle paar Sekunden nach.
+            </Note>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            {BACKEND === 'local' ? (
-              <Button variant="primary" disabled={busy} onClick={() => void selfApprove()}>
-                Im Demo-Modus freigeben
-              </Button>
-            ) : null}
             <Button onClick={() => void refreshUser()}>Status aktualisieren</Button>
             <Button variant="danger" disabled={busy} onClick={() => void startOver()}>
               Antrag zurückziehen
@@ -471,9 +450,13 @@ export function Verify() {
       <Antragsformular />
 
       <Note>
-        Die Fotos bleiben auf diesem Gerät: Sie werden verkleinert, im Sitzungsspeicher des Browsers abgelegt und nach
-        dem Entscheid gelöscht. In Phase 2 gehen sie direkt an den Prüfanbieter und liegen nie bei uns.
+        Die Fotos werden verkleinert und verschlüsselt an unseren Dateispeicher in Frankfurt übertragen. Lesen kann sie
+        dort nur die Moderation; unmittelbar nach dem Entscheid werden sie gelöscht. Dauerhaft in deinem Browser liegt
+        keines der beiden Bilder.
       </Note>
+
+      {/* Anker der unsichtbaren Sicherheitsprüfung vor dem SMS-Versand. */}
+      <div id={RECAPTCHA_CONTAINER_ID} />
     </div>
   )
 }

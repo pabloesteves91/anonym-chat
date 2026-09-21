@@ -1,10 +1,12 @@
 /**
- * Domänenmodell des Prototyps.
+ * Domänenmodell.
  *
- * Diese Typen sind die Schnittstelle zwischen UI und "Backend". Wenn in
- * Phase 2 ein echter API-Client hinter `mockApi.ts` gesetzt wird, bleiben
- * sie unverändert – nur die Implementierung dahinter wird getauscht.
+ * Diese Typen sind die Schnittstelle zwischen Oberfläche und Datenhaltung.
+ * Die Oberfläche kennt nur sie; wo die Daten liegen, entscheidet allein
+ * `services/api.ts`.
  */
+
+import type { Membership, Verbrauch } from './plans'
 
 export type Language = 'de' | 'fr' | 'it' | 'en'
 
@@ -58,13 +60,19 @@ export interface User {
   /** Bestätigte Mobilnummer, im UI nur maskiert sichtbar. */
   phone: string | null
   profile: Profile
+  /** Tarif und Laufzeit. */
+  membership: Membership
+  /** Chats des heutigen Tages – Grundlage der Gratisgrenze. */
+  usage: Verbrauch
 }
 
+/**
+ * Das Gegenüber im Chat. Mehr als diese zwei Angaben gibt es nicht zu
+ * wissen – und mehr soll es auch nicht geben.
+ */
 export interface Partner {
   id: string
   pseudonym: string
-  language: Language
-  interests: string[]
 }
 
 export type MessageAuthor = 'me' | 'partner' | 'system'
@@ -94,7 +102,8 @@ export interface Message {
 
 /** Eine Nachricht, wie sie im Moderationsspeicher liegt. */
 export interface TranscriptMessage {
-  author: 'me' | 'partner'
+  /** Kennung des schreibenden Kontos – die Moderation sieht beide Seiten. */
+  author: string
   text: string
   ts: number
   flag?: FilterVerdict
@@ -106,15 +115,17 @@ export interface TranscriptMessage {
  */
 export interface ChatTranscript {
   id: string
-  ownerId: string
-  ownerPseudonym: string
-  partnerId: string
-  partnerPseudonym: string
+  /** Beide Kennungen; die Zuordnung zu Namen steht daneben. */
+  participants: string[]
+  pseudonyms: Record<string, string>
   startedAt: string
-  endedAt: string
+  /** `null`, solange der Chat noch läuft. */
+  endedAt: string | null
   /** Epoch-Millisekunden, ab dann wird der Verlauf gelöscht. */
   expiresAt: number
+  /** Gefüllt erst beim Öffnen – die Übersicht lädt keine Inhalte. */
   messages: TranscriptMessage[]
+  messageCount: number
   flagCount: number
   reported: boolean
 }
@@ -176,7 +187,7 @@ export interface Report {
   excerpt: { author: MessageAuthor; text: string; ts: number }[]
   /** Treffer des lokalen Wortfilters im Verlauf. */
   autoFlags: number
-  /** Verweis auf den gespeicherten Chatverlauf, solange die Frist läuft. */
+  /** Verweis auf den Chatraum, solange die Frist läuft. */
   transcriptId: string | null
   status: ReportStatus
 }

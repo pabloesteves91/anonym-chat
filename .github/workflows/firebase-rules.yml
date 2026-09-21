@@ -1,8 +1,8 @@
 name: Firebase Rules
 
-# Rollt firestore.rules und storage.rules aus, ohne dass jemand lokal etwas
-# installieren muss. Läuft von Hand (Actions → Firebase Rules → Run workflow)
-# und automatisch, wenn sich eine der beiden Dateien ändert.
+# Rollt Security Rules und Firestore-Indizes aus, ohne dass jemand lokal
+# etwas installieren muss. Läuft von Hand (Actions → Firebase Rules → Run
+# workflow) und automatisch, wenn sich eine der beteiligten Dateien ändert.
 #
 # Voraussetzung: das Repository-Secret FIREBASE_SERVICE_ACCOUNT mit dem
 # Inhalt eines Dienstkonto-Schlüssels aus der Firebase-Konsole
@@ -12,11 +12,35 @@ on:
   push:
     paths:
       - firestore.rules
+      - firestore.indexes.json
       - storage.rules
       - firebase.json
 
 jobs:
+  # Regeln, die ihre eigenen Prüfungen nicht bestehen, werden nicht
+  # ausgerollt. Falsche Regeln fallen sonst erst auf, wenn sie jemand
+  # ausnutzt.
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Der Firestore-Emulator läuft auf der JVM.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+      - run: npx --yes firebase-tools@15 emulators:exec --only firestore --project demo-anonym-chat "npx vitest run --config vitest.rules.config.ts"
+
   deploy:
+    needs: pruefen
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +61,7 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
 
       - name: Regeln ausrollen
-        run: npx --yes firebase-tools@15 deploy --only firestore:rules,storage --project anonym-chat-223af --non-interactive
+        run: npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes,storage --project anonym-chat-223af --non-interactive
 
       - name: Schlüssel entfernen
         if: always()

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Button, Note, PageTitle, Panel } from '../components/ui'
+import { buttonClass } from '../components/buttonClass'
 import { Lobby } from '../components/Lobby'
 import { Queue } from '../components/Queue'
 import { ChatRoom } from '../components/ChatRoom'
@@ -15,19 +17,22 @@ function Ended() {
 
   const gemeldet = endReason === 'gemeldet'
   const blockiert = endReason === 'blockiert'
+  const vomPartner = endReason === 'partner'
   const reasonLabel = REPORT_REASONS.find((r) => r.value === report?.reason)?.label
 
   return (
     <Panel className="p-6">
       <p className="label-caps">
-        {gemeldet ? 'Meldung erfasst' : blockiert ? 'Konto blockiert' : 'Chat beendet'}
+        {gemeldet ? 'Meldung erfasst' : blockiert ? 'Konto blockiert' : vomPartner ? 'Verlassen' : 'Chat beendet'}
       </p>
       <h2 className="mt-2 font-display text-2xl font-semibold">
         {gemeldet
           ? 'Danke – die Moderation übernimmt'
           : blockiert
             ? 'Ihr werdet nicht mehr verbunden'
-            : 'Der Chat ist vorbei'}
+            : vomPartner
+              ? 'Dein Gegenüber hat den Chat beendet'
+              : 'Der Chat ist vorbei'}
       </h2>
 
       {gemeldet && report ? (
@@ -38,7 +43,7 @@ function Ended() {
           </p>
           <Note>
             Vorgangsnummer <span className="font-mono">{report.id}</span>. Mitgeschickt wurden {report.excerpt.length}{' '}
-            Nachrichten. Die Moderation sieht sie sich an; im Prototyp bleibt die Meldung in diesem Browser.
+            Nachrichten. Die Moderation sieht sie sich an und entscheidet über eine Sperre.
           </Note>
         </div>
       ) : blockiert ? (
@@ -68,6 +73,7 @@ export function Chat() {
   const user = useSession((s) => s.user)
   const status = useChat((s) => s.status)
   const partner = useChat((s) => s.partner)
+  const grenzeErreicht = useChat((s) => s.grenzeErreicht)
   const filter = useChat((s) => s.filter)
   const setFilter = useChat((s) => s.setFilter)
   const prefilled = useRef(false)
@@ -96,7 +102,23 @@ export function Chat() {
         </div>
       ) : null}
 
-      {status === 'idle' ? <Lobby /> : null}
+      {grenzeErreicht ? (
+        <Panel className="p-5">
+          <p className="label-caps">Tagesgrenze erreicht</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold">Für heute ist das Gratiskontingent aufgebraucht</h2>
+          <p className="mt-2 max-w-prose text-muted">
+            Morgen geht es von selbst weiter. Wer nicht warten will, hebt die Grenze mit Plus auf – am Dienst selbst
+            ändert das nichts, nur an der Anzahl.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link to="/preise" className={buttonClass('primary')}>
+              Tarife ansehen
+            </Link>
+          </div>
+        </Panel>
+      ) : null}
+
+      {status === 'idle' && !grenzeErreicht ? <Lobby /> : null}
       {status === 'suche' ? <Queue /> : null}
       {status === 'aktiv' && partner ? <ChatRoom partner={partner} user={user} /> : null}
       {status === 'beendet' ? <Ended /> : null}

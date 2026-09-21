@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button, Field, Note, Panel, TagToggle, inputClass } from './ui'
 import { CodexDialog } from './CodexDialog'
 import { useSession } from '../store/useSession'
 import { INTERESTS, LANGUAGES } from '../services/types'
 import type { Language } from '../services/types'
+import { grenzen, verbleibend } from '../services/plans'
 import { useChat } from '../store/useChat'
 
 /** Ausgangszustand: Filter setzen und Suche starten. */
@@ -15,8 +17,12 @@ export function Lobby() {
   const codexAccepted = useSession((s) => s.codexAccepted)
   const acceptCodex = useSession((s) => s.acceptCodex)
   const selfBlocked = useSession((s) => s.selfBlocked)
+  const user = useSession((s) => s.user)
   const [codexOpen, setCodexOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  const darfFiltern = grenzen(user?.membership).interessenFilter
+  const uebrig = verbleibend(user?.membership, user?.usage)
 
   const start = () => {
     if (!codexAccepted) {
@@ -67,9 +73,12 @@ export function Lobby() {
           </select>
         </Field>
 
-        <fieldset className="border-0 p-0">
-          <legend className="label-caps mb-2">Interessen · mindestens eine Übereinstimmung</legend>
-          <div className="flex flex-wrap gap-2">
+        <fieldset className="border-0 p-0" disabled={!darfFiltern}>
+          <legend className="label-caps mb-2">
+            Interessen · mindestens eine Übereinstimmung
+            {darfFiltern ? null : <span className="ml-2 text-accent">mit Plus</span>}
+          </legend>
+          <div className={`flex flex-wrap gap-2 ${darfFiltern ? '' : 'opacity-50'}`}>
             {INTERESTS.map((interest) => (
               <TagToggle
                 key={interest}
@@ -79,6 +88,14 @@ export function Lobby() {
               />
             ))}
           </div>
+          {darfFiltern ? null : (
+            <p className="mt-2 text-sm text-muted">
+              Im Gratistarif wird nach Sprache gesucht.{' '}
+              <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+                Tarife ansehen
+              </Link>
+            </p>
+          )}
         </fieldset>
 
         {error ? <Note tone="warn">{error}</Note> : null}
@@ -93,6 +110,15 @@ export function Lobby() {
             </Button>
           ) : null}
         </div>
+
+        {uebrig !== null ? (
+          <p className="text-sm text-muted">
+            Heute noch {uebrig} {uebrig === 1 ? 'Chat' : 'Chats'} im Gratistarif.{' '}
+            <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+              Unbegrenzt mit Plus
+            </Link>
+          </p>
+        ) : null}
 
         {selfBlocked.length > 0 ? (
           <p className="text-sm text-muted">

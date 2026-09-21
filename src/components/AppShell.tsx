@@ -32,8 +32,17 @@ export function AppShell() {
               <NavLink to="/profil" className={navClass}>
                 Profil
               </NavLink>
+              <NavLink to="/preise" className={navClass}>
+                Tarife
+              </NavLink>
             </nav>
-          ) : null}
+          ) : (
+            <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
+              <NavLink to="/preise" className={navClass}>
+                Tarife
+              </NavLink>
+            </nav>
+          )}
 
           <div className="ml-auto flex items-center gap-2">
             {user ? (
@@ -70,12 +79,23 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-line px-4 py-4">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-          <p>Anonymchat · Testbetrieb: Gesprächspartner sind simuliert, es schreibt niemand zurück.</p>
-          <Link to="/test" className="ml-auto underline underline-offset-2 hover:text-ink">
-            Testübersicht
-          </Link>
+      <footer className="border-t border-line px-4 py-5">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+          <p>Anonymchat · Verifizierter Zufallschat ab 18</p>
+          <nav aria-label="Rechtliches" className="ml-auto flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+              Tarife
+            </Link>
+            <Link to="/impressum" className="underline underline-offset-2 hover:text-ink">
+              Impressum
+            </Link>
+            <Link to="/datenschutz" className="underline underline-offset-2 hover:text-ink">
+              Datenschutz
+            </Link>
+            <Link to="/agb" className="underline underline-offset-2 hover:text-ink">
+              Nutzungsbedingungen
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

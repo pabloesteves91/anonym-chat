@@ -6,6 +6,7 @@ import { useChat } from '../store/useChat'
 export function Queue() {
   const cancelSearch = useChat((s) => s.cancelSearch)
   const filter = useChat((s) => s.filter)
+  const wartende = useChat((s) => s.wartende)
   const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
@@ -27,6 +28,12 @@ export function Queue() {
 
       <p aria-live="polite" className="mt-3 font-mono text-xs text-muted">
         {String(seconds).padStart(2, '0')} s
+        {wartende > 0 ? ` · ${wartende} weitere in der Warteschlange` : ''}
+      </p>
+
+      <p className="mx-auto mt-4 max-w-md text-sm text-muted">
+        Hier wartet nichts Simuliertes auf dich: Am anderen Ende sitzt eine verifizierte Person, die ebenfalls gerade
+        sucht. Zu ruhigen Zeiten kann das dauern.
       </p>
 
       <div className="mt-6">

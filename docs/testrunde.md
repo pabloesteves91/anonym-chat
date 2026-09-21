@@ -1,65 +1,69 @@
-# Testrunde Phase 1
+# Durchlauf zu zweit
 
-Die Fassung für Testpersonen liegt als Seite vor (Link siehe unten); dieses
-Dokument ist die versionierte Quelle für Aufgaben und Fragen.
-
-## Ziel
-
-Herausfinden, wo Leute abbrechen. Die Verifizierungspflicht ist gleichzeitig
-der Kern des Produkts und die grösste Hürde – die offene Frage ist nicht, ob
-die App funktioniert, sondern ob jemand freiwillig ein Ausweisfoto und ein
-Selfie hochlädt, bevor er überhaupt einen Nutzen gesehen hat.
+Der Chat verbindet zwei echte Menschen. Allein lässt er sich deshalb nicht
+prüfen – es braucht zwei Konten, und beide müssen verifiziert sein.
 
 ## Vorbereitung
 
-- Prototyp-Link teilen (Artifact, Freigabe über das Share-Menü nötig)
-- Testpersonen darauf hinweisen: **kein echtes Dokument hochladen**, in der
-  App gibt es „Demo-Bild einsetzen"
-- Fünf bis zehn Personen genügen; wer nicht aus dem Umfeld kommt, ist wertvoller
+1. **Zwei Konten anlegen.** Zwei verschiedene E-Mail-Adressen, oder eines per
+   E-Mail und eines über Google. Zwei Browser oder ein normales und ein
+   privates Fenster; in zwei Tabs desselben Fensters teilen sich beide
+   dieselbe Anmeldung.
+2. **Zwei Mobilnummern.** Firebase verbindet jede Nummer fest mit einem
+   Konto und lässt sie kein zweites Mal zu – das ist der Sinn der Sache, aber
+   beim Testen unpraktisch. Abhilfe: In der Firebase-Konsole unter
+   **Authentication → Settings → Phone numbers for testing** zwei Nummern mit
+   festem Code eintragen. Dann geht keine SMS raus und beide Konten kommen
+   durch.
+3. **Beide freigeben.** Mit der Moderationskennung `/admin` öffnen, unter
+   „Offene Anträge" beide Anträge ansehen und freigeben. Das ist kein
+   Testschritt, den man überspringen kann: Ohne Freigabe verweigern die
+   Security Rules sogar den Eintrag in die Warteschlange.
 
-## Aufgaben
+## Der Durchlauf
 
-1. **Verifizieren** – Mobilnummer, SMS-Code vom Bildschirm, Ausweisfoto und
-   Selfie über die Demo-Bilder.
-2. **Sich selbst freigeben** – unter „Moderation" den eigenen Antrag
-   entscheiden. Erst danach ist der Chat offen.
-3. **Chatten** – Chat starten, ein paar Nachrichten, „Nächster Chat".
-4. **Melden** – jemanden melden und die Meldung in der Moderation ansehen.
+| Schritt | Fenster A | Fenster B | Erwartet |
+| --- | --- | --- | --- |
+| 1 | „Chat starten" | – | A wartet, Zähler läuft |
+| 2 | – | „Chat starten" | Beide landen binnen Sekunden im selben Raum |
+| 3 | tippt | – | B sieht „schreibt …" |
+| 4 | sendet | – | Nachricht erscheint bei beiden |
+| 5 | – | Tab schliessen | A sieht nach ~70 s „gerade nicht am Gerät" |
+| 6 | – | zurückkommen, „Chat beenden" | A sieht „Dein Gegenüber hat den Chat beendet" |
 
-Beobachten statt erklären: Wo zögert die Person, wo scrollt sie zurück, wo
-fragt sie nach?
+Passt nichts zusammen, liegt es fast immer am Filter: Stehen bei beiden
+Interessen, muss mindestens eines übereinstimmen – und zwar beidseitig.
+Im Gratistarif ist der Interessenfilter ohnehin aus.
 
-## Fragen
+## Was danach zu prüfen ist
 
-1. Wie weit bist du gekommen?
-2. Wo hättest du im echten Leben abgebrochen?
-3. Würdest du ein Foto deines echten Ausweises hochladen?
-4. Und ein Selfie mit dem Ausweis in der Hand?
-5. Was müsste erfüllt sein, damit du es doch tust?
-6. Die Freigabe macht ein Mensch – wie lange würdest du warten?
-7. War dir klar, was dein Gegenüber von dir sieht?
-8. Wie viel Vertrauen löst die App aus? (1–5)
-9. Würdest du so etwas benutzen, und wofür?
-10. Was war unklar, umständlich oder komisch?
-11. Wer bist du? (optional)
+- **Moderation.** `/admin` zeigt den Raum unter „Chatverläufe" mit der
+  Anzahl Nachrichten und der Restlaufzeit. „Verlauf öffnen" zeigt beide
+  Seiten mit Pseudonym – und schreibt unten einen Eintrag ins
+  Zugriffsprotokoll. Genau das ist der Punkt: Mitlesen geht, aber nicht
+  unbemerkt.
+- **Melden.** Im Chat „Melden", Grund wählen, absenden. Der Vorgang
+  erscheint in `/admin` mit Auszug. Status auf „Gesperrt" setzen: Das
+  gemeldete Konto steht danach in `blocked` und kommt nicht mehr in die
+  Warteschlange – die Rules lassen es nicht mehr hinein.
+- **Wortfilter.** Eine Nachricht mit einem schweren Treffer tippen (etwa
+  eine Aufforderung zu Bildern). Vor dem Senden erscheint eine Warnung, der
+  Knopf verlangt einen zweiten, bewussten Klick, und in der Moderation ist
+  die Nachricht markiert.
+- **Tagesgrenze.** Im Gratistarif nach zehn begonnenen Chats erscheint der
+  Hinweis auf die Tarifseite. Aufheben lässt sie sich in `/admin` unter
+  „Tarif vergeben".
+- **Ablauf.** Die 72 Stunden lassen sich nicht abwarten. Stattdessen in der
+  Firestore-Konsole bei einem Raum `expiresAt` in die Vergangenheit setzen:
+  Der Verlauf verschwindet aus der Übersicht, und ein Einzelabruf wird von
+  den Rules abgelehnt.
 
-## Auswertung
+## Häufige Stolpersteine
 
-Die drei Zahlen, auf die es ankommt:
-
-- **Abbruchquote pro Schritt** (Frage 1 und 2) – wo genau bricht es weg?
-- **Bereitschaft zu Ausweis und Selfie** (Fragen 3 und 4) – wenn hier die
-  Mehrheit „eher nein" sagt, ist nicht das UI das Problem, sondern das
-  Konzept in dieser Form.
-- **Akzeptierte Wartezeit** (Frage 6) – entscheidet, ob manuelle Prüfung
-  überhaupt tragfähig ist oder eine automatische Vorprüfung braucht.
-
-Frage 5 liefert die Bedingungen, unter denen es doch ginge – das ist das
-Material für Phase 2.
-
-## Links
-
-- Prototyp: https://claude.ai/artifact/ByUdPtJrYZnowGqCyTc8fJ
-- Testanleitung mit Fragebogen: https://claude.ai/artifact/3pMbZmbcZ3XmTdmavH8Wos
-
-Beide Seiten sind privat und müssen vor der Testrunde freigegeben werden.
+| Meldung | Ursache |
+| --- | --- |
+| „Dafür fehlen die Rechte" | Konto nicht freigegeben, oder Rules nicht ausgerollt |
+| `auth/unauthorized-domain` | Domain fehlt in **Authentication → Authorized domains** |
+| `auth/operation-not-allowed` | Anmeldeart in der Konsole nicht aktiviert |
+| Suche findet nie jemanden | Index fehlt (`firestore.indexes.json`), oder Filter zu eng |
+| SMS kommt nicht an | Regionssperre, Kontingent erschöpft, oder Testnummer nicht eingetragen |
