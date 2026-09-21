@@ -254,6 +254,14 @@ Repository-Secret liegt, ist das mehr, als nötig ist.
 npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage
 ```
 
+## Die Kasse ausrollen
+
+Ein eigener Ablauf, weil er mehr Rechte und den Blaze-Tarif braucht:
+**Actions → Firebase Functions → Run workflow**. Er prüft die Funktionen,
+schreibt die beiden Stripe-Schlüssel aus den Repository-Secrets in den
+Google Secret Manager und rollt aus. Die vollständige Einrichtung steht in
+[tarife.md](tarife.md).
+
 ### Emulator für die Entwicklung
 
 ```bash

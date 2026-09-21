@@ -124,26 +124,30 @@ Blaze praktisch nichts, verlangt aber eine hinterlegte Karte. **Gleichzeitig
 einen Budgetalarm einrichten** (Cloud-Konsole → Abrechnung → Budgets): Ohne
 ihn merkt man Missbrauch erst auf der Rechnung.
 
-### 4. Den geheimen Schlüssel hinterlegen
+### 4. Den geheimen Schlüssel als Repository-Secret hinterlegen
 
-```bash
-firebase functions:secrets:set STRIPE_SECRET_KEY
-```
+GitHub → **Settings → Secrets and variables → Actions → New repository
+secret**, Name `STRIPE_SECRET_KEY`. Der Wert steht in Stripe unter
+**Entwickler → API-Schlüssel** und beginnt mit `sk_`.
 
-Der Wert steht in Stripe unter **Entwickler → API-Schlüssel** und beginnt mit
-`sk_`. Er gehört in den Secret Manager und **nirgendwo sonst** – nicht ins
-Repository, nicht in eine Chatnachricht, nicht in eine Umgebungsdatei. Wer
-ihn hat, kann in deinem Namen abrechnen und zurückerstatten.
+Er gehört dorthin und **nirgendwo sonst** – nicht ins Repository, nicht in
+eine Chatnachricht, nicht in eine Umgebungsdatei. Wer ihn hat, kann in
+deinem Namen abrechnen und zurückerstatten.
+
+Ein Terminal braucht es dafür nicht: Der Ablauf „Firebase Functions"
+schreibt den Schlüssel von dort in den Google Secret Manager, wo die
+Funktionen ihn lesen.
 
 ### 5. Einmal ausrollen und die Webhook-Adresse holen
 
-```bash
-firebase deploy --only functions
-```
+GitHub → **Actions → Firebase Functions → Run workflow**.
 
-Die Ausgabe nennt die Adresse von `stripeWebhook`. Diese in Stripe unter
-**Entwickler → Webhooks → Endpunkt hinzufügen** eintragen und drei
-Ereignisse abonnieren:
+Das Webhook-Geheimnis gibt es noch nicht – der Ablauf setzt dafür einen
+Platzhalter und sagt es in der Ausgabe. Am Ende steht dort die Adresse von
+`stripeWebhook`.
+
+Diese in Stripe unter **Entwickler → Webhooks → Endpunkt hinzufügen**
+eintragen und drei Ereignisse abonnieren:
 
 - `checkout.session.completed`
 - `customer.subscription.updated`
@@ -151,12 +155,9 @@ Ereignisse abonnieren:
 
 ### 6. Das Webhook-Geheimnis hinterlegen und erneut ausrollen
 
-Stripe zeigt nach dem Anlegen ein Geheimnis, das mit `whsec_` beginnt:
-
-```bash
-firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
-firebase deploy --only functions
-```
+Stripe zeigt nach dem Anlegen ein Geheimnis, das mit `whsec_` beginnt.
+Dieses als zweites Repository-Secret `STRIPE_WEBHOOK_SECRET` hinterlegen und
+**Actions → Firebase Functions → Run workflow** noch einmal starten.
 
 Ohne dieses Geheimnis nimmt die Funktion nichts an – und das ist der Punkt:
 Sonst könnte jede Person, die die Adresse kennt, sich selbst einen
@@ -174,6 +175,23 @@ Stripe hat einen Testmodus mit eigenen Schlüsseln. Kartennummer
 `4242 4242 4242 4242`, beliebiges künftiges Datum, beliebige Prüfziffer.
 Danach muss in Firestore unter `users/<Kennung>.membership` der Tarif
 stehen – gesetzt von der Funktion, nicht vom Browser.
+
+### Wenn das Ausrollen an Rechten scheitert
+
+Funktionen auszurollen verlangt mehr als Regeln auszurollen. Fehlt dem
+Dienstkonto eine Rolle, nennt die Fehlermeldung sie. Erfahrungsgemäss
+gebraucht werden, zusätzlich zu „Firebase-Administrator":
+
+| Rolle | Wofür |
+| --- | --- |
+| Cloud Functions Admin | die Funktionen anlegen und ersetzen |
+| Service Account User | sie unter einem Dienstkonto laufen lassen |
+| Secret Manager Admin | die beiden Stripe-Schlüssel schreiben |
+| Cloud Build Editor | den Build, den Firebase dafür anstösst |
+| Artifact Registry Administrator | das Ablegen des gebauten Abbilds |
+
+Einzutragen in der **Google-Cloud-Konsole → IAM**, beim Konto
+`firebase-adminsdk-…@anonym-chat-223af.iam.gserviceaccount.com`.
 
 ## Wie die Kasse arbeitet
 

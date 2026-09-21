@@ -1,0 +1,79 @@
+name: Firebase Functions
+
+# Rollt die Kasse aus, ohne dass jemand ein Terminal braucht: Die beiden
+# Stripe-Schlüssel liegen als Repository-Secrets und werden von hier in den
+# Google Secret Manager geschrieben.
+#
+# Voraussetzungen:
+#   - Firebase auf Blaze (Cloud Functions gibt es im Gratistarif nicht)
+#   - Secret FIREBASE_SERVICE_ACCOUNT (wie beim Regel-Ablauf)
+#   - Secret STRIPE_SECRET_KEY        (beginnt mit sk_)
+#   - Secret STRIPE_WEBHOOK_SECRET    (beginnt mit whsec_, kommt später)
+#
+# Der Webhook-Schlüssel entsteht erst, wenn die Funktion einmal ausgerollt
+# ist – vorher gibt es keine Adresse, die man in Stripe eintragen könnte.
+# Fehlt er, setzt dieser Ablauf einen Platzhalter, damit der erste Durchgang
+# durchläuft, und sagt es deutlich.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - functions/**
+      - .github/workflows/firebase-functions.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Typprüfung der Funktionen
+        run: |
+          npm --prefix functions ci
+          npm --prefix functions run lint
+
+      - name: Schlüssel bereitstellen
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT fehlt. Anleitung: docs/deployment.md"
+            exit 1
+          fi
+          printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
+
+      - name: Stripe-Schlüssel in den Secret Manager
+        env:
+          SK: ${{ secrets.STRIPE_SECRET_KEY }}
+          WH: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$SK" ]; then
+            echo "::error::Secret STRIPE_SECRET_KEY fehlt. Anleitung: docs/tarife.md"
+            exit 1
+          fi
+          printf '%s' "$SK" | npx --yes firebase-tools@15 functions:secrets:set STRIPE_SECRET_KEY \
+            --data-file - --force --project anonym-chat-223af --non-interactive
+
+          if [ -z "$WH" ]; then
+            echo "::warning::STRIPE_WEBHOOK_SECRET fehlt – es wird ein Platzhalter gesetzt. Die Kasse nimmt damit keine Quittungen an. Nach dem ersten Ausrollen die Webhook-Adresse in Stripe eintragen, das Geheimnis als Repository-Secret hinterlegen und diesen Ablauf erneut starten."
+            WH="whsec_NOCH_NICHT_GESETZT"
+          fi
+          printf '%s' "$WH" | npx --yes firebase-tools@15 functions:secrets:set STRIPE_WEBHOOK_SECRET \
+            --data-file - --force --project anonym-chat-223af --non-interactive
+
+      - name: Funktionen ausrollen
+        run: npx --yes firebase-tools@15 deploy --only functions --project anonym-chat-223af --non-interactive
+
+      - name: Hinweis bei fehlenden Rechten
+        if: failure()
+        run: |
+          echo "::error::Ausrollen fehlgeschlagen. Fehlen dem Dienstkonto Rollen, nennt die Meldung oben welche – siehe docs/tarife.md, Abschnitt 'Wenn das Ausrollen an Rechten scheitert'."
+
+      - name: Schlüssel entfernen
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-key.json"
