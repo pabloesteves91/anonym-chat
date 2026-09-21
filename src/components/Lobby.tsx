@@ -5,7 +5,7 @@ import { CodexDialog } from './CodexDialog'
 import { useSession } from '../store/useSession'
 import { INTERESTS, LANGUAGES } from '../services/types'
 import type { Language } from '../services/types'
-import { grenzen, verbleibend } from '../services/plans'
+import { grenzenFuer, verbleibend } from '../services/plans'
 import { useChat } from '../store/useChat'
 
 /** Ausgangszustand: Filter setzen und Suche starten. */
@@ -21,8 +21,8 @@ export function Lobby() {
   const [codexOpen, setCodexOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const darfFiltern = grenzen(user?.membership).interessenFilter
-  const uebrig = verbleibend(user?.membership, user?.usage)
+  const darfFiltern = grenzenFuer(user).interessenFilter
+  const uebrig = verbleibend(user)
 
   const start = () => {
     if (!codexAccepted) {

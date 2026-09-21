@@ -7,6 +7,7 @@
  */
 
 import type { Membership, Verbrauch } from './plans'
+import type { Rolle } from './roles'
 
 export type Language = 'de' | 'fr' | 'it' | 'en'
 
@@ -66,6 +67,8 @@ export interface User {
   usage: Verbrauch
   /** Hat die Person den Tarif schon einmal bewusst gewählt? */
   planChosen: boolean
+  /** Moderation und Verwaltung nutzen den Dienst ohne Tarifgrenzen. */
+  rolle: Rolle
 }
 
 /**

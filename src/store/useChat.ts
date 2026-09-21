@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
 import { generateId } from '../services/pseudonym'
-import { grenzen, verbleibend } from '../services/plans'
+import { grenzenFuer, verbleibend } from '../services/plans'
 import { useSession } from './useSession'
 import type { LiveMessage } from '../services/api'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'
@@ -140,14 +140,14 @@ export const useChat = create<ChatState>((set, get) => {
       // Vorher prüfen, nachher zählen: Wer abbricht, ohne jemanden getroffen
       // zu haben, soll dafür kein Guthaben verlieren – und wer schon am
       // Anschlag ist, soll nicht erst vergeblich warten.
-      if (verbleibend(ich.membership, ich.usage) === 0) {
+      if (verbleibend(ich) === 0) {
         set({ status: 'idle', grenzeErreicht: true })
         return
       }
 
       try {
         const treffer = await api.findMatch(get().filter, ich, {
-          bevorzugt: grenzen(ich.membership).bevorzugt,
+          bevorzugt: grenzenFuer(ich).bevorzugt,
           signal: controller.signal,
           onWartende: (anzahl) => {
             if (token === runToken) set({ wartende: anzahl })

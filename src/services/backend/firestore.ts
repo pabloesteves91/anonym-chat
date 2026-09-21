@@ -17,7 +17,8 @@ import { deleteObject, getDownloadURL, ref, uploadString } from 'firebase/storag
 import { getDb, getFileStorage, getFirebaseAuth } from '../firebase'
 import { generateId, generatePseudonym } from '../pseudonym'
 import { validateDisplayName } from '../wordFilter'
-import { GRATIS_MITGLIEDSCHAFT, grenzen, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
+import { GRATIS_MITGLIEDSCHAFT, grenzenFuer, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
+import { rolleFuer } from '../roles'
 import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
@@ -136,6 +137,7 @@ function toUser(id: string, data: UserDoc): User {
     membership: data.membership ?? GRATIS_MITGLIEDSCHAFT,
     usage: data.usage ?? { tag: heute(), chats: 0 },
     planChosen: Boolean(data.planChosen),
+    rolle: rolleFuer(id),
   }
 }
 
@@ -221,8 +223,9 @@ export async function setPseudonym(name: string): Promise<User> {
   const pruefung = validateDisplayName(name)
   if (!pruefung.ok) throw new ApiError(pruefung.error ?? 'Dieser Name geht nicht.', 'ungueltig')
   return fuehreAus(async () => {
-    const data = await ladeUserDoc(uid())
-    if (!grenzen(data?.membership).eigenerName) {
+    const id = uid()
+    const data = await ladeUserDoc(id)
+    if (!grenzenFuer({ membership: data?.membership, rolle: rolleFuer(id) }).eigenerName) {
       throw new ApiError('Einen eigenen Namen gibt es mit Plus. Gratis wird gewürfelt.', 'verweigert')
     }
     return await setzePseudonym(name.trim())
@@ -307,7 +310,7 @@ export async function registerChatStart(): Promise<{ erlaubt: boolean; verbleibe
     const data = await ladeUserDoc(id)
     if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
 
-    const grenze = grenzen(data.membership).chatsProTag
+    const grenze = grenzenFuer({ membership: data.membership, rolle: rolleFuer(id) }).chatsProTag
     const tag = heute()
     const bisher = data.usage?.tag === tag ? data.usage.chats : 0
 
@@ -661,18 +664,22 @@ export async function listBlocked(): Promise<string[]> {
 }
 
 /**
- * Räumt Meldungen, Sperren, Verläufe und Protokoll ab.
+ * Räumt Meldungen, Sperren und Chatverläufe ab.
  *
- * Gedacht für den Start in den Echtbetrieb, nicht für den Alltag: Wer das
- * drückt, löscht auch das Zugriffsprotokoll – und damit den Nachweis darüber,
- * wer was gelesen hat.
+ * Gedacht für den Start in den Echtbetrieb, nicht für den Alltag: Danach
+ * kommen gesperrte Konten zurück und laufende Gespräche sind weg.
+ *
+ * Das Zugriffsprotokoll bleibt ausdrücklich stehen – die Regeln lassen es
+ * auch gar nicht löschen. Ein Protokoll, das sich aufräumen lässt, ist
+ * keines, und dieses hier soll gerade die Moderation nachvollziehbar
+ * machen.
  */
 export async function clearReports(): Promise<void> {
   await fuehreAus(async () => {
     const nachrichten = await getDocs(collectionGroup(getDb(), PFAD.messages))
     const stapel = writeBatch(getDb())
     nachrichten.forEach((eintrag) => stapel.delete(eintrag.ref))
-    for (const pfad of [PFAD.reports, PFAD.blocked, PFAD.chats, PFAD.accessLog]) {
+    for (const pfad of [PFAD.reports, PFAD.blocked, PFAD.chats]) {
       const treffer = await getDocs(collection(getDb(), pfad))
       treffer.forEach((eintrag) => stapel.delete(eintrag.ref))
     }

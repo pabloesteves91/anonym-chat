@@ -133,6 +133,7 @@ export function Preise() {
   const [gewaehlt, setGewaehlt] = useState<PlanId | null>(null)
 
   const meiner = aktiverPlan(user?.membership)
+  const imBetrieb = Boolean(user && user.rolle !== 'nutzer')
 
   const waehlen = async (plan: PlanId) => {
     const ok = await choosePlan(plan)
@@ -149,6 +150,13 @@ export function Preise() {
         </p>
       </div>
 
+      {imBetrieb ? (
+        <Note>
+          Dein Konto betreibt den Dienst und hat keine Tarifgrenzen. Die Übersicht bleibt hier, damit du siehst, was
+          anderen angeboten wird.
+        </Note>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {PLAENE.map((plan) => (
           <Karte
@@ -156,7 +164,7 @@ export function Preise() {
             plan={plan}
             aktiv={plan.id === meiner}
             gewaehlt={gewaehlt === plan.id}
-            busy={busy}
+            busy={busy || imBetrieb}
             angemeldet={Boolean(konto)}
             onWaehlen={() => void waehlen(plan.id)}
           />

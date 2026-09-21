@@ -168,6 +168,13 @@ nicht auf die Sekunde genau – Firestore räumt in Wellen ab. Für die Zusage
 trotzdem nicht darauf, deshalb prüfen die Security Rules die Frist zusätzlich
 bei jedem Einzelabruf.
 
+### Eine moderierende Person hinzufügen
+
+Ihre Kennung an drei Stellen eintragen und pushen – mehr nicht:
+`src/services/roles.ts`, `firestore.rules`, `storage.rules`. Welche Liste
+die richtige ist, steht im README unter „Rollen". Der Ablauf unten rollt
+die Regeln automatisch aus.
+
 ### Regeln und Indizes ausrollen
 
 Die Security Rules liegen als `firestore.rules` und `storage.rules` im Repo

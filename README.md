@@ -122,14 +122,46 @@ Firestore. Wird der Unterbau getauscht, ändert sich genau eine Datei.
 - **Der Wortfilter** läuft im Browser, schon beim Tippen. Er blockiert nichts,
   sondern warnt vorher und markiert nachher – Filter, die blockieren, werden
   umgangen, Filter, die markieren, geben der Moderation Anhaltspunkte.
-- **Die Moderationskennung** steht doppelt: in `services/firebase.ts` für die
-  Anzeige und in den Rules für die Entscheidung. Sobald es mehr als eine
-  moderierende Person gibt, gehört das auf Custom Claims umgestellt.
+- **Die Moderationsansicht** ist für alle anderen nicht vorhanden: Wer ohne
+  Rechte auf `/admin` geht, sieht dieselbe Seite wie bei einer Adresse, die
+  es nicht gibt – keine Anmeldemaske, die zum Probieren einlädt. Das ist
+  Verschleierung, keine Sicherung; die leistet allein `firestore.rules`.
 
 Was nicht ins Repository gehört: der **Dienstkonto-Schlüssel** (umgeht jede
 Regel) und der **Apple-.p8-Schlüssel**. Die Firebase-Webkonfiguration
 dagegen ist ein öffentlicher Bezeichner und steht bewusst im Code – der
 Schutz kommt aus den Rules und der Domainbeschränkung des API-Schlüssels.
+
+## Rollen
+
+Zwei, weil sie Unterschiedliches anrichten können:
+
+| Rolle | Darf | Darf nicht |
+| --- | --- | --- |
+| **Moderation** | Verifizierungen entscheiden, Meldungen und Verläufe lesen, Konten sperren | Tarife vergeben, Daten löschen |
+| **Verwaltung** | alles davon, plus Tarife vergeben und Meldungen/Verläufe zurücksetzen | das Zugriffsprotokoll löschen – das kann niemand |
+
+Beide nutzen den Dienst ohne Tarifgrenzen: unbegrenzt Chats, alle Filter,
+eigener Anzeigename. Ein Tageskontingent, das mitten in einer Prüfung
+ausgeht, wäre nur im Weg.
+
+### Eine Person hinzufügen
+
+Ihre Kennung (steht in ihrem Profil unter „Kennung dieses Kontos") an
+**drei Stellen** eintragen – sie müssen zusammenpassen:
+
+1. `src/services/roles.ts` – `MODERATOR_UIDS` oder `ADMIN_UIDS`, für die Anzeige
+2. `firestore.rules` – in `istModeration()` beziehungsweise `istVerwaltung()`
+3. `storage.rules` – in `istModeration()`, für die Ausweisbilder
+
+Pushen genügt: Der Ablauf „Firebase Rules" rollt die Regeln aus, sobald sich
+eine der Dateien ändert, und führt vorher die Regel-Tests aus. Nur in
+`roles.ts` eingetragen heisst: Die Person sieht die Oberfläche und bekommt
+vom Server auf jede Abfrage eine Absage.
+
+Sobald es mehr als eine Handvoll Kennungen sind, gehört das auf Custom
+Claims umgestellt – eine Liste im Quelltext skaliert nicht, und jede
+Änderung braucht ein Deployment.
 
 ## Tarife
 
@@ -158,8 +190,9 @@ Details und der Weg zur Kasse: [docs/tarife.md](docs/tarife.md).
 - **Verlassene Räume** werden nicht aufgeräumt, sie laufen nur ab. Bei mehr
   Verkehr lohnt sich eine geplante Funktion, die Warteschlange und leere
   Räume putzt.
-- **Mehr als eine moderierende Person** braucht Custom Claims statt der
-  fest eingetragenen Kennung.
+- **Die Rollenlisten** stehen im Quelltext und in den Regeln. Jede neue
+  Person braucht ein Deployment; ab einer Handvoll gehört das auf Custom
+  Claims umgestellt.
 - **Die Rechtstexte** enthalten Platzhalter (mit ⚠︎ markiert) und sind nicht
   juristisch geprüft.
 

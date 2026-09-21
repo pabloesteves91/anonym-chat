@@ -11,11 +11,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Die eine Kennung mit Moderationsrechten. Sobald es mehr als eine gibt:
-    // auf Custom Claims (request.auth.token.moderator == true) umstellen.
-    function isModerator() {
+    // Zwei Rollen, weil sie Unterschiedliches anrichten können.
+    //
+    // Verwaltung: alles, was Moderation darf, plus Tarife vergeben und
+    // Daten löschen. Moderation: Verifizierungen entscheiden, Meldungen und
+    // Verläufe lesen, Konten sperren – die tägliche Arbeit.
+    //
+    // Dieselben Listen stehen in `src/services/roles.ts` (für die Anzeige)
+    // und in `storage.rules`. Sie müssen zusammenpassen: Wer nur dort
+    // eingetragen ist, sieht die Oberfläche und bekommt hier eine Absage.
+    //
+    // Sobald es mehr als eine Handvoll Kennungen sind: auf Custom Claims
+    // umstellen (request.auth.token.rolle), dann braucht eine Änderung kein
+    // Deployment mehr.
+    function istVerwaltung() {
       return request.auth != null
-        && request.auth.uid == 'RwwpyDrsJldCIx38BcBHVsgTXc32';
+        && request.auth.uid in [
+          'RwwpyDrsJldCIx38BcBHVsgTXc32'
+        ];
+    }
+
+    function istModeration() {
+      return istVerwaltung()
+        || (request.auth != null
+            && request.auth.uid in [
+              'PLATZHALTER_KEINE_WEITEREN_MODERATOREN'
+            ]);
     }
 
     function isSignedIn() {
@@ -59,13 +80,21 @@ service cloud.firestore {
         && request.resource.data.verificationStatus in ['offen', 'wartet'];
     }
 
+    /** Was die Moderation am Konto ändern darf – und sonst nichts. */
+    function nurVerifizierungsfelder() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['verified', 'verificationStatus', 'verifiedAt']);
+    }
+
     match /users/{userId} {
       allow create: if isOwner(userId)
         && request.resource.data.verified == false
         && request.resource.data.verificationStatus == 'offen'
         && request.resource.data.membership.plan == 'frei';
-      allow read: if isModerator() || isOwner(userId);
-      allow update: if isModerator()
+      allow read: if istModeration() || isOwner(userId);
+      allow update: if istVerwaltung()
+        // Moderation entscheidet über die Verifizierung – nicht über Tarife.
+        || (istModeration() && nurVerifizierungsfelder())
         || (isOwner(userId)
             && request.resource.data.verified == resource.data.verified
             && request.resource.data.membership == resource.data.membership
@@ -81,11 +110,12 @@ service cloud.firestore {
     // lediglich, wer was möchte – damit die Moderation weiss, wen sie nach
     // dem Zahlungseingang freischalten muss.
     match /planRequests/{userId} {
-      allow read: if isModerator() || isOwner(userId);
+      allow read: if istModeration() || isOwner(userId);
       allow create, update: if isOwner(userId)
         && request.resource.data.userId == userId
         && request.resource.data.erledigt == false;
-      allow update, delete: if isModerator();
+      // Abhaken gehört zur Tarifvergabe und damit zur Verwaltung.
+      allow update, delete: if istVerwaltung();
       allow delete: if isOwner(userId);
     }
 
@@ -95,16 +125,16 @@ service cloud.firestore {
     match /verifications/{requestId} {
       allow create: if isOwner(request.resource.data.userId)
         && request.resource.data.status == 'wartet';
-      allow read: if isModerator() || isOwner(resource.data.userId);
-      allow update: if isModerator();
-      allow delete: if isModerator() || (isOwner(resource.data.userId) && resource.data.status == 'wartet');
+      allow read: if istModeration() || isOwner(resource.data.userId);
+      allow update: if istModeration();
+      allow delete: if istModeration() || (isOwner(resource.data.userId) && resource.data.status == 'wartet');
     }
 
     // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.
     match /reports/{reportId} {
       allow create: if isOwner(request.resource.data.reporterId)
         && request.resource.data.status == 'offen';
-      allow read, update, delete: if isModerator();
+      allow read, update, delete: if istModeration();
     }
 
     // Warteschlange.
@@ -117,7 +147,7 @@ service cloud.firestore {
     // Den fremden Eintrag darf man genau einmal anfassen: um die Nummer des
     // gemeinsamen Raums einzutragen, und nur solange dort noch keine steht.
     match /queue/{userId} {
-      allow read: if darfChatten() || isModerator();
+      allow read: if darfChatten() || istModeration();
       allow create: if isOwner(userId)
         && darfChatten()
         && request.resource.data.uid == userId
@@ -127,7 +157,7 @@ service cloud.firestore {
             && resource.data.roomId == null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roomId'])
             && request.resource.data.roomId is string);
-      allow delete: if isOwner(userId) || isModerator();
+      allow delete: if isOwner(userId) || istModeration();
     }
 
     // Chaträume. Lesen und schreiben darf nur, wer darin steht – die
@@ -144,19 +174,20 @@ service cloud.firestore {
         && request.resource.data.expiresAt > request.time;
 
       // Einzelabruf: nach Ablauf der Frist sieht ihn auch die Moderation nicht mehr.
-      allow get: if teilnehmer() || (isModerator() && resource.data.expiresAt > request.time);
+      allow get: if teilnehmer() || (istModeration() && resource.data.expiresAt > request.time);
 
       // Auflisten: Die Bedingung oben lässt sich für eine Abfrage nicht
       // prüfen – Firestore kann den Zeitwert des Clients nicht verifizieren
       // und würde jede Liste ablehnen. Die Übersicht ist deshalb der
       // Moderation ohne Zeitbedingung erlaubt; abgelaufene Räume filtert
       // die App heraus und die TTL-Richtlinie löscht sie.
-      allow list: if isModerator();
-      allow delete: if isModerator();
+      allow list: if istModeration();
+      // Vorzeitiges Löschen ist Moderationsarbeit – und steht im Protokoll.
+      allow delete: if istModeration();
 
       // Im laufenden Gespräch ändern sich nur Zähler und Zustände. Wer
       // darin sitzt, kann weder die Beteiligten noch die Frist verschieben.
-      allow update: if isModerator()
+      allow update: if istModeration()
         || (teilnehmer()
             && request.resource.data.participants == resource.data.participants
             && request.resource.data.expiresAt == resource.data.expiresAt
@@ -176,24 +207,24 @@ service cloud.firestore {
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000
           && request.resource.data.expiresAt is timestamp;
-        allow read: if imRaum() || isModerator();
+        allow read: if imRaum() || istModeration();
         // Geschriebenes bleibt stehen: Nachträgliches Ändern würde jeden
         // Verlauf als Beweismittel wertlos machen.
         allow update: if false;
-        allow delete: if isModerator();
+        allow delete: if istModeration();
       }
     }
 
     // Abfrage über alle Nachrichten hinweg – nur für das Aufräumen durch
     // die Moderation. Ohne diese Regel scheitert jede Collection-Group-Abfrage.
     match /{pfad=**}/messages/{messageId} {
-      allow read, delete: if isModerator();
+      allow read, delete: if istModeration();
     }
 
     // Sperrliste: gepflegt und gelesen von der Moderation. Durchgesetzt wird
     // sie oben in `darfChatten()`; dafür braucht niemand Leserecht.
     match /blocked/{userId} {
-      allow read, write: if isModerator();
+      allow read, write: if istModeration();
     }
 
     // Zugriffsprotokoll: Einträge entstehen beim Öffnen und Löschen eines
@@ -205,8 +236,11 @@ service cloud.firestore {
     // könnte den Eintrag umgehen. Mit einer Cloud Function gehört das
     // Schreiben auf die Serverseite.
     match /accessLog/{entryId} {
-      allow read: if isModerator();
-      allow create: if isModerator();
+      allow read: if istModeration();
+      allow create: if istModeration();
+      // Für niemanden, auch nicht für die Verwaltung. Ein Protokoll, das
+      // sich aufräumen lässt, ist keines – und der Sinn dieses Protokolls
+      // ist, die Moderation selbst nachvollziehbar zu machen.
       allow update, delete: if false;
     }
   }

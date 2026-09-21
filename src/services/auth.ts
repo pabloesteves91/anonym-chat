@@ -15,7 +15,8 @@ import {
   type AuthProvider,
   type User,
 } from 'firebase/auth'
-import { MODERATOR_UID, getFirebaseAuth } from './firebase'
+import { getFirebaseAuth } from './firebase'
+import { darfModerieren, rolleFuer, type Rolle } from './roles'
 
 /**
  * Zugangskontrolle für die Moderationsansicht.
@@ -34,6 +35,8 @@ export type AccessMode =
 
 export interface ModeratorAccess {
   erlaubt: boolean
+  /** Was dieses Konto darf. */
+  rolle: Rolle
   mode: AccessMode
   /** Adresse des angemeldeten Kontos, für die Anzeige. */
   email: string | null
@@ -49,15 +52,15 @@ export interface ModeratorAccess {
 
 export class AuthError extends Error {}
 
-const KEIN_ZUGANG: ModeratorAccess = { erlaubt: false, mode: 'gesperrt', email: null, uid: null }
+const KEIN_ZUGANG: ModeratorAccess = { erlaubt: false, rolle: 'nutzer', mode: 'gesperrt', email: null, uid: null }
 
 /** Reine Auswertung – ohne Firebase, damit sie prüfbar bleibt. */
 export function evaluateAccess(user: Pick<User, 'uid' | 'email'> | null): ModeratorAccess {
   if (!user) return KEIN_ZUGANG
-  if (user.uid !== MODERATOR_UID) {
-    return { erlaubt: false, mode: 'gesperrt', email: user.email, uid: user.uid }
+  if (!darfModerieren(user.uid)) {
+    return { erlaubt: false, rolle: 'nutzer', mode: 'gesperrt', email: user.email, uid: user.uid }
   }
-  return { erlaubt: true, mode: 'konto', email: user.email, uid: user.uid }
+  return { erlaubt: true, rolle: rolleFuer(user.uid), mode: 'konto', email: user.email, uid: user.uid }
 }
 
 /** Meldet Änderungen des Zugangs, auch beim ersten Laden. */

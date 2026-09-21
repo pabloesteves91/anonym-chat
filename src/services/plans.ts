@@ -119,6 +119,23 @@ export interface Grenzen {
   bevorzugt: boolean
 }
 
+/**
+ * Grenzen für eine konkrete Person.
+ *
+ * Moderation und Verwaltung haben keine: Sie betreiben den Dienst, und ein
+ * Tageskontingent, das mitten in einer Prüfung ausgeht, wäre nur im Weg.
+ * Bezahlen müssten sie ohnehin an sich selbst.
+ */
+export function grenzenFuer(
+  person: { membership?: Membership | null; rolle?: string } | null | undefined,
+  jetzt = Date.now(),
+): Grenzen {
+  if (person?.rolle === 'moderation' || person?.rolle === 'verwaltung') {
+    return { chatsProTag: null, interessenFilter: true, eigenerName: true, bevorzugt: true }
+  }
+  return grenzen(person?.membership, jetzt)
+}
+
 export function grenzen(mitgliedschaft: Membership | null | undefined, jetzt = Date.now()): Grenzen {
   const plan = aktiverPlan(mitgliedschaft, jetzt)
   if (plan === 'frei') {
@@ -143,13 +160,13 @@ export interface Verbrauch {
 
 /** Wie viele Chats heute noch drin sind. `null` heisst: unbegrenzt. */
 export function verbleibend(
-  mitgliedschaft: Membership | null | undefined,
-  verbrauch: Verbrauch | null | undefined,
+  person: { membership?: Membership | null; usage?: Verbrauch | null; rolle?: string } | null | undefined,
   jetzt = new Date(),
 ): number | null {
-  const grenze = grenzen(mitgliedschaft, jetzt.getTime()).chatsProTag
+  const grenze = grenzenFuer(person, jetzt.getTime()).chatsProTag
   if (grenze === null) return null
   const heutigerTag = heute(jetzt)
+  const verbrauch = person?.usage
   const gezaehlt = verbrauch?.tag === heutigerTag ? verbrauch.chats : 0
   return Math.max(0, grenze - gezaehlt)
 }

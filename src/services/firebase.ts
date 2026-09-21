@@ -23,15 +23,7 @@ const firebaseConfig = {
   appId: '1:417196431125:web:4831ec455d5b79064f3b1c',
 }
 
-/**
- * Die eine Kennung mit Moderationsrechten. Dieselbe UID steht in den
- * Security Rules – dort entscheidet sie tatsächlich, hier steuert sie nur,
- * was angezeigt wird.
- *
- * Sobald es mehr als eine moderierende Person gibt: auf Custom Claims oder
- * eine Collection `admins/{uid}` umstellen und beide Seiten anpassen.
- */
-export const MODERATOR_UID = 'RwwpyDrsJldCIx38BcBHVsgTXc32'
+// Wer moderieren oder verwalten darf, steht in `services/roles.ts`.
 
 /**
  * Welche Anmeldearten in der Firebase-Konsole aktiviert sind.

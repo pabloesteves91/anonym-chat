@@ -193,7 +193,8 @@ export const useModeration = create<ModerationState>((set, get) => ({
     set({ busy: true, error: null })
     try {
       await api.clearReports()
-      set({ reports: [], blocked: [], transcripts: [], accessLog: [], opened: {} })
+      // Das Zugriffsprotokoll bleibt – es lässt sich gar nicht löschen.
+      set({ reports: [], blocked: [], transcripts: [], opened: {} })
     } catch (error) {
       set({ error: meldung(error, 'Das Aufräumen ist fehlgeschlagen.') })
     } finally {

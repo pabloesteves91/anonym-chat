@@ -12,9 +12,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isModerator() {
+    // Dieselben Listen wie in `firestore.rules` und `src/services/roles.ts`.
+    // Ausweisbilder darf jede moderierende Person sehen – das ist ihre
+    // Arbeit; getrennte Rollen gibt es hier deshalb nicht.
+    function istModeration() {
       return request.auth != null
-        && request.auth.uid == 'RwwpyDrsJldCIx38BcBHVsgTXc32';
+        && request.auth.uid in [
+          'RwwpyDrsJldCIx38BcBHVsgTXc32'
+        ];
     }
 
     match /verifications/{userId}/{datei} {
@@ -25,8 +30,8 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
 
       // Die hochladende Person sieht ihre eigene Vorschau, sonst nur die Moderation.
-      allow read: if isModerator() || (request.auth != null && request.auth.uid == userId);
-      allow delete: if isModerator();
+      allow read: if istModeration() || (request.auth != null && request.auth.uid == userId);
+      allow delete: if istModeration();
     }
 
     // Alles andere ist gesperrt.

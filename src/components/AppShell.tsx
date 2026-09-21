@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { evaluateAccess } from '../services/auth'
+import { darfModerieren } from '../services/roles'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
@@ -69,7 +69,7 @@ export function AppShell() {
    * ohnehin auf dem Server: Ein eingeblendeter Knopf öffnet niemandem
    * Daten, den die Security Rules nicht hineinlassen.
    */
-  const darfModerieren = evaluateAccess(konto ? { uid: konto.uid, email: konto.email } : null).erlaubt
+  const zeigtModeration = darfModerieren(konto?.uid)
 
   /**
    * Angemeldet, aber ohne Profil: Ohne eigene Anzeige bliebe hier eine
@@ -98,7 +98,7 @@ export function AppShell() {
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
-              {darfModerieren ? (
+              {zeigtModeration ? (
                 <NavLink to="/admin" className={modClass}>
                   <ShieldMark className="h-4 w-4 text-accent" />
                   Moderation

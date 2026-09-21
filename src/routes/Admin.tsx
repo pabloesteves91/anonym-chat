@@ -3,7 +3,8 @@ import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { REPORT_REASONS } from '../services/types'
 import type { Report, ReportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
-import { useAdminAccess } from '../store/useAdminAccess'
+import { useAuth } from '../store/useAuth'
+import { ROLLE_LABEL, type Rolle } from '../services/roles'
 import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 import { PlanZuteilung } from '../components/PlanZuteilung'
@@ -100,9 +101,9 @@ function ReportCard({ report }: { report: Report }) {
   )
 }
 
-export function Admin() {
-  const email = useAdminAccess((s) => s.email)
-  const signOut = useAdminAccess((s) => s.signOut)
+export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) {
+  const signOut = useAuth((s) => s.signOut)
+  const darfVerwalten = rolle === 'verwaltung'
   const ready = useModeration((s) => s.ready)
   const reports = useModeration((s) => s.reports)
   const blocked = useModeration((s) => s.blocked)
@@ -134,6 +135,9 @@ export function Admin() {
       <div className="flex flex-wrap items-center gap-3 rounded-sm border border-line bg-surface px-4 py-3">
         <span className="label-caps">Angemeldet</span>
         <span className="font-mono text-sm">{email ?? 'unbekannt'}</span>
+        <span className="rounded-[2px] border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent uppercase">
+          {ROLLE_LABEL[rolle]}
+        </span>
         <Button size="sm" className="ml-auto" onClick={() => void signOut()}>
           Abmelden
         </Button>
@@ -196,15 +200,15 @@ export function Admin() {
         </div>
       )}
 
-      <PlanZuteilung />
+      {darfVerwalten ? <PlanZuteilung /> : null}
 
+      {darfVerwalten ? (
       <Panel className="flex flex-col gap-3 p-5">
-        <h2 className="font-display text-xl font-semibold">Alles zurücksetzen</h2>
+        <h2 className="font-display text-xl font-semibold">Meldungen und Verläufe zurücksetzen</h2>
         <Note tone="warn">
-          Löscht Meldungen, Sperren, Chatverläufe und das Zugriffsprotokoll – für alle Konten, endgültig. Gedacht ist
-          das für den Übergang in den Echtbetrieb, nicht für den Alltag: Mit dem Protokoll verschwindet auch der
-          Nachweis darüber, wer welchen Verlauf gelesen hat, und aufgehobene Sperren lassen gesperrte Konten
-          zurückkommen.
+          Löscht Meldungen, Sperren und Chatverläufe – für alle Konten, endgültig. Gedacht ist das für den Übergang in
+          den Echtbetrieb, nicht für den Alltag: Danach kommen gesperrte Konten zurück und laufende Gespräche sind
+          weg. Das Zugriffsprotokoll bleibt stehen; es lässt sich auch nicht löschen.
         </Note>
         <div>
           <Button variant="danger" disabled={busy} onClick={() => void clearAll()}>
@@ -212,6 +216,13 @@ export function Admin() {
           </Button>
         </div>
       </Panel>
+      ) : (
+        <p className="text-sm text-muted">
+          Tarife vergeben und Daten löschen kann nur die Verwaltung. Das ist Absicht: Wer Anträge prüft, braucht
+          keinen Zugriff auf bezahlte Zugänge – und erst recht nicht die Möglichkeit, das Zugriffsprotokoll zu
+          entfernen.
+        </p>
+      )}
     </div>
   )
 }

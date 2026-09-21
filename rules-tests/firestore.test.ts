@@ -6,7 +6,18 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { Timestamp, doc, getDoc, getDocs, collection, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import {
+  Timestamp,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
 
 /**
  * Die Security Rules gegen den Emulator.
@@ -21,6 +32,16 @@ import { Timestamp, doc, getDoc, getDocs, collection, query, setDoc, updateDoc, 
  */
 
 const MODERATOR = 'RwwpyDrsJldCIx38BcBHVsgTXc32'
+/**
+ * Eine reine Moderationskennung.
+ *
+ * Die Liste in den Regeln ist im Auslieferungszustand leer und enthält nur
+ * einen Platzhalter. Damit sich die Rollentrennung trotzdem prüfen lässt,
+ * wird er hier durch diese Kennung ersetzt – geprüft wird die Regel, nicht
+ * ihr Inhalt.
+ */
+const NUR_MOD = 'konto-nur-moderation'
+const PLATZHALTER = "'PLATZHALTER_KEINE_WEITEREN_MODERATOREN'"
 const ANNA = 'konto-anna'
 const BEN = 'konto-ben'
 const FREMD = 'konto-fremd'
@@ -73,7 +94,11 @@ const raum = (patch: Record<string, unknown> = {}) => ({
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-anonym-chat',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
+    firestore: {
+      rules: readFileSync('firestore.rules', 'utf8').replace(PLATZHALTER, `'${NUR_MOD}'`),
+      host: '127.0.0.1',
+      port: 8080,
+    },
   })
 })
 
@@ -324,6 +349,86 @@ describe('Verifizierungsanträge', () => {
   })
 })
 
+describe('Rollentrennung', () => {
+  it('lässt reine Moderation über Verifizierungen entscheiden', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'verifications', 'ver-1'), {
+        id: 'ver-1',
+        userId: ANNA,
+        pseudonym: 'Anna',
+        phoneMasked: '+41 xx',
+        submittedAt: Timestamp.now(),
+        status: 'wartet',
+        decidedAt: null,
+        decidedBy: null,
+        rejectionReason: null,
+      })
+    })
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'verifications', 'ver-1'), { status: 'freigegeben' }))
+    await assertSucceeds(
+      updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
+        verified: true,
+        verificationStatus: 'verifiziert',
+        verifiedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    )
+  })
+
+  it('lässt reine Moderation keine Tarife vergeben', async () => {
+    await assertFails(
+      updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
+        membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+      }),
+    )
+    await assertSucceeds(
+      updateDoc(doc(als(MODERATOR), 'users', ANNA), {
+        membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+      }),
+    )
+  })
+
+  it('lässt reine Moderation das Pseudonym anderer nicht ändern', async () => {
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { pseudonym: 'Untergeschoben' }))
+  })
+
+  it('lässt reine Moderation Meldungen und Verläufe bearbeiten', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'chats', 'raum-1'), raum())
+      await setDoc(doc(ctx.firestore(), 'blocked', BEN), { at: '2026-01-01T00:00:00.000Z' })
+    })
+    await assertSucceeds(getDocs(collection(als(NUR_MOD), 'chats')))
+    await assertSucceeds(setDoc(doc(als(NUR_MOD), 'blocked', FREMD), { at: '2026-01-01T00:00:00.000Z' }))
+    await assertSucceeds(
+      setDoc(doc(als(NUR_MOD), 'accessLog', 'log-2'), {
+        id: 'log-2',
+        at: '2026-01-01T00:00:00.000Z',
+        transcriptId: 'raum-1',
+        by: 'Moderation',
+        action: 'geoeffnet',
+      }),
+    )
+  })
+
+  it('lässt auch die Verwaltung das Zugriffsprotokoll nicht löschen', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'accessLog', 'log-3'), {
+        id: 'log-3',
+        at: '2026-01-01T00:00:00.000Z',
+        transcriptId: 'raum-1',
+        by: 'Moderation',
+        action: 'geoeffnet',
+      })
+    })
+    await assertFails(deleteDoc(doc(als(MODERATOR), 'accessLog', 'log-3')))
+    await assertFails(deleteDoc(doc(als(NUR_MOD), 'accessLog', 'log-3')))
+  })
+
+  it('lässt gewöhnliche Konten nichts davon', async () => {
+    await assertFails(getDocs(collection(als(ANNA), 'chats')))
+    await assertFails(updateDoc(doc(als(ANNA), 'users', BEN), { verified: true }))
+  })
+})
+
 describe('Tarifwünsche', () => {
   const wunsch = (userId: string, patch: Record<string, unknown> = {}) => ({
     userId,
@@ -358,10 +463,16 @@ describe('Tarifwünsche', () => {
     )
   })
 
-  it('lässt die Moderation lesen und erledigen', async () => {
+  it('lässt die Verwaltung lesen und erledigen', async () => {
     await setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA))
     await assertSucceeds(getDoc(doc(als(MODERATOR), 'planRequests', ANNA)))
     await assertSucceeds(updateDoc(doc(als(MODERATOR), 'planRequests', ANNA), { erledigt: true }))
+  })
+
+  it('lässt reine Moderation lesen, aber nicht abhaken', async () => {
+    await setDoc(doc(als(ANNA), 'planRequests', ANNA), wunsch(ANNA))
+    await assertSucceeds(getDoc(doc(als(NUR_MOD), 'planRequests', ANNA)))
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'planRequests', ANNA), { erledigt: true }))
   })
 })
 

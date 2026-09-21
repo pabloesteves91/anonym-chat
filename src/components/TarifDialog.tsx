@@ -47,7 +47,9 @@ export function TarifDialog() {
   const [aufgegangen, setAufgegangen] = useState(false)
   const [abgeschlossen, setAbgeschlossen] = useState(false)
 
-  const anlass = ready && !loading && Boolean(user) && !user?.planChosen
+  // Wer den Dienst betreibt, bekommt kein Tarifangebot – er hat ohnehin
+  // keine Grenzen, und die Frage wäre nur im Weg.
+  const anlass = ready && !loading && Boolean(user) && !user?.planChosen && user?.rolle === 'nutzer'
   if (anlass && !aufgegangen && !abgeschlossen) setAufgegangen(true)
 
   const sichtbar = aufgegangen && !abgeschlossen

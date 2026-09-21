@@ -48,6 +48,18 @@ genau einer Stelle; Preisseite, Profil und Chat lesen von dort.
   bleibt – als Angebot für die ersten Unterstützenden, nicht als
   Dauerangebot neben dem Abo.
 
+## Konten, die den Dienst betreiben
+
+Moderation und Verwaltung haben keine Tarifgrenzen – sie stehen gar nicht
+erst im Tarifmodell. Das Tarif-Fenster nach der Anmeldung erscheint ihnen
+nicht, und auf der Preisseite steht, dass die Übersicht nur zeigt, was
+anderen angeboten wird.
+
+Vergeben darf einen Tarif ausschliesslich die Verwaltung. Die Moderation
+kann es nicht, und zwar nicht nur in der Oberfläche: Die Regel für
+`users` lässt ihr genau drei Felder offen (`verified`,
+`verificationStatus`, `verifiedAt`) und `membership` nicht.
+
 ## Wie ein Tarif heute vergeben wird
 
 In drei Schritten, weil der mittlere ausserhalb der App stattfindet:

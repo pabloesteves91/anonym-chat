@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { GRATIS_CHATS_PRO_TAG, aktiverPlan, grenzen, heute, preisText, verbleibend, PLAENE } from './plans'
+import {
+  GRATIS_CHATS_PRO_TAG,
+  aktiverPlan,
+  grenzen,
+  grenzenFuer,
+  heute,
+  preisText,
+  verbleibend,
+  PLAENE,
+} from './plans'
 import type { Membership } from './plans'
 
 const mitgliedschaft = (patch: Partial<Membership> = {}): Membership => ({
@@ -46,16 +55,36 @@ describe('verbleibend', () => {
   const jetzt = new Date('2026-03-05T10:00:00')
 
   it('zählt nur den heutigen Tag', () => {
-    expect(verbleibend(null, { tag: heute(jetzt), chats: 3 }, jetzt)).toBe(GRATIS_CHATS_PRO_TAG - 3)
-    expect(verbleibend(null, { tag: '2026-03-04', chats: 99 }, jetzt)).toBe(GRATIS_CHATS_PRO_TAG)
+    expect(verbleibend({ usage: { tag: heute(jetzt), chats: 3 } }, jetzt)).toBe(GRATIS_CHATS_PRO_TAG - 3)
+    expect(verbleibend({ usage: { tag: '2026-03-04', chats: 99 } }, jetzt)).toBe(GRATIS_CHATS_PRO_TAG)
   })
 
   it('geht nicht unter null', () => {
-    expect(verbleibend(null, { tag: heute(jetzt), chats: 999 }, jetzt)).toBe(0)
+    expect(verbleibend({ usage: { tag: heute(jetzt), chats: 999 } }, jetzt)).toBe(0)
   })
 
   it('meldet für Plus keine Grenze', () => {
-    expect(verbleibend(mitgliedschaft(), { tag: heute(jetzt), chats: 999 }, jetzt)).toBeNull()
+    expect(verbleibend({ membership: mitgliedschaft(), usage: { tag: heute(jetzt), chats: 999 } }, jetzt)).toBeNull()
+  })
+})
+
+describe('grenzenFuer', () => {
+  const amAnschlag = { usage: { tag: heute(), chats: 999 } }
+
+  it('nimmt Moderation und Verwaltung jede Grenze', () => {
+    for (const rolle of ['moderation', 'verwaltung']) {
+      const g = grenzenFuer({ rolle })
+      expect(g.chatsProTag).toBeNull()
+      expect(g.interessenFilter).toBe(true)
+      expect(g.eigenerName).toBe(true)
+      expect(g.bevorzugt).toBe(true)
+      expect(verbleibend({ rolle, ...amAnschlag })).toBeNull()
+    }
+  })
+
+  it('behandelt ein gewöhnliches Konto wie bisher', () => {
+    expect(grenzenFuer({ rolle: 'nutzer' }).chatsProTag).toBe(GRATIS_CHATS_PRO_TAG)
+    expect(grenzenFuer(null).chatsProTag).toBe(GRATIS_CHATS_PRO_TAG)
   })
 })
 

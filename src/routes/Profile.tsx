@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
 import { Kontokennung } from '../components/Kontokennung'
-import { aktiverPlan, grenzen, planById, verbleibend } from '../services/plans'
+import { aktiverPlan, grenzenFuer, planById, verbleibend } from '../services/plans'
+import { ROLLE_LABEL } from '../services/roles'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
@@ -37,9 +38,10 @@ export function Profile() {
 
   if (!user) return null
 
-  const darfUmbenennen = grenzen(user.membership).eigenerName
+  const darfUmbenennen = grenzenFuer(user).eigenerName
+  const imBetrieb = user.rolle !== 'nutzer'
   const meinPlan = planById(aktiverPlan(user.membership))
-  const uebrig = verbleibend(user.membership, user.usage)
+  const uebrig = verbleibend(user)
   const entwurf = draft ?? user.profile
   // Reihenfolge der Interessen ist bedeutungslos – sonst gilt ab- und wieder
   // anwählen fälschlich als Änderung.
@@ -149,21 +151,25 @@ export function Profile() {
       <Panel className="flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="font-display text-xl font-semibold">Tarif</h2>
-          <span className="label-caps">{meinPlan.name}</span>
+          <span className="label-caps">{imBetrieb ? ROLLE_LABEL[user.rolle] : meinPlan.name}</span>
         </div>
         <p className="text-sm text-muted">
-          {uebrig === null
-            ? 'Unbegrenzt Chats, Filter nach Interessen, bevorzugt in der Warteschlange.'
-            : `Heute noch ${uebrig} ${uebrig === 1 ? 'Chat' : 'Chats'}. Die Grenze setzt sich um Mitternacht zurück.`}
-          {user.membership.bis
+          {imBetrieb
+            ? 'Konten, die den Dienst betreiben, haben keine Tarifgrenzen: unbegrenzt Chats, alle Filter, eigener Anzeigename. Bezahlen müsstest du an dich selbst.'
+            : uebrig === null
+              ? 'Unbegrenzt Chats, Filter nach Interessen, bevorzugt in der Warteschlange.'
+              : `Heute noch ${uebrig} ${uebrig === 1 ? 'Chat' : 'Chats'}. Die Grenze setzt sich um Mitternacht zurück.`}
+          {!imBetrieb && user.membership.bis
             ? ` Läuft bis ${new Date(user.membership.bis).toLocaleDateString('de-CH', { dateStyle: 'long' })}.`
             : ''}
         </p>
-        <div>
-          <Link to="/preise" className={buttonClass(uebrig === null ? 'secondary' : 'primary', 'sm')}>
-            {uebrig === null ? 'Tarife ansehen' : 'Grenze aufheben'}
-          </Link>
-        </div>
+        {imBetrieb ? null : (
+          <div>
+            <Link to="/preise" className={buttonClass(uebrig === null ? 'secondary' : 'primary', 'sm')}>
+              {uebrig === null ? 'Tarife ansehen' : 'Grenze aufheben'}
+            </Link>
+          </div>
+        )}
       </Panel>
 
       <Kontokennung
