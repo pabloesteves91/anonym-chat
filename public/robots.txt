@@ -1,5 +1,13 @@
 # Öffentlicher Dienst – Suchmaschinen sind willkommen.
-# Die Moderationsansicht gehört nicht in den Index.
+#
+# Die Sperre für die Moderationsansicht greift nur bei einer Auslieferung mit
+# echten Pfaden, etwa über Firebase Hosting. Auf GitHub Pages läuft die App
+# mit Hash-Routing: Dort steht die Ansicht unter /#/admin, und was hinter dem
+# Rautezeichen steht, bekommt kein Server und kein Crawler zu sehen.
+#
+# Geschützt wird die Moderation ohnehin nicht hier, sondern in
+# firestore.rules: Die Daten gibt Firestore nur einer einzigen Kennung
+# heraus. Diese Datei hält Suchergebnisse sauber, nicht Unbefugte draussen.
 User-agent: *
 Allow: /
 Disallow: /admin

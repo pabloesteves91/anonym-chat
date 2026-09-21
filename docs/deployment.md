@@ -262,7 +262,9 @@ npm run dev:emulator  # Dev-Server, der sie statt Firebase benutzt
   Firestore gibt Meldungen, Anträge und Verläufe nur der einen Kennung
   heraus, die in `firestore.rules` steht. Eine Prüfung im Browser wäre
   Anzeige, keine Sicherung.
-- `public/robots.txt` lässt Suchmaschinen herein und hält sie von `/admin`
-  fern.
+- `public/robots.txt` lässt Suchmaschinen herein. Die Zeile gegen `/admin`
+  greift allerdings nur bei echten Pfaden – auf Pages läuft Hash-Routing,
+  die Ansicht steht unter `/#/admin`, und Fragmente sieht kein Crawler. Das
+  ist kein Loch: Die Daten schützt `firestore.rules`, nicht diese Datei.
 - Kosten entstehen bei Firebase: Lese- und Schreibzugriffe, Dateispeicher
   und vor allem **SMS**. Das Kontingent im Blick behalten, siehe oben.
