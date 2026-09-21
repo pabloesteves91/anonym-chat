@@ -11,6 +11,36 @@ import type {
   VerificationRequest,
 } from '../services/types'
 
+/**
+ * Jede Aktion hier setzt `busy`, und `busy` sperrt sämtliche Knöpfe der
+ * Ansicht. Bleibt es nach einem Fehlschlag stehen, ist die ganze Moderation
+ * blockiert – ohne dass irgendwo stünde, warum. Deshalb gibt jede Aktion
+ * `busy` im `finally` wieder frei und legt die Meldung ab.
+ */
+const meldung = (error: unknown, fallback: string) =>
+  error instanceof api.ApiError ? error.message : fallback
+
+/**
+ * Holt die Bilder offener Anträge und reicht sie einzeln nach.
+ *
+ * Einer nach dem anderen, damit ein hängender Abruf die übrigen nicht
+ * aufhält, und jeder für sich abgesichert: Ein fehlendes Bild macht einen
+ * Antrag nicht unentscheidbar – die Moderation sieht dann, dass es fehlt.
+ */
+async function ladeBilder(
+  set: (fn: (state: ModerationState) => Partial<ModerationState>) => void,
+  requests: VerificationRequest[],
+): Promise<void> {
+  for (const request of requests.filter((eintrag) => eintrag.status === 'wartet')) {
+    try {
+      const bilder = await api.getVerificationImages(request.id)
+      set((state) => ({ images: { ...state.images, [request.id]: bilder } }))
+    } catch {
+      set((state) => ({ images: { ...state.images, [request.id]: { ausweis: null, selfie: null } } }))
+    }
+  }
+}
+
 /** Datenquelle der Moderationsansicht. */
 interface ModerationState {
   ready: boolean
@@ -63,30 +93,18 @@ export const useModeration = create<ModerationState>((set, get) => ({
         api.listAccessLog(),
         api.listPlanRequests(),
       ])
+      set({ reports, blocked, requests, transcripts, accessLog, planRequests, ready: true })
 
-      // Bilder nur für offene Anträge holen – entschiedene haben keine mehr.
-      const offen = requests.filter((request) => request.status === 'wartet')
-      const paare = await Promise.all(
-        offen.map(async (request) => [request.id, await api.getVerificationImages(request.id)] as const),
-      )
-      set({
-        reports,
-        blocked,
-        requests,
-        transcripts,
-        accessLog,
-        planRequests,
-        images: Object.fromEntries(paare),
-        ready: true,
-      })
+      // Die Bilder kommen aus dem Dateispeicher und damit über eine zweite
+      // Verbindung. Sie dürfen die Ansicht nicht aufhalten: Wartet die
+      // Liste auf sie, verschwinden bei einer langsamen oder gesperrten
+      // Antwort auch Anträge, Verläufe und Meldungen – und niemand sähe,
+      // woran es liegt. Sie werden deshalb nachgereicht.
+      void ladeBilder(set, requests)
     } catch (error) {
       // Ein Fehlschlag muss enden: Bleibt `ready` auf false, zeigt die
       // Ansicht für immer "wird geladen" und sieht aus wie ein Hänger.
-      set({
-        ready: true,
-        error:
-          error instanceof api.ApiError ? error.message : 'Die Moderationsdaten konnten nicht geladen werden.',
-      })
+      set({ ready: true, error: meldung(error, 'Die Moderationsdaten konnten nicht geladen werden.') })
     }
   },
 
@@ -94,60 +112,92 @@ export const useModeration = create<ModerationState>((set, get) => ({
     // Sperren, solange der Zugriff läuft: ein Doppelklick wäre sonst zwei
     // Einträge im Protokoll für ein einziges Mitlesen.
     if (get().busy) return
-    set({ busy: true })
-    const transcript = await api.openTranscript(id)
-    if (!transcript) {
-      // Abgelaufen oder bereits gelöscht – Liste auffrischen statt ins Leere zeigen.
-      set({ transcripts: await api.listTranscripts(), busy: false })
-      return
+    set({ busy: true, error: null })
+    try {
+      const transcript = await api.openTranscript(id)
+      if (!transcript) {
+        // Abgelaufen oder bereits gelöscht – Liste auffrischen statt ins Leere zeigen.
+        set({ transcripts: await api.listTranscripts() })
+        return
+      }
+      const accessLog = await api.listAccessLog()
+      set((state) => ({ opened: { ...state.opened, [id]: transcript }, accessLog }))
+    } catch (error) {
+      set({ error: meldung(error, 'Der Verlauf konnte nicht geöffnet werden.') })
+    } finally {
+      set({ busy: false })
     }
-    const accessLog = await api.listAccessLog()
-    set((state) => ({ opened: { ...state.opened, [id]: transcript }, accessLog, busy: false }))
   },
 
   async deleteTranscript(id) {
-    set({ busy: true })
-    const transcripts = await api.deleteTranscript(id)
-    const accessLog = await api.listAccessLog()
-    set((state) => {
-      const opened = { ...state.opened }
-      delete opened[id]
-      return { transcripts, accessLog, opened, busy: false }
-    })
+    set({ busy: true, error: null })
+    try {
+      const transcripts = await api.deleteTranscript(id)
+      const accessLog = await api.listAccessLog()
+      set((state) => {
+        const opened = { ...state.opened }
+        delete opened[id]
+        return { transcripts, accessLog, opened }
+      })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Verlauf konnte nicht gelöscht werden.') })
+    } finally {
+      set({ busy: false })
+    }
   },
 
   async decide(requestId, decision, reason) {
-    set({ busy: true })
-    const requests = await api.decideVerification(requestId, decision, reason)
-    set((state) => {
-      const images = { ...state.images }
-      delete images[requestId]
-      return { requests, images, busy: false }
-    })
+    set({ busy: true, error: null })
+    try {
+      const requests = await api.decideVerification(requestId, decision, reason)
+      set((state) => {
+        const images = { ...state.images }
+        delete images[requestId]
+        return { requests, images }
+      })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Entscheid konnte nicht gespeichert werden.') })
+    } finally {
+      set({ busy: false })
+    }
   },
 
   async setPlan(userId, plan, laufzeitTage) {
-    set({ busy: true })
+    set({ busy: true, error: null })
     try {
       await api.setMembership(userId, plan, laufzeitTage)
-      set({ planRequests: await api.listPlanRequests(), busy: false })
+      set({ planRequests: await api.listPlanRequests() })
       return true
-    } catch {
-      set({ busy: false })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Tarif konnte nicht gesetzt werden.') })
       return false
+    } finally {
+      set({ busy: false })
     }
   },
 
   async setStatus(id, status) {
-    set({ busy: true })
-    const reports = await api.updateReportStatus(id, status)
-    const blocked = await api.listBlocked()
-    set({ reports, blocked, busy: false })
+    set({ busy: true, error: null })
+    try {
+      const reports = await api.updateReportStatus(id, status)
+      const blocked = await api.listBlocked()
+      set({ reports, blocked })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Status konnte nicht gesetzt werden.') })
+    } finally {
+      set({ busy: false })
+    }
   },
 
   async clearAll() {
-    set({ busy: true })
-    await api.clearReports()
-    set({ reports: [], blocked: [], transcripts: [], accessLog: [], opened: {}, busy: false })
+    set({ busy: true, error: null })
+    try {
+      await api.clearReports()
+      set({ reports: [], blocked: [], transcripts: [], accessLog: [], opened: {} })
+    } catch (error) {
+      set({ error: meldung(error, 'Das Aufräumen ist fehlgeschlagen.') })
+    } finally {
+      set({ busy: false })
+    }
   },
 }))

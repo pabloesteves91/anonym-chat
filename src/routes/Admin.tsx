@@ -124,9 +124,10 @@ export function Admin() {
   return (
     <div className="flex flex-col gap-6">
       <div className="prose-column">
-        <PageTitle kicker="Mock-Ansicht">Moderation</PageTitle>
+        <PageTitle kicker="Nur für die Moderation">Moderation</PageTitle>
         <p className="text-muted">
-          Verifizierungsanträge, gespeicherte Chatverläufe und Meldungen aus diesem Browser.
+          Verifizierungsanträge, Chatverläufe und Meldungen aller Konten. Jeder Blick in einen Verlauf wird
+          protokolliert.
         </p>
       </div>
 
@@ -137,6 +138,23 @@ export function Admin() {
           Abmelden
         </Button>
       </div>
+
+      {fehler ? (
+        <Panel className="flex flex-col gap-3 border-signal/45 p-5">
+          <h2 className="font-display text-xl font-semibold">Das hat nicht geklappt</h2>
+          <Note tone="warn">{fehler}</Note>
+          <p className="text-sm text-muted">
+            Bei „Dafür fehlen die Rechte" prüft Firestore die Kennung dieses Kontos gegen die in
+            <span className="font-mono"> firestore.rules</span> hinterlegte. Stimmen sie nicht überein, lehnt der
+            Server ab, auch wenn die Anmeldung geklappt hat.
+          </p>
+          <div>
+            <Button disabled={busy} onClick={() => void load()}>
+              Neu laden
+            </Button>
+          </div>
+        </Panel>
+      ) : null}
 
       <VerificationQueue />
 
@@ -158,22 +176,7 @@ export function Admin() {
         </div>
       </div>
 
-      {fehler ? (
-        <Panel className="flex flex-col gap-3 p-5">
-          <h2 className="font-display text-xl font-semibold">Die Daten kommen nicht an</h2>
-          <Note tone="warn">{fehler}</Note>
-          <p className="text-sm text-muted">
-            Bei „Dafür fehlen die Rechte" prüft Firestore die Kennung dieses Kontos gegen die in
-            <span className="font-mono"> firestore.rules</span> hinterlegte. Stimmen sie nicht überein, bleibt die
-            Ansicht leer, auch wenn die Anmeldung geklappt hat.
-          </p>
-          <div>
-            <Button disabled={busy} onClick={() => void load()}>
-              Erneut versuchen
-            </Button>
-          </div>
-        </Panel>
-      ) : !ready ? (
+      {!ready ? (
         <p className="label-caps" role="status">
           Meldungen werden geladen …
         </p>

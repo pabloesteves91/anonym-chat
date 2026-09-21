@@ -7,15 +7,20 @@ import { useModeration } from '../store/useModeration'
 const datum = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' }) : '–'
 
-function Bild({ src, alt, fehlt }: { src: string | null; alt: string; fehlt: string }) {
+function Bild({ src, alt, laedt }: { src: string | null; alt: string; laedt: boolean }) {
   return (
     <figure className="flex flex-col gap-1">
       <figcaption className="label-caps">{alt}</figcaption>
       {src ? (
         <img src={src} alt={alt} className="h-40 w-full rounded-sm border border-line bg-raised object-contain" />
       ) : (
-        <p className="flex h-40 items-center justify-center rounded-sm border border-dashed border-line-strong bg-raised p-3 text-center text-sm text-muted">
-          {fehlt}
+        <p
+          role={laedt ? 'status' : undefined}
+          className="flex h-40 items-center justify-center rounded-sm border border-dashed border-line-strong bg-raised p-3 text-center text-sm text-muted"
+        >
+          {laedt
+            ? 'Bild wird geladen …'
+            : 'Bild nicht abrufbar. Nach einem Entscheid werden die Bilder gelöscht – vorher deutet es auf ein Problem mit dem Dateispeicher hin.'}
         </p>
       )}
     </figure>
@@ -45,20 +50,13 @@ function OffenerAntrag({ request, images }: { request: VerificationRequest; imag
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Bild
-          src={images?.ausweis ?? null}
-          alt="Ausweisfoto"
-          fehlt="Bild nicht mehr im Sitzungsspeicher – nach einem Browserneustart bewusst weg."
-        />
-        <Bild
-          src={images?.selfie ?? null}
-          alt="Selfie mit Ausweis"
-          fehlt="Bild nicht mehr im Sitzungsspeicher – nach einem Browserneustart bewusst weg."
-        />
+        <Bild src={images?.ausweis ?? null} alt="Ausweisfoto" laedt={images === undefined} />
+        <Bild src={images?.selfie ?? null} alt="Selfie mit Ausweis" laedt={images === undefined} />
       </div>
 
       <p className="mt-3 text-sm text-muted">
-        Zu prüfen: Dokument gültig und lesbar, Person auf beiden Bildern dieselbe, Alter mindestens 18.
+        Zu prüfen: Dokument gültig und lesbar, Person auf beiden Bildern dieselbe, Alter mindestens 18. Entscheiden
+        lässt sich auch, wenn ein Bild nicht lädt – dann aber besser ablehnen als durchwinken.
       </p>
 
       {ablehnen ? (
