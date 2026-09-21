@@ -95,12 +95,14 @@ src/
     phone.ts            SMS-Bestätigung über Firebase Phone Auth
     auth.ts             Anmeldung – für Nutzende und für die Moderation
     matching.ts         Wer zu wem passt (ohne Firestore, damit prüfbar)
-    plans.ts            Tarife, Grenzen, Tageszähler
+      plans.ts            Tarife, Grenzen, Tageszähler
+    kasse.ts            Weg zur Bezahlung (Stripe), abschaltbar
     wordFilter.ts       Wortfilter und Namensprüfung
   store/                Zustand (zustand): session, chat, verification, …
   routes/               Seiten
   components/           Bausteine
   content/legal.ts      Impressum, Datenschutz, Nutzungsbedingungen
+functions/              Serverfunktionen: Checkout und Stripe-Webhook
 ```
 
 Komponenten sprechen nie direkt mit Firebase. Sie rufen Aktionen eines
@@ -179,10 +181,11 @@ Details und der Weg zur Kasse: [docs/tarife.md](docs/tarife.md).
 
 ## Was noch offen ist
 
-- **Die Kasse.** Bezahlen lässt sich nichts. Eine Zahlung braucht einen
-  Server, der die Quittung des Anbieters prüft. Bis dahin hinterlässt eine
-  Auswahl auf `/preise` oder im Fenster nach der Anmeldung einen Wunsch, den
-  die Moderation unter `/admin` sieht und von Hand freischaltet.
+- **Die Kasse** ist geschrieben, aber abgeschaltet. `functions/` enthält
+  Checkout und Webhook; eingeschaltet wird sie mit `KASSE_AKTIV` in
+  `src/services/kasse.ts`, sobald das Stripe-Konto steht. Bis dahin
+  hinterlässt eine Auswahl einen Wunsch, den die Verwaltung unter `/admin`
+  von Hand freischaltet. Einrichtung: [docs/tarife.md](docs/tarife.md).
 - **Die Tagesgrenze** wird im Browser geprüft. Wer den Code umschreibt,
   umgeht sie. Ein Riegel wird daraus erst mit einer Serverfunktion.
 - **Das Zugriffsprotokoll** schreibt der Client. Wer Moderationsrechte hat,

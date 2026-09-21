@@ -86,32 +86,124 @@ allow update: if isModerator()
 Ein Konto kann seinen eigenen Tarif also nicht ändern – auch nicht mit
 umgeschriebenem Browsercode.
 
-## Was die Kasse braucht
+## Die Kasse einrichten
 
-Bezahlen lässt sich noch nichts, und zwar aus einem Grund, der sich nicht
-umgehen lässt: Ein Browser darf über einen bezahlten Zugang nicht selbst
-entscheiden. Die Quittung des Zahlungsanbieters muss von etwas geprüft
-werden, das die Person nicht kontrolliert.
+Der Code steht: `functions/` enthält zwei Funktionen, und die Oberfläche
+kann bezahlen. Abgeschaltet ist alles über eine einzige Zeile in
+`src/services/kasse.ts` (`KASSE_AKTIV = false`), damit kein Knopf ins Leere
+führt, solange die Gegenseite fehlt.
 
-Der übliche Weg mit Firebase:
+Was noch fehlt, ist alles, was ein Stripe-Konto braucht – und das kann nur
+tun, wer Zugang dazu hat.
 
-1. **Stripe Checkout** für die Bezahlung. Drei Preise anlegen: zwei Abos
-   (monatlich, jährlich) und eine einmalige Zahlung für Lifetime.
-2. **Cloud Function** (oder ein kleiner Server) mit zwei Aufgaben:
-   - eine Sitzung eröffnen und den Link zurückgeben,
-   - den Webhook von Stripe entgegennehmen, die Signatur prüfen und
-     `users/{uid}.membership` setzen.
-3. **Die Rules bleiben, wie sie sind.** Die Function schreibt mit dem
-   Admin-SDK und geht an den Rules vorbei; die Kennung der Moderation
-   bleibt der einzige andere Weg.
-4. **Verlängerung und Kündigung** kommen ebenfalls als Webhook
-   (`customer.subscription.updated`, `.deleted`). `membership.bis` wird
-   dabei fortgeschrieben; läuft es ab, fällt `aktiverPlan()` von selbst auf
-   `frei` zurück – dafür braucht es keinen weiteren Schreibvorgang.
+### 1. Drei Preise in Stripe anlegen
 
-Solange das fehlt, ist auf der Preisseite offen gesagt, dass die Kasse
-fehlt. Eine Seite, die zum Kauf auffordert und dann nichts tut, ist
-schlimmer als eine, die es zugibt.
+Dashboard → Produktkatalog. Alle in **CHF**:
+
+| Produkt | Preis | Art |
+| --- | --- | --- |
+| Plus monatlich | 7.90 | wiederkehrend, monatlich |
+| Plus jährlich | 69.00 | wiederkehrend, jährlich |
+| Lifetime | 179.00 | einmalig |
+
+Jeder Preis bekommt eine Kennung, die mit `price_` beginnt.
+
+Unter **Einstellungen → Zahlungsmethoden** zusätzlich **TWINT** aktivieren.
+Für ein Schweizer Publikum ist das wichtiger als Kreditkarten.
+
+### 2. Kennungen eintragen
+
+Die drei Kennungen in `functions/src/tarife.ts` einsetzen. Sie sind kein
+Geheimnis – sie stehen in jeder Checkout-Adresse – und gehören deshalb ins
+Repository, nicht in die Secrets.
+
+### 3. Firebase auf Blaze umstellen
+
+Cloud Functions gibt es im Gratistarif nicht. Bei diesen Mengen kostet
+Blaze praktisch nichts, verlangt aber eine hinterlegte Karte. **Gleichzeitig
+einen Budgetalarm einrichten** (Cloud-Konsole → Abrechnung → Budgets): Ohne
+ihn merkt man Missbrauch erst auf der Rechnung.
+
+### 4. Den geheimen Schlüssel hinterlegen
+
+```bash
+firebase functions:secrets:set STRIPE_SECRET_KEY
+```
+
+Der Wert steht in Stripe unter **Entwickler → API-Schlüssel** und beginnt mit
+`sk_`. Er gehört in den Secret Manager und **nirgendwo sonst** – nicht ins
+Repository, nicht in eine Chatnachricht, nicht in eine Umgebungsdatei. Wer
+ihn hat, kann in deinem Namen abrechnen und zurückerstatten.
+
+### 5. Einmal ausrollen und die Webhook-Adresse holen
+
+```bash
+firebase deploy --only functions
+```
+
+Die Ausgabe nennt die Adresse von `stripeWebhook`. Diese in Stripe unter
+**Entwickler → Webhooks → Endpunkt hinzufügen** eintragen und drei
+Ereignisse abonnieren:
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+### 6. Das Webhook-Geheimnis hinterlegen und erneut ausrollen
+
+Stripe zeigt nach dem Anlegen ein Geheimnis, das mit `whsec_` beginnt:
+
+```bash
+firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
+firebase deploy --only functions
+```
+
+Ohne dieses Geheimnis nimmt die Funktion nichts an – und das ist der Punkt:
+Sonst könnte jede Person, die die Adresse kennt, sich selbst einen
+Lifetime-Zugang schicken.
+
+### 7. Die Kasse einschalten
+
+In `src/services/kasse.ts` `KASSE_AKTIV` auf `true` setzen und pushen. Ab
+dann führt "Diesen Tarif möchte ich" nicht mehr zur Wunschliste, sondern
+zur Bezahlung.
+
+### 8. Im Testmodus durchspielen
+
+Stripe hat einen Testmodus mit eigenen Schlüsseln. Kartennummer
+`4242 4242 4242 4242`, beliebiges künftiges Datum, beliebige Prüfziffer.
+Danach muss in Firestore unter `users/<Kennung>.membership` der Tarif
+stehen – gesetzt von der Funktion, nicht vom Browser.
+
+## Wie die Kasse arbeitet
+
+```
+Browser                 Funktion                  Stripe
+   |  "ich will Plus"       |                        |
+   |----------------------->|  Sitzung eröffnen      |
+   |                        |----------------------->|
+   |  Adresse zur Kasse     |                        |
+   |<-----------------------|                        |
+   |------------------------------------------------>|  bezahlen
+   |                        |  Quittung (Webhook)    |
+   |                        |<-----------------------|
+   |                        |  Signatur prüfen       |
+   |                        |  membership setzen     |
+   |  zurück auf /preise    |                        |
+```
+
+Zwei Dinge daran sind wichtig:
+
+- **Der Browser schickt nur die Tarifkennung**, nie einen Preis. Sonst
+  liesse sich der Lifetime-Zugang zum Monatspreis buchen.
+- **Der Zugang entsteht aus der Quittung**, nicht aus der Rückkehr des
+  Browsers. Wer nach der Zahlung das Fenster schliesst, bekommt seinen
+  Tarif trotzdem; wer die Rückkehr-Adresse von Hand aufruft, bekommt
+  nichts.
+
+Doppelte Zustellungen fängt eine Sperre in `stripeEvents` ab: Stripe stellt
+im Zweifel mehrfach zu, und eine zweimal verarbeitete Quittung würde eine
+Laufzeit verlängern, die niemand bezahlt hat.
 
 ## Die Tagesgrenze
 

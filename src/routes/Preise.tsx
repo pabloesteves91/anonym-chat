@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
 import { GRATIS_CHATS_PRO_TAG, PLAENE, aktiverPlan, preisText, type Plan, type PlanId } from '../services/plans'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
+import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
+import { ApiError } from '../services/api'
 
 const taktText: Record<Plan['takt'], string> = {
   gratis: 'dauerhaft',
@@ -62,6 +64,7 @@ function Karte({
   gewaehlt,
   onWaehlen,
   busy,
+  laeuft,
   angemeldet,
 }: {
   plan: Plan
@@ -69,6 +72,8 @@ function Karte({
   gewaehlt: boolean
   onWaehlen: () => void
   busy: boolean
+  /** Eine Bezahlung ist unterwegs – der Knopf sagt es. */
+  laeuft: boolean
   angemeldet: boolean
 }) {
   return (
@@ -116,7 +121,13 @@ function Karte({
           <p className="text-sm text-accent">Wunsch ist notiert.</p>
         ) : (
           <Button size="sm" variant={plan.empfohlen ? 'primary' : 'secondary'} disabled={busy} onClick={onWaehlen}>
-            {plan.id === 'frei' ? 'Gratis nutzen' : 'Diesen Tarif möchte ich'}
+            {laeuft
+              ? 'Weiter zur Kasse …'
+              : plan.id === 'frei'
+                ? 'Gratis nutzen'
+                : KASSE_AKTIV
+                  ? `Für ${preisText(plan)} buchen`
+                  : 'Diesen Tarif möchte ich'}
           </Button>
         )}
       </div>
@@ -131,11 +142,29 @@ export function Preise() {
   const busy = useSession((s) => s.busy)
   const choosePlan = useSession((s) => s.choosePlan)
   const [gewaehlt, setGewaehlt] = useState<PlanId | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
+  // Der Weg zur Kasse führt über den Server und kann einen Moment dauern –
+  // ein Knopf, der nichts tut, sieht aus wie ein kaputter Knopf.
+  const [zahlungLaeuft, setZahlungLaeuft] = useState(false)
+  const [parameter] = useSearchParams()
+  const zahlung = parameter.get('zahlung')
 
   const meiner = aktiverPlan(user?.membership)
   const imBetrieb = Boolean(user && user.rolle !== 'nutzer')
 
   const waehlen = async (plan: PlanId) => {
+    setFehler(null)
+    if (KASSE_AKTIV && istBezahlbar(plan)) {
+      setZahlungLaeuft(true)
+      try {
+        // Ab hier verlässt die Seite den Browser Richtung Stripe.
+        await starteZahlung(plan)
+      } catch (error) {
+        setFehler(error instanceof ApiError ? error.message : 'Die Zahlung konnte nicht gestartet werden.')
+        setZahlungLaeuft(false)
+      }
+      return
+    }
     const ok = await choosePlan(plan)
     if (ok) setGewaehlt(plan)
   }
@@ -149,6 +178,15 @@ export function Preise() {
           Dienst. Bezahlt wird für mehr Gespräche und gezielteres Suchen, nicht für mehr Sicherheit.
         </p>
       </div>
+
+      {zahlung === 'erfolgreich' ? (
+        <Note>
+          Danke – die Zahlung ist bei Stripe eingegangen. Der Zugang wird freigeschaltet, sobald die Bestätigung bei
+          uns ankommt; das dauert in der Regel Sekunden. Steht dein Tarif gleich noch nicht hier, lade die Seite neu.
+        </Note>
+      ) : null}
+      {zahlung === 'abgebrochen' ? <Note tone="warn">Die Zahlung wurde abgebrochen. Es wurde nichts belastet.</Note> : null}
+      {fehler ? <Note tone="warn">{fehler}</Note> : null}
 
       {imBetrieb ? (
         <Note>
@@ -164,7 +202,8 @@ export function Preise() {
             plan={plan}
             aktiv={plan.id === meiner}
             gewaehlt={gewaehlt === plan.id}
-            busy={busy || imBetrieb}
+            busy={busy || imBetrieb || zahlungLaeuft}
+            laeuft={zahlungLaeuft}
             angemeldet={Boolean(konto)}
             onWaehlen={() => void waehlen(plan.id)}
           />
@@ -224,12 +263,19 @@ export function Preise() {
       </section>
 
       <div className="prose-column flex flex-col gap-4">
-        <Note tone="warn">
-          <strong>Die Kasse fehlt noch.</strong> Zahlen lässt sich hier im Moment nicht: Eine Bezahlung braucht einen
-          Server, der die Quittung des Zahlungsanbieters prüft – ein Browser darf über einen bezahlten Zugang nicht
-          selbst entscheiden. Wer oben einen bezahlten Tarif wählt, hinterlässt deshalb einen Wunsch; freigeschaltet
-          wird er von Hand. Fragen dazu an <span className="font-mono">{BETREIBER.email}</span>.
-        </Note>
+        {KASSE_AKTIV ? (
+          <Note>
+            Bezahlt wird über Stripe – Karte, TWINT, Apple Pay und Google Pay. Wir sehen deine Zahlungsdaten nie; sie
+            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung an <span className="font-mono">{BETREIBER.email}</span>.
+          </Note>
+        ) : (
+          <Note tone="warn">
+            <strong>Die Kasse fehlt noch.</strong> Zahlen lässt sich hier im Moment nicht: Eine Bezahlung braucht
+            einen Server, der die Quittung des Zahlungsanbieters prüft – ein Browser darf über einen bezahlten Zugang
+            nicht selbst entscheiden. Wer oben einen bezahlten Tarif wählt, hinterlässt deshalb einen Wunsch;
+            freigeschaltet wird er von Hand. Fragen dazu an <span className="font-mono">{BETREIBER.email}</span>.
+          </Note>
+        )}
 
         <div className="flex flex-wrap gap-3">
           <Link to={konto ? '/chat' : '/anmelden'} className={buttonClass('primary')}>

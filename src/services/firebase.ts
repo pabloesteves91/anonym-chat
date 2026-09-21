@@ -2,6 +2,7 @@ import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore'
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage'
+import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions'
 
 /**
  * Firebase-Anbindung.
@@ -42,6 +43,7 @@ let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
 let storage: FirebaseStorage | null = null
+let functions: Functions | null = null
 
 function getApp(): FirebaseApp {
   app ??= initializeApp(firebaseConfig)
@@ -78,6 +80,23 @@ export function getDb(): Firestore {
     connectFirestoreEmulator(db, name, Number(port))
   }
   return db
+}
+
+/**
+ * Serverfunktionen – heute nur die Kasse.
+ *
+ * Dieselbe Region wie in `functions/src/index.ts`: Steht hier eine andere,
+ * ruft der Browser ins Leere.
+ */
+export function getServerFunctions(): Functions {
+  if (functions) return functions
+  functions = getFunctions(getApp(), 'europe-west6')
+  const host = import.meta.env.VITE_FUNCTIONS_EMULATOR as string | undefined
+  if (host) {
+    const [name, port] = host.split(':')
+    connectFunctionsEmulator(functions, name, Number(port))
+  }
+  return functions
 }
 
 export function getFileStorage(): FirebaseStorage {

@@ -4,6 +4,8 @@ import { Dialog } from './Dialog'
 import { Button, Note } from './ui'
 import { PLAENE, preisText, type Plan, type PlanId } from '../services/plans'
 import { useSession } from '../store/useSession'
+import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
+import { ApiError } from '../services/api'
 
 const taktText: Record<Plan['takt'], string> = {
   gratis: 'dauerhaft gratis',
@@ -34,6 +36,7 @@ export function TarifDialog() {
   const [auswahl, setAuswahl] = useState<PlanId>('frei')
   const [bestaetigt, setBestaetigt] = useState<PlanId | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
+  const [zahlungLaeuft, setZahlungLaeuft] = useState(false)
 
   /**
    * Einmal aufgegangen, bleibt das Fenster offen, bis jemand es schliesst.
@@ -60,6 +63,17 @@ export function TarifDialog() {
 
   const waehlen = async () => {
     setFehler(null)
+    if (KASSE_AKTIV && istBezahlbar(auswahl)) {
+      setZahlungLaeuft(true)
+      try {
+        // Ab hier verlässt die Seite den Browser Richtung Stripe.
+        await starteZahlung(auswahl)
+      } catch (error) {
+        setFehler(error instanceof ApiError ? error.message : 'Die Zahlung konnte nicht gestartet werden.')
+        setZahlungLaeuft(false)
+      }
+      return
+    }
     const ok = await choosePlan(auswahl)
     if (ok) setBestaetigt(auswahl)
     else setFehler('Die Auswahl konnte nicht gespeichert werden. Du kannst sie später unter „Tarife" treffen.')
@@ -115,7 +129,11 @@ export function TarifDialog() {
             ))}
           </fieldset>
 
-          {auswahl === 'frei' ? null : (
+          {auswahl === 'frei' ? null : KASSE_AKTIV ? (
+            <p className="text-sm text-muted">
+              Weiter geht es bei Stripe – Karte, TWINT, Apple Pay und Google Pay. Danach kommst du hierher zurück.
+            </p>
+          ) : (
             <p className="text-sm text-muted">
               Bezahlen lässt sich hier noch nicht – das braucht einen Server, der die Quittung prüft. Deine Auswahl
               geht als Wunsch an die Moderation, die den Zugang von Hand freischaltet.
@@ -125,8 +143,14 @@ export function TarifDialog() {
           {fehler ? <Note tone="warn">{fehler}</Note> : null}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="primary" disabled={busy} onClick={() => void waehlen()}>
-              {auswahl === 'frei' ? 'Gratis starten' : 'Auswählen'}
+            <Button type="button" variant="primary" disabled={busy || zahlungLaeuft} onClick={() => void waehlen()}>
+              {zahlungLaeuft
+                ? 'Weiter zur Kasse …'
+                : auswahl === 'frei'
+                  ? 'Gratis starten'
+                  : KASSE_AKTIV
+                    ? 'Zur Bezahlung'
+                    : 'Auswählen'}
             </Button>
             <Button type="button" variant="quiet" disabled={busy} onClick={schliessen}>
               Später entscheiden
