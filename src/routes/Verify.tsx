@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
+import { Kontokennung } from '../components/Kontokennung'
 import { RECAPTCHA_CONTAINER_ID, maskPhone } from '../services/api'
 import { VERIFY_STEPS } from '../services/types'
 import type { VerifyStep } from '../services/types'
@@ -448,6 +449,11 @@ export function Verify() {
       </div>
 
       <Antragsformular />
+
+      <Kontokennung
+        id={user?.id ?? ''}
+        hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie nur bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist."
+      />
 
       <Note>
         Die Fotos werden verkleinert und verschlüsselt an unseren Dateispeicher in Frankfurt übertragen. Lesen kann sie

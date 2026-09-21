@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
+import { Kontokennung } from '../components/Kontokennung'
 import { aktiverPlan, grenzen, planById, verbleibend } from '../services/plans'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
 import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
@@ -165,14 +166,10 @@ export function Profile() {
         </div>
       </Panel>
 
-      <Panel className="p-5">
-        <p className="label-caps">Interne Kennung</p>
-        <p className="mt-1 font-mono text-sm text-muted">{user.id}</p>
-        <p className="mt-2 text-sm text-muted">
-          Bleibt an deine Verifizierung gebunden und ist im Chat niemals sichtbar. Sie ist der Grund, weshalb eine
-          Sperre nicht durch ein neues Konto umgangen werden kann.
-        </p>
-      </Panel>
+      <Kontokennung
+        id={user.id}
+        hinweis="Bleibt an deine Verifizierung gebunden und ist im Chat niemals sichtbar. Sie ist der Grund, weshalb eine Sperre nicht durch ein neues Konto umgangen werden kann."
+      />
 
       <Panel className="p-5">
         <form
