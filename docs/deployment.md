@@ -211,6 +211,36 @@ Die JSON-Datei danach lokal löschen und nirgends sonst ablegen: Sie umgeht
 jede Security Rule. Im Secret ist sie richtig aufgehoben, in einem Chat oder
 im Repo nicht.
 
+#### Wenn das Ausrollen an Rechten scheitert
+
+```
+Error: Request to https://serviceusage.googleapis.com/... had HTTP Error: 403,
+Permission denied to get service [firebasestorage.googleapis.com]
+```
+
+Der Schlüssel ist dann in Ordnung – dem Dienstkonto dahinter fehlen nur
+Rollen. Das aus der Firebase-Konsole erzeugte Konto
+(`firebase-adminsdk-…@anonym-chat-223af.iam.gserviceaccount.com`) darf von
+Haus aus Daten lesen und schreiben, aber keine Regeln veröffentlichen.
+
+Zu beheben in der **Google-Cloud-Konsole → IAM und Verwaltung → IAM**: beim
+Dienstkonto auf den Stift, **Weitere Rolle hinzufügen**, und diese drei
+ergänzen:
+
+| Rolle | Wofür |
+| --- | --- |
+| Firebase Rules Admin | `firestore.rules` und `storage.rules` veröffentlichen |
+| Cloud Datastore Index Admin | Indizes und TTL-Richtlinien setzen |
+| Service Usage Consumer | die Vorabprüfung, ob die nötigen APIs aktiv sind |
+
+Speichern, dann **Actions → Firebase Rules → Run workflow**. Die Rollen
+greifen sofort; ein neuer Schlüssel ist nicht nötig.
+
+Wer es kürzer mag, vergibt stattdessen die Rolle **Firebase Admin** – sie
+enthält alle drei. Die Rolle **Editor** funktioniert ebenfalls, gibt dem
+Konto aber Zugriff auf das ganze Projekt; für einen Schlüssel, der in einem
+Repository-Secret liegt, ist das mehr, als nötig ist.
+
 ### C) Lokal, wenn ein Terminal da ist
 
 ```bash

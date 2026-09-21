@@ -60,8 +60,20 @@ jobs:
           printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
 
-      - name: Regeln ausrollen
-        run: npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes,storage --project anonym-chat-223af --non-interactive
+      # Getrennte Schritte, weil sie unterschiedlich dringend sind: Ohne die
+      # Firestore-Regeln geht in der App gar nichts, ohne die Storage-Regeln
+      # nur das Hochladen der Ausweisbilder. Zusammen in einem Aufruf würde
+      # ein Rechteproblem beim Speicher auch die Regeln aufhalten.
+      - name: Firestore-Regeln und Indizes ausrollen
+        run: npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes --project anonym-chat-223af --non-interactive
+
+      - name: Storage-Regeln ausrollen
+        run: npx --yes firebase-tools@15 deploy --only storage --project anonym-chat-223af --non-interactive
+
+      - name: Hinweis bei fehlenden Rechten
+        if: failure()
+        run: |
+          echo "::error::Ausrollen fehlgeschlagen. Bei 'Permission denied to get service' fehlen dem Dienstkonto Rollen – siehe docs/deployment.md, Abschnitt 'Wenn das Ausrollen an Rechten scheitert'."
 
       - name: Schlüssel entfernen
         if: always()
