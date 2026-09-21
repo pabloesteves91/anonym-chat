@@ -66,7 +66,7 @@ und lesen darf sie nur, wer selbst verifiziert und nicht gesperrt ist.
 
 | Ort | Inhalt | Wer darf lesen |
 | --- | --- | --- |
-| `users/{uid}` | Pseudonym, Profil, Verifizierungsstand, Tarif | Konto selbst, Moderation |
+| `users/{uid}` | Pseudonym, Profil, Verifizierungsstand (`verificationStatus`), Tarif | Konto selbst, Moderation |
 | `planRequests/{uid}` | Wer welchen Tarif möchte | Konto selbst, Moderation |
 | `verifications/{id}` | Antrag mit maskierter Nummer | Konto selbst, Moderation |
 | `queue/{uid}` | Wer gerade sucht | alle Suchenden |

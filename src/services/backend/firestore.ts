@@ -99,7 +99,14 @@ async function fuehreAus<T>(was: () => Promise<T>, fallback: string): Promise<T>
 
 interface UserDoc {
   pseudonym: string
-  verified: boolean
+  /**
+   * Der Prüfstand – und die einzige Wahrheit darüber.
+   *
+   * Daneben stand früher ein zweites Feld `verified`. Zwei Felder, die
+   * dasselbe bedeuten, laufen auseinander: Wird nur eines gesetzt, darf
+   * jemand chatten und wird als ungeprüft angezeigt, oder umgekehrt. Die
+   * Regeln lesen jetzt ebenfalls nur noch dieses Feld.
+   */
   verificationStatus: User['verificationStatus']
   verifiedAt: string | null
   phone: string | null
@@ -113,7 +120,6 @@ interface UserDoc {
 
 const leererUser = (): UserDoc => ({
   pseudonym: generatePseudonym(),
-  verified: false,
   verificationStatus: 'offen',
   verifiedAt: null,
   phone: null,
@@ -129,7 +135,9 @@ function toUser(id: string, data: UserDoc): User {
   return {
     id,
     pseudonym: data.pseudonym,
-    verified: Boolean(data.verified),
+    // Abgeleitet, nicht gespeichert: So kann die Anzeige dem Zugang nie
+    // widersprechen.
+    verified: data.verificationStatus === 'verifiziert',
     verificationStatus: data.verificationStatus ?? 'offen',
     verifiedAt: data.verifiedAt ?? null,
     phone: data.phone ?? null,
@@ -373,7 +381,6 @@ export async function submitVerification(input: {
     stapel.set(doc(getDb(), PFAD.verifications, requestId), antrag)
     stapel.update(doc(getDb(), PFAD.users, id), {
       phone: input.phone,
-      verified: false,
       verificationStatus: 'wartet',
     })
     await stapel.commit()
@@ -436,7 +443,6 @@ export async function decideVerification(
       rejectionReason: decision === 'abgelehnt' ? (rejectionReason?.trim() || 'Ohne Angabe') : null,
     })
     stapel.update(doc(getDb(), PFAD.users, antrag.userId), {
-      verified: decision === 'freigegeben',
       verificationStatus: decision === 'freigegeben' ? 'verifiziert' : 'abgelehnt',
       verifiedAt: decision === 'freigegeben' ? entschiedenAm.toDate().toISOString() : null,
     })
@@ -462,7 +468,6 @@ export async function withdrawVerification(): Promise<void> {
     const stapel = writeBatch(getDb())
     treffer.forEach((eintrag) => stapel.delete(eintrag.ref))
     stapel.update(doc(getDb(), PFAD.users, id), {
-      verified: false,
       verificationStatus: 'offen',
       verifiedAt: null,
     })

@@ -50,7 +50,6 @@ let env: RulesTestEnvironment
 
 const konto = (patch: Record<string, unknown> = {}) => ({
   pseudonym: 'Blauer Falke 4417',
-  verified: true,
   verificationStatus: 'verifiziert',
   verifiedAt: null,
   phone: null,
@@ -113,7 +112,7 @@ beforeEach(async () => {
     const db = ctx.firestore()
     await setDoc(doc(db, 'users', ANNA), konto({ pseudonym: 'Anna' }))
     await setDoc(doc(db, 'users', BEN), konto({ pseudonym: 'Ben' }))
-    await setDoc(doc(db, 'users', FREMD), konto({ verified: false, verificationStatus: 'offen' }))
+    await setDoc(doc(db, 'users', FREMD), konto({ verificationStatus: 'offen' }))
   })
 })
 
@@ -130,10 +129,10 @@ describe('Konten', () => {
 
   it('verhindert die Selbstfreigabe', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'users', FREMD), konto({ verified: false, verificationStatus: 'offen' }))
+      await setDoc(doc(ctx.firestore(), 'users', FREMD), konto({ verificationStatus: 'offen' }))
     })
-    await assertFails(updateDoc(doc(als(FREMD), 'users', FREMD), { verified: true }))
     await assertFails(updateDoc(doc(als(FREMD), 'users', FREMD), { verificationStatus: 'verifiziert' }))
+    await assertFails(updateDoc(doc(als(FREMD), 'users', FREMD), { verificationStatus: 'abgelehnt' }))
   })
 
   it('verhindert den selbst gesetzten Tarif', async () => {
@@ -153,12 +152,8 @@ describe('Konten', () => {
   })
 
   it('erlaubt das Einreichen und Zurückziehen eines Antrags', async () => {
-    await assertSucceeds(
-      updateDoc(doc(als(FREMD), 'users', FREMD), { verified: false, verificationStatus: 'wartet' }),
-    )
-    await assertSucceeds(
-      updateDoc(doc(als(FREMD), 'users', FREMD), { verified: false, verificationStatus: 'offen' }),
-    )
+    await assertSucceeds(updateDoc(doc(als(FREMD), 'users', FREMD), { verificationStatus: 'wartet' }))
+    await assertSucceeds(updateDoc(doc(als(FREMD), 'users', FREMD), { verificationStatus: 'offen' }))
   })
 
   it('erlaubt das eigene Profil', async () => {
@@ -169,6 +164,15 @@ describe('Konten', () => {
 describe('Warteschlange', () => {
   it('lässt nur verifizierte Konten hinein', async () => {
     await assertSucceeds(setDoc(doc(als(ANNA), 'queue', ANNA), warteEintrag(ANNA)))
+    await assertFails(setDoc(doc(als(FREMD), 'queue', FREMD), warteEintrag(FREMD)))
+  })
+
+  it('hält ein Konto draussen, dem nur das alte Feld auf true steht', async () => {
+    // Der Prüfstand hängt allein an `verificationStatus`. Ein übrig
+    // gebliebenes `verified: true` öffnet nichts mehr.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', FREMD), konto({ verificationStatus: 'offen', verified: true }))
+    })
     await assertFails(setDoc(doc(als(FREMD), 'queue', FREMD), warteEintrag(FREMD)))
   })
 
@@ -367,7 +371,6 @@ describe('Rollentrennung', () => {
     await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'verifications', 'ver-1'), { status: 'freigegeben' }))
     await assertSucceeds(
       updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
-        verified: true,
         verificationStatus: 'verifiziert',
         verifiedAt: '2026-01-01T00:00:00.000Z',
       }),
@@ -425,7 +428,7 @@ describe('Rollentrennung', () => {
 
   it('lässt gewöhnliche Konten nichts davon', async () => {
     await assertFails(getDocs(collection(als(ANNA), 'chats')))
-    await assertFails(updateDoc(doc(als(ANNA), 'users', BEN), { verified: true }))
+    await assertFails(updateDoc(doc(als(ANNA), 'users', BEN), { verificationStatus: 'verifiziert' }))
   })
 })
 

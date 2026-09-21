@@ -56,39 +56,40 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    // `verificationStatus` ist die einzige Wahrheit über den Prüfstand.
+    // Früher stand daneben ein zweites Feld `verified`; zwei Felder, die
+    // dasselbe bedeuten, laufen auseinander – dann darf jemand chatten und
+    // wird als ungeprüft angezeigt, oder umgekehrt.
     function darfChatten() {
       return kontoDa()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verified == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verificationStatus == 'verifiziert'
         && !exists(/databases/$(database)/documents/blocked/$(request.auth.uid));
     }
 
     // Das eigene Konto: anlegen und pflegen darf man es selbst, lesen darf
     // es zusätzlich die Moderation.
     //
-    // Zwei Felder sind ausgenommen. `verified` setzt ausschliesslich die
-    // Moderation – ein Konto, das sich selbst freigeben könnte, macht die
-    // ganze Prüfung sinnlos. Und `membership` ebenso, solange die Kasse
-    // fehlt: Ein Browser darf über einen bezahlten Zugang nicht selbst
-    // entscheiden.
+    // Zwei Felder sind ausgenommen. `verificationStatus` entscheidet über
+    // den Zugang zum Chat – ein Konto, das sich selbst auf 'verifiziert'
+    // setzen könnte, macht die ganze Prüfung sinnlos. Und `membership`
+    // ebenso, solange die Kasse fehlt: Ein Browser darf über einen
+    // bezahlten Zugang nicht selbst entscheiden.
     //
     // Der Antragsstand gehört dagegen halb der Person: Einreichen ('wartet')
     // und Zurückziehen ('offen') sind ihre Entscheidung. 'verifiziert' und
-    // 'abgelehnt' bleiben der Moderation vorbehalten – und `verified` muss
-    // dabei auf false stehen, sonst wäre der Umweg eine Selbstfreigabe.
+    // 'abgelehnt' bleiben der Moderation vorbehalten.
     function eigenerAntragsstand() {
-      return request.resource.data.verified == false
-        && request.resource.data.verificationStatus in ['offen', 'wartet'];
+      return request.resource.data.verificationStatus in ['offen', 'wartet'];
     }
 
     /** Was die Moderation am Konto ändern darf – und sonst nichts. */
     function nurVerifizierungsfelder() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['verified', 'verificationStatus', 'verifiedAt']);
+        .hasOnly(['verificationStatus', 'verifiedAt']);
     }
 
     match /users/{userId} {
       allow create: if isOwner(userId)
-        && request.resource.data.verified == false
         && request.resource.data.verificationStatus == 'offen'
         && request.resource.data.membership.plan == 'frei';
       allow read: if istModeration() || isOwner(userId);
@@ -96,7 +97,6 @@ service cloud.firestore {
         // Moderation entscheidet über die Verifizierung – nicht über Tarife.
         || (istModeration() && nurVerifizierungsfelder())
         || (isOwner(userId)
-            && request.resource.data.verified == resource.data.verified
             && request.resource.data.membership == resource.data.membership
             && (request.resource.data.verificationStatus == resource.data.verificationStatus
                 || eigenerAntragsstand()));

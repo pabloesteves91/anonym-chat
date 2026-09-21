@@ -53,8 +53,14 @@ export interface User {
   id: string
   /** Anzeigename gegenüber anderen Nutzern, z.B. "Blauer Falke 4417". */
   pseudonym: string
-  /** Kurzform für "Prüfung bestanden" – Chat setzt das voraus. */
+  /**
+   * Kurzform für "Prüfung bestanden" – Chat setzt das voraus.
+   *
+   * Abgeleitet aus `verificationStatus`, nicht eigenständig gespeichert:
+   * Zwei Felder, die dasselbe bedeuten, laufen auseinander.
+   */
   verified: boolean
+  /** Der Prüfstand – die einzige Wahrheit darüber, auch in den Regeln. */
   verificationStatus: VerificationStatus
   /** ISO-Zeitstempel der Freigabe durch die Moderation. */
   verifiedAt: string | null
