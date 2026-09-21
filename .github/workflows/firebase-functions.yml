@@ -67,10 +67,14 @@ jobs:
             --data-file - --force --project anonym-chat-223af --non-interactive
 
       - name: Funktionen ausrollen
+        id: ausrollen
         run: npx --yes firebase-tools@15 deploy --only functions --project anonym-chat-223af --non-interactive
 
+      # Nur wenn wirklich das Ausrollen gescheitert ist. Ein fehlendes
+      # Secret hat nichts mit Rollen zu tun, und ein falscher Hinweis
+      # schickt auf die falsche Fährte.
       - name: Hinweis bei fehlenden Rechten
-        if: failure()
+        if: failure() && steps.ausrollen.outcome == 'failure'
         run: |
           echo "::error::Ausrollen fehlgeschlagen. Fehlen dem Dienstkonto Rollen, nennt die Meldung oben welche – siehe docs/tarife.md, Abschnitt 'Wenn das Ausrollen an Rechten scheitert'."
 
