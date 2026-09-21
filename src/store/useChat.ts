@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
 import { generateId } from '../services/pseudonym'
-import { grenzen } from '../services/plans'
+import { grenzen, verbleibend } from '../services/plans'
 import { useSession } from './useSession'
 import type { LiveMessage } from '../services/api'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'
@@ -137,16 +137,15 @@ export const useChat = create<ChatState>((set, get) => {
         wartende: 0,
       })
 
-      try {
-        // Erst zählen, dann suchen: sonst verbraucht ein abgebrochener
-        // Suchlauf ein Guthaben, das nie zu einem Gespräch geführt hat.
-        const zaehlung = await api.registerChatStart()
-        if (!zaehlung.erlaubt) {
-          set({ status: 'idle', grenzeErreicht: true })
-          return
-        }
-        await useSession.getState().refreshUser()
+      // Vorher prüfen, nachher zählen: Wer abbricht, ohne jemanden getroffen
+      // zu haben, soll dafür kein Guthaben verlieren – und wer schon am
+      // Anschlag ist, soll nicht erst vergeblich warten.
+      if (verbleibend(ich.membership, ich.usage) === 0) {
+        set({ status: 'idle', grenzeErreicht: true })
+        return
+      }
 
+      try {
         const treffer = await api.findMatch(get().filter, ich, {
           bevorzugt: grenzen(ich.membership).bevorzugt,
           signal: controller.signal,
@@ -155,6 +154,17 @@ export const useChat = create<ChatState>((set, get) => {
           },
         })
         if (token !== runToken) return
+
+        // Der Treffer steht – jetzt zählt er. Scheitert das Zählen, geht der
+        // Chat trotzdem weiter: ein verlorener Zähler ist kein Grund, zwei
+        // Menschen wieder auseinanderzureissen.
+        const zaehlung = await api.registerChatStart().catch(() => null)
+        if (zaehlung && !zaehlung.erlaubt) {
+          await api.leaveRoom(treffer.roomId)
+          set({ status: 'idle', grenzeErreicht: true })
+          return
+        }
+        void useSession.getState().refreshUser()
 
         const partner: Partner = { id: treffer.partnerId, pseudonym: treffer.partnerPseudonym }
         const begruessung = systemMessage(

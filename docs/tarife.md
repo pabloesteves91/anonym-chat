@@ -94,9 +94,10 @@ schlimmer als eine, die es zugibt.
 ## Die Tagesgrenze
 
 Gezählt wird in `users/{uid}.usage` – ein Tagesstempel und eine Zahl.
-`registerChatStart()` liest, vergleicht und schreibt zurück, bevor die
-Suche beginnt. Um Mitternacht (lokale Zeit) stimmt der Tagesstempel nicht
-mehr und die Zählung beginnt von vorn.
+Geprüft wird vor der Suche, gezählt erst, wenn tatsächlich jemand gefunden
+ist: Wer zehn Minuten wartet und dann abbricht, hat kein Gespräch geführt
+und soll auch keines abgebucht bekommen. Um Mitternacht (lokale Zeit)
+stimmt der Tagesstempel nicht mehr und die Zählung beginnt von vorn.
 
 Das ist eine Bremse, kein Riegel: Der Browser schreibt die Zahl selbst und
 könnte sie auch nicht schreiben. Verlässlich wird es mit derselben
