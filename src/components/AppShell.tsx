@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { evaluateAccess } from '../services/auth'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
@@ -40,6 +41,14 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-accent-soft text-ink' : 'text-muted hover:text-ink'
   }`
 
+/** Abgesetzt vom Rest: Die Moderation ist Werkzeug, nicht Angebot. */
+const modClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
+    isActive
+      ? 'border-accent bg-accent-soft text-ink'
+      : 'border-line-strong text-muted hover:border-accent hover:text-ink'
+  }`
+
 export function AppShell() {
   const konto = useAuth((s) => s.user)
   const signOut = useAuth((s) => s.signOut)
@@ -51,6 +60,16 @@ export function AppShell() {
   // Die Moderation ist kein Publikum: Dort hat ein Tarifangebot nichts
   // verloren, und ein Modal davor macht die Ansicht unbedienbar.
   const imModerationsbereich = pathname.startsWith('/admin')
+
+  /**
+   * Der Weg in die Moderation, nur für die berechtigte Kennung.
+   *
+   * Dieselbe Auswertung wie die Zugangsprüfung selbst, damit es nicht zwei
+   * Meinungen darüber gibt, wer moderieren darf. Entschieden wird das
+   * ohnehin auf dem Server: Ein eingeblendeter Knopf öffnet niemandem
+   * Daten, den die Security Rules nicht hineinlassen.
+   */
+  const darfModerieren = evaluateAccess(konto ? { uid: konto.uid, email: konto.email } : null).erlaubt
 
   /**
    * Angemeldet, aber ohne Profil: Ohne eigene Anzeige bliebe hier eine
@@ -79,6 +98,12 @@ export function AppShell() {
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
+              {darfModerieren ? (
+                <NavLink to="/admin" className={modClass}>
+                  <ShieldMark className="h-4 w-4 text-accent" />
+                  Moderation
+                </NavLink>
+              ) : null}
             </nav>
           ) : (
             <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
