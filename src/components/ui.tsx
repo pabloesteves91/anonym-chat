@@ -86,10 +86,22 @@ export function TagToggle({
   )
 }
 
-export function Note({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'warn' }) {
+export function Note({
+  children,
+  tone = 'neutral',
+  className = '',
+  as: Tag = 'p',
+}: {
+  children: ReactNode
+  tone?: 'neutral' | 'warn'
+  className?: string
+  /** `div`, sobald der Hinweis selbst Absätze oder Listen enthält – in
+   *  einem `<p>` wäre das ungültiges Markup. */
+  as?: 'p' | 'div'
+}) {
   const styles =
     tone === 'warn'
       ? 'border-signal/40 bg-signal-soft text-ink'
       : 'border-line bg-raised text-muted'
-  return <p className={`rounded-sm border px-3 py-2 text-sm ${styles}`}>{children}</p>
+  return <Tag className={`rounded-sm border px-3 py-2 text-sm ${styles} ${className}`}>{children}</Tag>
 }

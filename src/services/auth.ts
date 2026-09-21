@@ -37,16 +37,27 @@ export interface ModeratorAccess {
   mode: AccessMode
   /** Adresse des angemeldeten Kontos, für die Anzeige. */
   email: string | null
+  /**
+   * Kennung des angemeldeten Kontos – auch dann, wenn es keine Rechte hat.
+   *
+   * Ohne sie steht man vor einer Anmeldemaske und weiss nicht, warum: Man
+   * ist ja angemeldet. Mit ihr lässt sich vergleichen, ob es dieselbe
+   * Kennung ist, die in den Regeln steht.
+   */
+  uid: string | null
 }
 
 export class AuthError extends Error {}
 
-const KEIN_ZUGANG: ModeratorAccess = { erlaubt: false, mode: 'gesperrt', email: null }
+const KEIN_ZUGANG: ModeratorAccess = { erlaubt: false, mode: 'gesperrt', email: null, uid: null }
 
 /** Reine Auswertung – ohne Firebase, damit sie prüfbar bleibt. */
 export function evaluateAccess(user: Pick<User, 'uid' | 'email'> | null): ModeratorAccess {
-  if (!user || user.uid !== MODERATOR_UID) return KEIN_ZUGANG
-  return { erlaubt: true, mode: 'konto', email: user.email }
+  if (!user) return KEIN_ZUGANG
+  if (user.uid !== MODERATOR_UID) {
+    return { erlaubt: false, mode: 'gesperrt', email: user.email, uid: user.uid }
+  }
+  return { erlaubt: true, mode: 'konto', email: user.email, uid: user.uid }
 }
 
 /** Meldet Änderungen des Zugangs, auch beim ersten Laden. */

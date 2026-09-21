@@ -19,6 +19,8 @@ interface AdminAccessState {
   erlaubt: boolean
   mode: AccessMode
   email: string | null
+  /** Kennung des angemeldeten Kontos, auch ohne Rechte. */
+  uid: string | null
   busy: boolean
   error: string | null
 
@@ -34,6 +36,7 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
   erlaubt: false,
   mode: 'gesperrt',
   email: null,
+  uid: null,
   busy: false,
   error: null,
 
@@ -44,7 +47,13 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
     )
 
     return watchModeratorAccess((access) =>
-      set({ geprueft: true, erlaubt: access.erlaubt, mode: access.mode, email: access.email }),
+      set({
+        geprueft: true,
+        erlaubt: access.erlaubt,
+        mode: access.mode,
+        email: access.email,
+        uid: access.uid,
+      }),
     )
   },
 
@@ -53,7 +62,7 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
     try {
       const access = await signInModerator(email, password)
       // Den Rest meldet der Beobachter; hier nur den Ladezustand schliessen.
-      set({ busy: false, erlaubt: access.erlaubt, mode: access.mode, email: access.email })
+      set({ busy: false, erlaubt: access.erlaubt, mode: access.mode, email: access.email, uid: access.uid })
     } catch (error) {
       set({ busy: false, error: error instanceof AuthError ? error.message : 'Anmeldung fehlgeschlagen.' })
     }
@@ -63,7 +72,7 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
     set({ busy: true, error: null })
     try {
       const access = await signInWithProvider(anbieter)
-      set({ busy: false, erlaubt: access.erlaubt, mode: access.mode, email: access.email })
+      set({ busy: false, erlaubt: access.erlaubt, mode: access.mode, email: access.email, uid: access.uid })
     } catch (error) {
       set({ busy: false, error: error instanceof AuthError ? error.message : 'Anmeldung fehlgeschlagen.' })
     }
@@ -72,6 +81,6 @@ export const useAdminAccess = create<AdminAccessState>((set) => ({
   async signOut() {
     set({ busy: true })
     await signOutModerator()
-    set({ busy: false, erlaubt: false, mode: 'gesperrt', email: null, error: null })
+    set({ busy: false, erlaubt: false, mode: 'gesperrt', email: null, uid: null, error: null })
   },
 }))

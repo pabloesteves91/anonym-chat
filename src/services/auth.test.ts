@@ -8,12 +8,26 @@ describe('Moderationszugang', () => {
       erlaubt: true,
       mode: 'konto',
       email: 'mod@example.ch',
+      uid: MODERATOR_UID,
     })
   })
 
-  it('sperrt fremde Konten und nicht angemeldete Besucher', () => {
-    const gesperrt = { erlaubt: false, mode: 'gesperrt', email: null }
-    expect(evaluateAccess({ uid: 'irgendwer', email: 'wer@example.ch' })).toEqual(gesperrt)
-    expect(evaluateAccess(null)).toEqual(gesperrt)
+  it('sperrt fremde Konten', () => {
+    expect(evaluateAccess({ uid: 'irgendwer', email: 'wer@example.ch' })).toEqual({
+      erlaubt: false,
+      mode: 'gesperrt',
+      email: 'wer@example.ch',
+      uid: 'irgendwer',
+    })
+  })
+
+  it('nennt die Kennung des fremden Kontos, damit der Grund sichtbar wird', () => {
+    // Wer angemeldet ist und trotzdem abgewiesen wird, muss vergleichen
+    // können – sonst bleibt nur Raten.
+    expect(evaluateAccess({ uid: 'irgendwer', email: null }).uid).toBe('irgendwer')
+  })
+
+  it('sperrt nicht angemeldete Besucher ohne Angaben', () => {
+    expect(evaluateAccess(null)).toEqual({ erlaubt: false, mode: 'gesperrt', email: null, uid: null })
   })
 })
