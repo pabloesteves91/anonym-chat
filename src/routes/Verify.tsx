@@ -367,6 +367,10 @@ export function Verify() {
             </Link>
           </div>
         </Panel>
+
+        <div className="mt-6">
+          <Kontokennung id={user.id} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
+        </div>
       </div>
     )
   }
@@ -410,6 +414,8 @@ export function Verify() {
             </Button>
           </div>
         </Panel>
+
+        <Kontokennung id={user?.id ?? ''} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
       </div>
     )
   }
@@ -433,6 +439,8 @@ export function Verify() {
             </Button>
           </div>
         </Panel>
+
+        <Kontokennung id={user?.id ?? ''} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
       </div>
     )
   }
