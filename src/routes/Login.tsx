@@ -23,10 +23,12 @@ export function Login() {
 
   return (
     <div className="prose-column">
-      <PageTitle kicker="Konto">Anmelden</PageTitle>
+      <PageTitle kicker="Konto">Anmelden oder Konto anlegen</PageTitle>
       <p className="text-muted">
-        Dein Konto bleibt hinter den Kulissen: Es verbindet dich mit deiner Verifizierung, damit eine Sperre hält.
-        Im Chat sehen andere davon nichts – weder deinen Namen noch deine Adresse.
+        Beides geht über denselben Knopf: Wer zum ersten Mal kommt, bekommt automatisch ein Konto, wer schon eines
+        hat, landet wieder darin. Dein Konto bleibt dabei hinter den Kulissen – es verbindet dich mit deiner
+        Verifizierung, damit eine Sperre hält. Im Chat sehen andere davon nichts, weder deinen Namen noch deine
+        Adresse.
       </p>
 
       <Panel className="mt-6 flex flex-col gap-3 p-5">

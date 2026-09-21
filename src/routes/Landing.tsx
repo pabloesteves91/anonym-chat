@@ -62,6 +62,11 @@ export function Landing() {
             <ShieldMark />
             {label}
           </Link>
+          {!konto ? (
+            <Link to="/anmelden" className="rounded-sm px-3 py-2.5 text-muted underline underline-offset-4 transition-colors hover:text-ink">
+              Ich habe schon ein Konto
+            </Link>
+          ) : null}
           <span className="text-sm text-muted">Kostenlos · Keine Profile · Kein Klarname</span>
         </div>
       </section>

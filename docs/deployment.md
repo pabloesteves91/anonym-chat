@@ -116,15 +116,44 @@ freigegeben sein:
 Ohne diesen Eintrag meldet die Anmeldung `auth/unauthorized-domain`.
 
 Die Security Rules liegen als `firestore.rules` und `storage.rules` im Repo
-und **müssen ausgerollt sein, bevor echte Daten hineingehen**:
+und **müssen ausgerollt sein, bevor echte Daten hineingehen**. Ohne sie gilt,
+was in der Konsole steht – im Produktionsmodus ist das „alles verboten", und
+die App bekommt bei jedem Zugriff „Dafür fehlen die Rechte".
+
+Drei Wege, je nachdem was gerade zur Hand ist.
+
+### A) Von Hand in der Konsole – am schnellsten, ohne Einrichtung
+
+1. Datei im Repo öffnen, Inhalt kopieren:
+   [firestore.rules](../firestore.rules)
+2. Firebase-Konsole → **Firestore Database → Regeln**, alles ersetzen,
+   **Veröffentlichen**.
+3. Dasselbe mit [storage.rules](../storage.rules) unter **Storage → Regeln**.
+
+Nachteil: Die Konsole und das Repo können auseinanderlaufen. Nach einer
+Änderung im Repo also daran denken – oder Weg B nehmen.
+
+### B) Über GitHub Actions – einmal einrichten, dann automatisch
+
+`.github/workflows/firebase-rules.yml` rollt beide Dateien aus, sobald sie
+sich ändern, und lässt sich jederzeit von Hand starten. Einmalig nötig:
+
+1. Firebase-Konsole → **Projekteinstellungen → Dienstkonten → Neuen privaten
+   Schlüssel generieren**. Es lädt eine JSON-Datei herunter.
+2. GitHub → **Settings → Secrets and variables → Actions → New repository
+   secret**, Name `FIREBASE_SERVICE_ACCOUNT`, als Wert den **ganzen Inhalt**
+   der JSON-Datei einfügen.
+3. **Actions → Firebase Rules → Run workflow**.
+
+Die JSON-Datei danach lokal löschen und nirgends sonst ablegen: Sie umgeht
+jede Security Rule. Im Secret ist sie richtig aufgehoben, in einem Chat oder
+im Repo nicht.
+
+### C) Lokal, wenn ein Terminal da ist
 
 ```bash
 npx firebase-tools deploy --only firestore:rules,storage
 ```
-
-Ohne sie gilt, was in der Konsole steht – im Produktionsmodus ist das
-„alles verboten", und die App bekommt bei jedem Zugriff „Dafür fehlen die
-Rechte".
 
 ### Emulator für die Entwicklung
 

@@ -1,0 +1,44 @@
+name: Firebase Rules
+
+# Rollt firestore.rules und storage.rules aus, ohne dass jemand lokal etwas
+# installieren muss. Läuft von Hand (Actions → Firebase Rules → Run workflow)
+# und automatisch, wenn sich eine der beiden Dateien ändert.
+#
+# Voraussetzung: das Repository-Secret FIREBASE_SERVICE_ACCOUNT mit dem
+# Inhalt eines Dienstkonto-Schlüssels aus der Firebase-Konsole
+# (Projekteinstellungen → Dienstkonten → Neuen privaten Schlüssel generieren).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - firestore.rules
+      - storage.rules
+      - firebase.json
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Schlüssel bereitstellen
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT fehlt. Anleitung: docs/deployment.md"
+            exit 1
+          fi
+          printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
+
+      - name: Regeln ausrollen
+        run: npx --yes firebase-tools@15 deploy --only firestore:rules,storage --project anonym-chat-223af --non-interactive
+
+      - name: Schlüssel entfernen
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-key.json"
