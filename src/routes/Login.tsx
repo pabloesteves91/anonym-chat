@@ -105,7 +105,11 @@ export function Login() {
           <Field
             label="Passwort"
             htmlFor="passwort"
-            hint={registrieren ? `Mindestens ${MIN_PASSWORT_LAENGE} Zeichen.` : undefined}
+            hint={
+              registrieren
+                ? `Mindestens ${MIN_PASSWORT_LAENGE} Zeichen.`
+                : 'Nur für Konten mit Passwort. Über Google oder Apple angelegte Konten haben keines.'
+            }
           >
             <input
               id="passwort"

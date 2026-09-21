@@ -78,8 +78,16 @@ export function watchModeratorAccess(onChange: (access: ModeratorAccess) => void
   }
 }
 
+/**
+ * Firebase meldet für ein falsches Passwort und für ein Konto ganz ohne
+ * Passwort denselben Code. Der Hinweis auf Google und Apple steht deshalb
+ * gleich dabei – sonst sucht man nach einem Passwort, das es nie gab.
+ */
+const OHNE_PASSWORT =
+  'Wurde das Konto über Google oder Apple angelegt, hat es kein Passwort – dann bitte den entsprechenden Knopf nehmen.'
+
 const FEHLERTEXT: Record<string, string> = {
-  'auth/invalid-credential': 'E-Mail oder Passwort stimmt nicht.',
+  'auth/invalid-credential': `E-Mail oder Passwort stimmt nicht. ${OHNE_PASSWORT}`,
   'auth/operation-not-allowed': 'Diese Anmeldeart ist in Firebase nicht aktiviert.',
   'auth/popup-closed-by-user': 'Das Anmeldefenster wurde geschlossen.',
   'auth/popup-blocked': 'Der Browser hat das Anmeldefenster blockiert.',
@@ -92,7 +100,7 @@ const FEHLERTEXT: Record<string, string> = {
   'auth/weak-password': 'Das Passwort ist zu kurz – mindestens acht Zeichen.',
   'auth/missing-password': 'Bitte ein Passwort eingeben.',
   'auth/user-not-found': 'Zu dieser Adresse gibt es kein Konto.',
-  'auth/wrong-password': 'E-Mail oder Passwort stimmt nicht.',
+  'auth/wrong-password': `E-Mail oder Passwort stimmt nicht. ${OHNE_PASSWORT}`,
 }
 
 function authFehler(error: unknown, fallback: string): AuthError {
