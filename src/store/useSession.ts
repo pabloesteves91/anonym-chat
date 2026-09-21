@@ -23,6 +23,7 @@ interface SessionState {
 
   load: (uid: string) => Promise<void>
   clear: () => void
+  clearError: () => void
   /** Nur Nutzer und Status neu lesen, ohne Ladezustand zurückzusetzen. */
   refreshUser: () => Promise<void>
   acceptCodex: () => Promise<void>
@@ -49,21 +50,37 @@ export const useSession = create<SessionState>((set, get) => ({
   async load(uid) {
     // Bis das Profil dieses Kontos geladen ist, darf keine Weiche gestellt
     // werden – sonst landet eine verifizierte Person wieder im Antrag.
-    set({ loading: true })
-    await api.ensureIdentity(uid)
-    const session = await api.getSession()
-    set({
-      ready: true,
-      user: session.user,
-      storageAvailable: session.storageAvailable,
-      codexAccepted: session.codexAccepted,
-      selfBlocked: session.selfBlocked,
-      loading: false,
-    })
+    set({ loading: true, error: null })
+    try {
+      await api.ensureIdentity(uid)
+      const session = await api.getSession()
+      set({
+        ready: true,
+        user: session.user,
+        storageAvailable: session.storageAvailable,
+        codexAccepted: session.codexAccepted,
+        selfBlocked: session.selfBlocked,
+        loading: false,
+      })
+    } catch (error) {
+      // Ein Fehlschlag muss enden. Bleibt `loading` stehen, wartet die
+      // Oberfläche bis in alle Ewigkeit auf ein Profil, das nie kommt –
+      // von aussen nicht von "lädt gerade" zu unterscheiden.
+      set({
+        ready: true,
+        loading: false,
+        user: null,
+        error: error instanceof api.ApiError ? error.message : 'Dein Profil konnte nicht geladen werden.',
+      })
+    }
   },
 
   clear() {
     set({ ready: true, loading: false, user: null, codexAccepted: false, selfBlocked: [], error: null })
+  },
+
+  clearError() {
+    set({ error: null })
   },
 
   async refreshUser() {

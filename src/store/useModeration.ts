@@ -15,6 +15,8 @@ import type {
 interface ModerationState {
   ready: boolean
   busy: boolean
+  /** Warum die Ansicht leer bleibt – sonst lädt sie scheinbar endlos. */
+  error: string | null
   reports: Report[]
   blocked: string[]
   requests: VerificationRequest[]
@@ -40,6 +42,7 @@ interface ModerationState {
 export const useModeration = create<ModerationState>((set, get) => ({
   ready: false,
   busy: false,
+  error: null,
   reports: [],
   blocked: [],
   requests: [],
@@ -50,30 +53,41 @@ export const useModeration = create<ModerationState>((set, get) => ({
   accessLog: [],
 
   async load() {
-    const [reports, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
-      api.listReports(),
-      api.listBlocked(),
-      api.listVerificationRequests(),
-      api.listTranscripts(),
-      api.listAccessLog(),
-      api.listPlanRequests(),
-    ])
+    set({ error: null })
+    try {
+      const [reports, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
+        api.listReports(),
+        api.listBlocked(),
+        api.listVerificationRequests(),
+        api.listTranscripts(),
+        api.listAccessLog(),
+        api.listPlanRequests(),
+      ])
 
-    // Bilder nur für offene Anträge holen – entschiedene haben keine mehr.
-    const offen = requests.filter((request) => request.status === 'wartet')
-    const paare = await Promise.all(
-      offen.map(async (request) => [request.id, await api.getVerificationImages(request.id)] as const),
-    )
-    set({
-      reports,
-      blocked,
-      requests,
-      transcripts,
-      accessLog,
-      planRequests,
-      images: Object.fromEntries(paare),
-      ready: true,
-    })
+      // Bilder nur für offene Anträge holen – entschiedene haben keine mehr.
+      const offen = requests.filter((request) => request.status === 'wartet')
+      const paare = await Promise.all(
+        offen.map(async (request) => [request.id, await api.getVerificationImages(request.id)] as const),
+      )
+      set({
+        reports,
+        blocked,
+        requests,
+        transcripts,
+        accessLog,
+        planRequests,
+        images: Object.fromEntries(paare),
+        ready: true,
+      })
+    } catch (error) {
+      // Ein Fehlschlag muss enden: Bleibt `ready` auf false, zeigt die
+      // Ansicht für immer "wird geladen" und sieht aus wie ein Hänger.
+      set({
+        ready: true,
+        error:
+          error instanceof api.ApiError ? error.message : 'Die Moderationsdaten konnten nicht geladen werden.',
+      })
+    }
   },
 
   async openTranscript(id) {

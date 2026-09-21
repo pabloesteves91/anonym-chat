@@ -2,8 +2,38 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
+import { Button, Note, Panel } from './ui'
 import { ThemeToggle } from './ThemeToggle'
 import { TarifDialog } from './TarifDialog'
+
+/** Angemeldet, aber das Profil lässt sich nicht laden. */
+function Profilfehler({ meldung }: { meldung: string }) {
+  const erneut = useAuth((s) => s.user?.uid)
+  const load = useSession((s) => s.load)
+  const signOut = useAuth((s) => s.signOut)
+  const busy = useSession((s) => s.loading)
+
+  return (
+    <div className="prose-column">
+      <h1 className="font-display text-3xl font-semibold">Dein Profil lässt sich nicht laden</h1>
+      <p className="mt-3 text-muted">
+        Du bist angemeldet, aber die Daten zu deinem Konto kommen nicht an. Meistens liegt das an der Verbindung;
+        seltener daran, dass dieses Konto keinen Zugriff hat.
+      </p>
+      <Panel className="mt-6 flex flex-col gap-4 p-5">
+        <Note tone="warn">{meldung}</Note>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="primary" disabled={busy || !erneut} onClick={() => erneut && void load(erneut)}>
+            {busy ? 'Wird geladen …' : 'Erneut versuchen'}
+          </Button>
+          <Button disabled={busy} onClick={() => void signOut()}>
+            Abmelden
+          </Button>
+        </div>
+      </Panel>
+    </div>
+  )
+}
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-sm px-2.5 py-1.5 text-sm transition-colors ${
@@ -15,11 +45,19 @@ export function AppShell() {
   const signOut = useAuth((s) => s.signOut)
   const user = useSession((s) => s.user)
   const storageAvailable = useSession((s) => s.storageAvailable)
+  const profilFehler = useSession((s) => s.error)
   const { pathname } = useLocation()
 
   // Die Moderation ist kein Publikum: Dort hat ein Tarifangebot nichts
   // verloren, und ein Modal davor macht die Ansicht unbedienbar.
   const imModerationsbereich = pathname.startsWith('/admin')
+
+  /**
+   * Angemeldet, aber ohne Profil: Ohne eigene Anzeige bliebe hier eine
+   * Seite stehen, die auf etwas wartet, das nicht mehr kommt. Die
+   * Moderationsansicht ist ausgenommen – sie hängt nicht am Profil.
+   */
+  const profilFehlt = Boolean(konto && !user && profilFehler) && !imModerationsbereich
 
   return (
     <div className="flex min-h-full flex-col">
@@ -82,7 +120,7 @@ export function AppShell() {
       ) : null}
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        <Outlet />
+        {profilFehlt ? <Profilfehler meldung={profilFehler ?? ''} /> : <Outlet />}
       </main>
 
       {/* Einmalige Tarifwahl nach der ersten Anmeldung. */}

@@ -109,6 +109,7 @@ export function Admin() {
   const busy = useModeration((s) => s.busy)
   const load = useModeration((s) => s.load)
   const clearAll = useModeration((s) => s.clearAll)
+  const fehler = useModeration((s) => s.error)
 
   useEffect(() => {
     void load()
@@ -157,7 +158,22 @@ export function Admin() {
         </div>
       </div>
 
-      {!ready ? (
+      {fehler ? (
+        <Panel className="flex flex-col gap-3 p-5">
+          <h2 className="font-display text-xl font-semibold">Die Daten kommen nicht an</h2>
+          <Note tone="warn">{fehler}</Note>
+          <p className="text-sm text-muted">
+            Bei „Dafür fehlen die Rechte" prüft Firestore die Kennung dieses Kontos gegen die in
+            <span className="font-mono"> firestore.rules</span> hinterlegte. Stimmen sie nicht überein, bleibt die
+            Ansicht leer, auch wenn die Anmeldung geklappt hat.
+          </p>
+          <div>
+            <Button disabled={busy} onClick={() => void load()}>
+              Erneut versuchen
+            </Button>
+          </div>
+        </Panel>
+      ) : !ready ? (
         <p className="label-caps" role="status">
           Meldungen werden geladen …
         </p>
