@@ -209,3 +209,5 @@ Details und der Weg zur Kasse: [docs/tarife.md](docs/tarife.md).
   Rules und Indizes ausrollen
 - [docs/tarife.md](docs/tarife.md) – Tarifmodell und was die Kasse braucht
 - [docs/testrunde.md](docs/testrunde.md) – Durchlauf zu zweit
+- [docs/sicherheit.md](docs/sicherheit.md) – was geprüft ist, was offen ist,
+  und was vor dem Start noch passieren muss

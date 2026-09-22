@@ -189,12 +189,23 @@ describe('Warteschlange', () => {
 
   it('erlaubt genau einen Zugriff auf den fremden Eintrag: die Raumnummer', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'queue', ANNA), warteEintrag(ANNA))
       await setDoc(doc(ctx.firestore(), 'queue', BEN), warteEintrag(BEN))
     })
     await assertFails(updateDoc(doc(als(ANNA), 'queue', BEN), { pseudonym: 'Untergeschoben' }))
     await assertSucceeds(updateDoc(doc(als(ANNA), 'queue', BEN), { roomId: 'raum-1' }))
     // Ein zweites Mal nicht: der Eintrag ist vergeben.
     await assertFails(updateDoc(doc(als(FREMD), 'queue', BEN), { roomId: 'raum-2' }))
+  })
+
+  it('lässt nur Suchende eine Raumnummer eintragen', async () => {
+    // Anna ist verifiziert, sucht aber nicht. Dann hat sie an Bens Eintrag
+    // auch nichts zu suchen – sonst kann jedes verifizierte Konto reihenweise
+    // Wartende mit erfundenen Raumnummern blockieren.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'queue', BEN), warteEintrag(BEN))
+    })
+    await assertFails(updateDoc(doc(als(ANNA), 'queue', BEN), { roomId: 'raum-1' }))
   })
 })
 
@@ -203,6 +214,30 @@ describe('Chaträume', () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'chats', 'raum-1'), raum())
     })
+  })
+
+  it('lässt keinen Raum mit einer ahnungslosen Person entstehen', async () => {
+    // Ohne diese Regel legt ein verifiziertes Konto einen Raum mit einem
+    // beliebigen Gegenüber an, schreibt darin und meldet ihn – die Moderation
+    // bekäme ein Gespräch vorgelegt, das nie stattgefunden hat.
+    await assertFails(setDoc(doc(als(ANNA), 'chats', 'raum-2'), raum({ id: 'raum-2' })))
+
+    // Suchen beide, ist es ein echter Treffer.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'queue', ANNA), warteEintrag(ANNA))
+      await setDoc(doc(ctx.firestore(), 'queue', BEN), warteEintrag(BEN))
+    })
+    await assertSucceeds(setDoc(doc(als(ANNA), 'chats', 'raum-2'), raum({ id: 'raum-2' })))
+  })
+
+  it('lässt niemanden einen Raum ohne sich selbst anlegen', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'queue', ANNA), warteEintrag(ANNA))
+      await setDoc(doc(ctx.firestore(), 'queue', BEN), warteEintrag(BEN))
+    })
+    await assertFails(
+      setDoc(doc(als(FREMD), 'chats', 'raum-3'), raum({ id: 'raum-3' })),
+    )
   })
 
   it('lässt nur Beteiligte lesen', async () => {

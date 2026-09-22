@@ -165,7 +165,15 @@ service cloud.firestore {
     // ausserhalb der Konto-ID, keine Nummer, keine Adresse.
     //
     // Den fremden Eintrag darf man genau einmal anfassen: um die Nummer des
-    // gemeinsamen Raums einzutragen, und nur solange dort noch keine steht.
+    // gemeinsamen Raums einzutragen, und nur solange dort noch keine steht –
+    // und nur, wer selbst in der Warteschlange steht. Wer nicht sucht, hat
+    // dort nichts einzutragen.
+    //
+    // Restrisiko: Wer wirklich sucht, kann einen fremden Eintrag mit einer
+    // erfundenen Raumnummer blockieren. Das lässt sich hier nicht abfangen –
+    // in einer Transaktion sieht `get()` den Raum noch nicht, den dieselbe
+    // Transaktion anlegt. Die App erkennt und heilt es stattdessen selbst
+    // (siehe `schonVergeben` in `src/services/backend/live.ts`).
     match /queue/{userId} {
       allow read: if darfChatten() || istModeration();
       allow create: if isOwner(userId)
@@ -174,6 +182,7 @@ service cloud.firestore {
         && request.resource.data.roomId == null;
       allow update: if (isOwner(userId) && request.resource.data.uid == userId)
         || (darfChatten()
+            && exists(/databases/$(database)/documents/queue/$(request.auth.uid))
             && resource.data.roomId == null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roomId'])
             && request.resource.data.roomId is string);
@@ -187,9 +196,20 @@ service cloud.firestore {
         return isSignedIn() && resource.data.participants.hasAny([request.auth.uid]);
       }
 
+      // Ein Raum entsteht nur aus der Warteschlange. Ohne die beiden
+      // Bedingungen unten könnte ein verifiziertes Konto einen Raum mit einer
+      // beliebigen zweiten Person anlegen, die davon nichts weiss, dort im
+      // eigenen Namen schreiben und den Raum anschliessend melden – die
+      // Moderation bekäme ein erfundenes Gespräch vorgelegt.
+      //
+      // Beide Warteschlangeneinträge sind da, wenn die Transaktion den Raum
+      // anlegt (`greife` in `src/services/backend/live.ts`): Regeln sehen den
+      // Stand vor der Transaktion, und da stehen beide noch drin.
       allow create: if darfChatten()
         && request.resource.data.participants.hasAny([request.auth.uid])
         && request.resource.data.participants.size() == 2
+        && exists(/databases/$(database)/documents/queue/$(request.resource.data.participants[0]))
+        && exists(/databases/$(database)/documents/queue/$(request.resource.data.participants[1]))
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt > request.time;
 

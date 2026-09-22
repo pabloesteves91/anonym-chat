@@ -140,7 +140,7 @@ export const DATENSCHUTZ: Rechtstext = {
       titel: 'Ihre Rechte',
       absaetze: [
         `Sie haben das Recht auf Auskunft, Berichtigung, Löschung und Datenherausgabe. Schreiben Sie dafür an ${BETREIBER.email}. Zur Beschwerde steht Ihnen der Eidgenössische Datenschutz- und Öffentlichkeitsbeauftragte (EDÖB) offen, für Betroffene aus dem EWR die jeweilige Aufsichtsbehörde.`,
-        'Ihr Konto können Sie im Profil selbst löschen. Damit verschwinden Profil und Mitgliedschaft; bestehende Meldungen und Sperren bleiben bestehen, weil sie sonst wirkungslos wären.',
+        `Die Löschung Ihres Kontos veranlassen Sie über ${BETREIBER.email}; wir führen sie aus, sobald wir Ihre Anfrage dem Konto zuordnen können. Damit verschwinden Profil und Mitgliedschaft; bestehende Meldungen und Sperren bleiben bestehen, weil sie sonst wirkungslos wären.`,
       ],
     },
     {

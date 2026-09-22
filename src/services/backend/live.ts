@@ -157,21 +157,50 @@ async function greife(kandidat: QueueDoc, ich: User): Promise<Treffer> {
   return { roomId, partnerId: kandidat.uid, partnerPseudonym: kandidat.pseudonym }
 }
 
-/** Wurde ich inzwischen von jemand anderem gegriffen? */
+/**
+ * Wurde ich inzwischen von jemand anderem gegriffen?
+ *
+ * Steht im eigenen Eintrag eine Raumnummer, zu der es keinen Raum gibt – oder
+ * einen, in dem ich gar nicht stehe –, dann hat sie jemand hineingeschrieben,
+ * der nicht wirklich gegriffen hat. Das ist kein hypothetischer Fall: Die
+ * Regeln erlauben Suchenden genau dieses eine Feld am fremden Eintrag, und sie
+ * können dort nicht nachsehen, ob der Raum auch entsteht.
+ *
+ * Ohne Gegenmassnahme bliebe die Suche für immer hängen: Ein Eintrag mit
+ * Raumnummer gilt als vergeben, niemand greift ihn mehr, und die eigene
+ * Transaktion bricht selbst ab. Deshalb wird die Nummer hier zurückgesetzt –
+ * das darf man am eigenen Eintrag – und weitergesucht.
+ */
 async function schonVergeben(meineKennung: string): Promise<Treffer | null> {
   const snap = await getDoc(doc(db(), PFAD.queue, meineKennung))
   const daten = snap.data() as QueueDoc | undefined
   if (!daten?.roomId) return null
 
-  const raum = await getDoc(doc(db(), PFAD.chats, daten.roomId))
-  if (!raum.exists()) return null
-  const inhalt = raum.data() as ChatDoc
-  const partnerId = inhalt.participants.find((id) => id !== meineKennung)
-  if (!partnerId) return null
+  const raum = await getDoc(doc(db(), PFAD.chats, daten.roomId)).catch(() => null)
+  const inhalt = raum?.exists() ? (raum.data() as ChatDoc) : null
+  const partnerId = inhalt?.participants.includes(meineKennung)
+    ? inhalt.participants.find((id) => id !== meineKennung)
+    : undefined
+
+  if (!inhalt || !partnerId) {
+    await freieMichWieder(meineKennung)
+    return null
+  }
+
   return {
     roomId: daten.roomId,
     partnerId,
     partnerPseudonym: inhalt.pseudonyms[partnerId] ?? 'Unbekannt',
+  }
+}
+
+/** Die untergeschobene Raumnummer entfernen, damit die Suche weiterläuft. */
+async function freieMichWieder(meineKennung: string): Promise<void> {
+  try {
+    await updateDoc(doc(db(), PFAD.queue, meineKennung), { roomId: null, since: serverTimestamp() })
+  } catch {
+    // Gelingt es nicht, hilft der nächste Durchgang oder das Verlassen der
+    // Warteschlange – hängen bleibt die Suche dadurch nicht.
   }
 }
 
