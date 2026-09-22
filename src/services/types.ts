@@ -45,6 +45,20 @@ export interface Profile {
   interests: string[]
 }
 
+/**
+ * Geschlecht, wie es bei der Registrierung angegeben wird.
+ *
+ * Es steuert ausschliesslich die Form des Zufallsnamens – gefiltert oder
+ * sortiert wird danach nicht. Angegeben wird es einmal; ändern kann es
+ * danach nur die Moderation, damit der Name im Chat verlässlich bleibt.
+ */
+export type Geschlecht = 'weiblich' | 'maennlich'
+
+export const GESCHLECHTER: { value: Geschlecht; label: string }[] = [
+  { value: 'weiblich', label: 'Weiblich' },
+  { value: 'maennlich', label: 'Männlich' },
+]
+
 /** Stand der Verifizierung aus Sicht des Nutzers. */
 export type VerificationStatus = 'offen' | 'wartet' | 'verifiziert' | 'abgelehnt'
 
@@ -75,6 +89,8 @@ export interface User {
   planChosen: boolean
   /** Moderation und Verwaltung nutzen den Dienst ohne Tarifgrenzen. */
   rolle: Rolle
+  /** Bestimmt die Form des Zufallsnamens. `null`, solange nicht angegeben. */
+  geschlecht: Geschlecht | null
 }
 
 /**

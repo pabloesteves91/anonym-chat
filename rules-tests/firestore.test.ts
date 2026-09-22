@@ -353,6 +353,51 @@ describe('Verifizierungsanträge', () => {
   })
 })
 
+describe('Geschlechtsangabe', () => {
+  it('lässt sie genau einmal setzen', async () => {
+    // Die Ausgangslage hat das Feld gar nicht – wie bei Konten aus der Zeit
+    // davor. Auch dann muss die Regel greifen.
+    await assertSucceeds(updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 'weiblich' }))
+    await assertFails(updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 'maennlich' }))
+  })
+
+  it('weist erfundene Angaben ab', async () => {
+    await assertFails(updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 'irgendwas' }))
+    await assertFails(updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 42 }))
+  })
+
+  it('lässt das übrige Profil weiter ändern, solange die Angabe gleich bleibt', async () => {
+    await updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 'weiblich' })
+    await assertSucceeds(updateDoc(doc(als(ANNA), 'users', ANNA), { pseudonym: 'Stille Amsel 2098' }))
+    await assertFails(
+      updateDoc(doc(als(ANNA), 'users', ANNA), { pseudonym: 'Blauer Falke 1111', geschlecht: 'maennlich' }),
+    )
+  })
+
+  it('lässt die Moderation korrigieren, samt Namen', async () => {
+    await updateDoc(doc(als(ANNA), 'users', ANNA), { geschlecht: 'weiblich' })
+    await assertSucceeds(
+      updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
+        geschlecht: 'maennlich',
+        pseudonym: 'Blauer Falke 4417',
+      }),
+    )
+  })
+
+  it('lässt die Moderation dabei nicht am Tarif drehen', async () => {
+    await assertFails(
+      updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
+        geschlecht: 'maennlich',
+        membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+      }),
+    )
+  })
+
+  it('lässt niemanden an einem fremden Konto drehen', async () => {
+    await assertFails(updateDoc(doc(als(BEN), 'users', ANNA), { geschlecht: 'maennlich' }))
+  })
+})
+
 describe('Rollentrennung', () => {
   it('lässt reine Moderation über Verifizierungen entscheiden', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -390,8 +435,18 @@ describe('Rollentrennung', () => {
     )
   })
 
-  it('lässt reine Moderation das Pseudonym anderer nicht ändern', async () => {
-    await assertFails(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { pseudonym: 'Untergeschoben' }))
+  it('lässt reine Moderation den Namen ändern – das ist der Supportfall', async () => {
+    // Eine Korrektur der Geschlechtsangabe muss den Namen neu setzen, sonst
+    // widerspräche er ihr. Damit kann die Moderation umbenennen; das ist der
+    // Preis dafür und im Zugriffsprotokoll nicht sichtbar. Weiter reicht es
+    // aber nicht.
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { pseudonym: 'Blauer Falke 4417' }))
+    await assertFails(
+      updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
+        profile: { language: 'fr', ageGroup: '50+', interests: [] },
+      }),
+    )
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { selfBlocked: ['konto-ben'] }))
   })
 
   it('lässt reine Moderation Meldungen und Verläufe bearbeiten', async () => {

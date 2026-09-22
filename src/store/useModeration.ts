@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
 import type { PlanId } from '../services/plans'
+import type { Geschlecht } from '../services/types'
 import type {
   AccessLogEntry,
   ChatTranscript,
@@ -65,6 +66,8 @@ interface ModerationState {
   decide: (requestId: string, decision: 'freigegeben' | 'abgelehnt', reason?: string) => Promise<void>
   /** Tarif von Hand vergeben, solange es keine Kasse gibt. */
   setPlan: (userId: string, plan: PlanId, laufzeitTage: number | null) => Promise<boolean>
+  /** Geschlechtsangabe korrigieren – der Supportfall dazu. */
+  setGeschlecht: (userId: string, geschlecht: Geschlecht) => Promise<boolean>
   setStatus: (id: string, status: ReportStatus) => Promise<void>
   clearAll: () => Promise<void>
 }
@@ -170,6 +173,19 @@ export const useModeration = create<ModerationState>((set, get) => ({
       return true
     } catch (error) {
       set({ error: meldung(error, 'Der Tarif konnte nicht gesetzt werden.') })
+      return false
+    } finally {
+      set({ busy: false })
+    }
+  },
+
+  async setGeschlecht(userId, geschlecht) {
+    set({ busy: true, error: null })
+    try {
+      await api.setGeschlechtFuer(userId, geschlecht)
+      return true
+    } catch (error) {
+      set({ error: meldung(error, 'Die Angabe konnte nicht geändert werden.') })
       return false
     } finally {
       set({ busy: false })

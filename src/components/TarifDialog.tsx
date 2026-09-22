@@ -52,13 +52,24 @@ export function TarifDialog() {
 
   // Wer den Dienst betreibt, bekommt kein Tarifangebot – er hat ohnehin
   // keine Grenzen, und die Frage wäre nur im Weg.
-  const anlass = ready && !loading && Boolean(user) && !user?.planChosen && user?.rolle === 'nutzer'
+  // Erst nach der Pflichtangabe: Zwei Fenster übereinander wären eine Wand.
+  const anlass =
+    ready && !loading && Boolean(user) && Boolean(user?.geschlecht) && !user?.planChosen && user?.rolle === 'nutzer'
   if (anlass && !aufgegangen && !abgeschlossen) setAufgegangen(true)
 
   const sichtbar = aufgegangen && !abgeschlossen
 
+  /**
+   * Einmal gesehen, nie wieder.
+   *
+   * "Später entscheiden" hält das auch fest – sonst ginge das Fenster bei
+   * jedem Seitenaufruf neu auf, und aus einem Angebot würde Nörgeln. Wer
+   * nichts wählt, bleibt im Gratistarif; das steht so im Fenster, und
+   * wechseln lässt es sich jederzeit unter "Tarife".
+   */
   const schliessen = () => {
     setAbgeschlossen(true)
+    if (bestaetigt === null) void choosePlan('frei')
   }
 
   const waehlen = async () => {

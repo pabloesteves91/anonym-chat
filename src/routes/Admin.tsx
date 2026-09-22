@@ -8,6 +8,7 @@ import { ROLLE_LABEL, type Rolle } from '../services/roles'
 import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 import { PlanZuteilung } from '../components/PlanZuteilung'
+import { GeschlechtKorrektur } from '../components/GeschlechtKorrektur'
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   offen: 'Offen',
@@ -199,6 +200,8 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
           ))}
         </div>
       )}
+
+      <GeschlechtKorrektur />
 
       {darfVerwalten ? <PlanZuteilung /> : null}
 

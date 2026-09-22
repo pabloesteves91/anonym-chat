@@ -23,6 +23,7 @@ import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
   ChatTranscript,
+  Geschlecht,
   PlanRequest,
   Profile,
   Report,
@@ -100,6 +101,14 @@ async function fuehreAus<T>(was: () => Promise<T>, fallback: string): Promise<T>
 interface UserDoc {
   pseudonym: string
   /**
+   * Einmal angegeben, danach nur noch von der Moderation änderbar.
+   *
+   * Der Name im Chat richtet sich danach. Liesse er sich jederzeit
+   * umstellen, wäre die einzige Angabe über das Gegenüber beliebig – und
+   * damit wertlos.
+   */
+  geschlecht: Geschlecht | null
+  /**
    * Der Prüfstand – und die einzige Wahrheit darüber.
    *
    * Daneben stand früher ein zweites Feld `verified`. Zwei Felder, die
@@ -120,6 +129,7 @@ interface UserDoc {
 
 const leererUser = (): UserDoc => ({
   pseudonym: generatePseudonym(),
+  geschlecht: null,
   verificationStatus: 'offen',
   verifiedAt: null,
   phone: null,
@@ -146,6 +156,7 @@ function toUser(id: string, data: UserDoc): User {
     usage: data.usage ?? { tag: heute(), chats: 0 },
     planChosen: Boolean(data.planChosen),
     rolle: rolleFuer(id),
+    geschlecht: data.geschlecht ?? null,
   }
 }
 
@@ -241,7 +252,53 @@ export async function setPseudonym(name: string): Promise<User> {
 }
 
 export async function regeneratePseudonym(): Promise<User> {
-  return fuehreAus(() => setzePseudonym(generatePseudonym()), 'Name konnte nicht gewürfelt werden.')
+  return fuehreAus(async () => {
+    const data = await ladeUserDoc(uid())
+    return await setzePseudonym(generatePseudonym(data?.geschlecht ?? null))
+  }, 'Name konnte nicht gewürfelt werden.')
+}
+
+/* ------------------------------------------------------------ Geschlecht */
+
+/**
+ * Die einmalige Angabe bei der Registrierung.
+ *
+ * Sie setzt zugleich einen passenden Namen: Der bisherige stammt aus der
+ * Zeit, in der das Geschlecht noch nicht bekannt war. Ein zweites Mal geht
+ * es nicht – die Regeln lassen den Wechsel nur zu, solange das Feld leer
+ * ist. Danach ist es eine Sache für den Support.
+ */
+export async function setGeschlecht(geschlecht: Geschlecht): Promise<User> {
+  return fuehreAus(async () => {
+    const id = uid()
+    const data = await ladeUserDoc(id)
+    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+    if (data.geschlecht) {
+      throw new ApiError('Das lässt sich nur noch über den Support ändern.', 'verweigert')
+    }
+    await updateDoc(doc(getDb(), PFAD.users, id), {
+      geschlecht,
+      pseudonym: generatePseudonym(geschlecht),
+    })
+    const frisch = await ladeUserDoc(id)
+    return toUser(id, frisch ?? data)
+  }, 'Die Angabe konnte nicht gespeichert werden.')
+}
+
+/**
+ * Korrektur durch die Moderation.
+ *
+ * Der Name wird dabei neu gewürfelt, sonst widerspräche er der Angabe.
+ */
+export async function setGeschlechtFuer(userId: string, geschlecht: Geschlecht): Promise<void> {
+  await fuehreAus(
+    () =>
+      updateDoc(doc(getDb(), PFAD.users, userId), {
+        geschlecht,
+        pseudonym: generatePseudonym(geschlecht),
+      }),
+    'Die Angabe konnte nicht geändert werden.',
+  )
 }
 
 /* ----------------------------------------------------------------- Tarif */
@@ -488,8 +545,15 @@ export async function resetIdentity(): Promise<void> {
     await withdrawVerification()
     const alt = await ladeUserDoc(id)
     const neu = leererUser()
-    // Ein bezahlter Tarif gehört der Person, nicht dem Pseudonym.
-    await setDoc(doc(getDb(), PFAD.users, id), { ...neu, membership: alt?.membership ?? neu.membership })
+    // Tarif und Geschlecht gehören der Person, nicht dem Pseudonym: Das
+    // eine ist bezahlt, das andere nur über den Support änderbar.
+    const geschlecht = alt?.geschlecht ?? null
+    await setDoc(doc(getDb(), PFAD.users, id), {
+      ...neu,
+      geschlecht,
+      pseudonym: generatePseudonym(geschlecht),
+      membership: alt?.membership ?? neu.membership,
+    })
   }, 'Zurücksetzen fehlgeschlagen.')
 }
 

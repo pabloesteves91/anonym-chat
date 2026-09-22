@@ -18,6 +18,8 @@ export {
   updateProfile,
   setPseudonym,
   regeneratePseudonym,
+  setGeschlecht,
+  setGeschlechtFuer,
   acceptCodex,
   blockPartner,
   listSelfBlocked,

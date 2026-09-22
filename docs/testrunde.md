@@ -5,7 +5,10 @@ prüfen – es braucht zwei Konten, und beide müssen verifiziert sein.
 
 ## Vorbereitung
 
-1. **Zwei Konten anlegen.** Zwei verschiedene E-Mail-Adressen, oder eines per
+1. **Zwei Konten anlegen.** Direkt nach der Registrierung fragt ein Fenster
+   nach dem Geschlecht – es lässt sich nicht überspringen und bestimmt die
+   Form des Anzeigenamens. Für den Durchlauf am besten eines je Form, dann
+   sieht man beide Varianten. Zwei verschiedene E-Mail-Adressen, oder eines per
    E-Mail und eines über Google. Zwei Browser oder ein normales und ein
    privates Fenster; in zwei Tabs desselben Fensters teilen sich beide
    dieselbe Anmeldung.

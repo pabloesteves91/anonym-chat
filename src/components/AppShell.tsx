@@ -6,6 +6,7 @@ import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Button, Note, Panel } from './ui'
 import { ThemeToggle } from './ThemeToggle'
 import { TarifDialog } from './TarifDialog'
+import { GeschlechtDialog } from './GeschlechtDialog'
 
 /** Angemeldet, aber das Profil lässt sich nicht laden. */
 function Profilfehler({ meldung }: { meldung: string }) {
@@ -148,7 +149,9 @@ export function AppShell() {
         {profilFehlt ? <Profilfehler meldung={profilFehler ?? ''} /> : <Outlet />}
       </main>
 
-      {/* Einmalige Tarifwahl nach der ersten Anmeldung. */}
+      {/* Zwei einmalige Fenster nach der ersten Anmeldung, in dieser
+          Reihenfolge: Erst die Pflichtangabe, dann das Tarifangebot. */}
+      {konto && !imModerationsbereich ? <GeschlechtDialog /> : null}
       {konto && !imModerationsbereich ? <TarifDialog /> : null}
 
       <footer className="border-t border-line px-4 py-5">

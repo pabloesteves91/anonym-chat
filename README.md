@@ -30,7 +30,11 @@ abgeschotteten Durchlauf gibt es die Emulatoren, siehe
 ### Der Weg einer Person
 
 1. **Konto** – E-Mail und Passwort, Google oder Apple. Das Konto ist die
-   Klammer um alles Weitere und taucht im Chat nirgends auf.
+   Klammer um alles Weitere und taucht im Chat nirgends auf. Direkt danach
+   wird einmalig das Geschlecht angegeben: Es bestimmt die Form des
+   Zufallsnamens („Stille Amsel 2098" gegen „Blauer Falke 4417") und lässt
+   sich danach nur noch über den Support ändern. Gefiltert wird danach
+   nicht.
 2. **Verifizierung** – Mobilnummer per echter SMS bestätigen, Ausweisfoto und
    Selfie hochladen. Die Nummer wird dabei fest mit dem Konto verbunden:
    Firebase lässt dieselbe Nummer kein zweites Mal zu.
@@ -66,7 +70,7 @@ und lesen darf sie nur, wer selbst verifiziert und nicht gesperrt ist.
 
 | Ort | Inhalt | Wer darf lesen |
 | --- | --- | --- |
-| `users/{uid}` | Pseudonym, Profil, Verifizierungsstand (`verificationStatus`), Tarif | Konto selbst, Moderation |
+| `users/{uid}` | Pseudonym, Geschlecht, Profil, Verifizierungsstand (`verificationStatus`), Tarif | Konto selbst, Moderation |
 | `planRequests/{uid}` | Wer welchen Tarif möchte | Konto selbst, Moderation |
 | `verifications/{id}` | Antrag mit maskierter Nummer | Konto selbst, Moderation |
 | `queue/{uid}` | Wer gerade sucht | alle Suchenden |
@@ -140,7 +144,7 @@ Zwei, weil sie Unterschiedliches anrichten können:
 
 | Rolle | Darf | Darf nicht |
 | --- | --- | --- |
-| **Moderation** | Verifizierungen entscheiden, Meldungen und Verläufe lesen, Konten sperren | Tarife vergeben, Daten löschen |
+| **Moderation** | Verifizierungen entscheiden, Meldungen und Verläufe lesen, Konten sperren, Geschlechtsangabe korrigieren | Tarife vergeben, Daten löschen |
 | **Verwaltung** | alles davon, plus Tarife vergeben und Meldungen/Verläufe zurücksetzen | das Zugriffsprotokoll löschen – das kann niemand |
 
 Beide nutzen den Dienst ohne Tarifgrenzen: unbegrenzt Chats, alle Filter,

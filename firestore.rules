@@ -82,10 +82,29 @@ service cloud.firestore {
       return request.resource.data.verificationStatus in ['offen', 'wartet'];
     }
 
-    /** Was die Moderation am Konto ändern darf – und sonst nichts. */
-    function nurVerifizierungsfelder() {
+    /**
+     * Was die Moderation am Konto ändern darf – und sonst nichts.
+     *
+     * Neben dem Prüfstand ist das die Geschlechtsangabe samt Name: Sie wird
+     * einmal gesetzt und danach nur noch auf Anfrage korrigiert. Tarif,
+     * Profil und Sperrlisten bleiben aussen vor.
+     */
+    function nurModerationsfelder() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['verificationStatus', 'verifiedAt']);
+        .hasOnly(['verificationStatus', 'verifiedAt', 'geschlecht', 'pseudonym']);
+    }
+
+    /**
+     * Die Geschlechtsangabe gehört der Person – aber nur einmal.
+     *
+     * Sie bestimmt die Form des Zufallsnamens, der im Chat das Einzige ist,
+     * was über das Gegenüber etwas aussagt. Liesse er sich jederzeit
+     * umstellen, wäre die Angabe beliebig und damit wertlos.
+     */
+    function geschlechtGesetztOderGleich() {
+      return request.resource.data.get('geschlecht', null) == resource.data.get('geschlecht', null)
+        || (resource.data.get('geschlecht', null) == null
+            && request.resource.data.get('geschlecht', null) in ['weiblich', 'maennlich']);
     }
 
     match /users/{userId} {
@@ -95,9 +114,10 @@ service cloud.firestore {
       allow read: if istModeration() || isOwner(userId);
       allow update: if istVerwaltung()
         // Moderation entscheidet über die Verifizierung – nicht über Tarife.
-        || (istModeration() && nurVerifizierungsfelder())
+        || (istModeration() && nurModerationsfelder())
         || (isOwner(userId)
             && request.resource.data.membership == resource.data.membership
+            && geschlechtGesetztOderGleich()
             && (request.resource.data.verificationStatus == resource.data.verificationStatus
                 || eigenerAntragsstand()));
       allow delete: if false;

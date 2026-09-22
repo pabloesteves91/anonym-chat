@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import * as api from '../services/api'
 import type { PlanId } from '../services/plans'
-import type { Profile, User } from '../services/types'
+import type { Geschlecht, Profile, User } from '../services/types'
 
 /**
  * Identität und Verifizierungsstatus.
@@ -29,6 +29,8 @@ interface SessionState {
   acceptCodex: () => Promise<void>
   /** Tarif auswählen: gratis gilt sofort, bezahlt wird ein Wunsch daraus. */
   choosePlan: (plan: PlanId) => Promise<boolean>
+  /** Einmalige Angabe bei der Registrierung; setzt zugleich den Namen. */
+  setGeschlecht: (geschlecht: Geschlecht) => Promise<boolean>
   refreshBlocks: () => Promise<void>
   unblockAll: () => Promise<void>
   saveProfile: (profile: Profile) => Promise<void>
@@ -91,6 +93,21 @@ export const useSession = create<SessionState>((set, get) => ({
   async acceptCodex() {
     await api.acceptCodex()
     set({ codexAccepted: true })
+  },
+
+  async setGeschlecht(geschlecht) {
+    set({ busy: true, error: null })
+    try {
+      const user = await api.setGeschlecht(geschlecht)
+      set({ user, busy: false })
+      return true
+    } catch (error) {
+      set({
+        busy: false,
+        error: error instanceof api.ApiError ? error.message : 'Die Angabe wurde nicht gespeichert.',
+      })
+      return false
+    }
   },
 
   async choosePlan(plan) {

@@ -6,7 +6,7 @@ import { Kontokennung } from '../components/Kontokennung'
 import { aktiverPlan, grenzenFuer, planById, verbleibend } from '../services/plans'
 import { ROLLE_LABEL } from '../services/roles'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
-import { AGE_GROUPS, INTERESTS, LANGUAGES } from '../services/types'
+import { AGE_GROUPS, GESCHLECHTER, INTERESTS, LANGUAGES } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
 import { useSession } from '../store/useSession'
 
@@ -128,6 +128,13 @@ export function Profile() {
             Würfeln
           </Button>
         </form>
+
+        {user.geschlecht ? (
+          <p className="text-sm text-muted">
+            Gebildet als {GESCHLECHTER.find((g) => g.value === user.geschlecht)?.label.toLowerCase()}er Name. Diese
+            Angabe hast du einmal gemacht; ändern kann sie nur der Support.
+          </p>
+        ) : null}
 
         {darfUmbenennen ? null : (
           <p className="text-sm text-muted">
