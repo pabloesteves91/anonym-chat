@@ -32,9 +32,9 @@ abgeschotteten Durchlauf gibt es die Emulatoren, siehe
 1. **Konto** – E-Mail und Passwort, Google oder Apple. Das Konto ist die
    Klammer um alles Weitere und taucht im Chat nirgends auf. Direkt danach
    wird einmalig das Geschlecht angegeben: Es bestimmt die Form des
-   Zufallsnamens („Stille Amsel 2098" gegen „Blauer Falke 4417") und lässt
-   sich danach nur noch über den Support ändern. Gefiltert wird danach
-   nicht.
+   Zufallsnamens („Goldene Drossel 4160" gegen „Weiter Salamander 1466")
+   und lässt sich danach nur noch über den Support ändern. Gefiltert wird
+   danach nicht.
 2. **Verifizierung** – Mobilnummer per echter SMS bestätigen, Ausweisfoto und
    Selfie hochladen. Die Nummer wird dabei fest mit dem Konto verbunden:
    Firebase lässt dieselbe Nummer kein zweites Mal zu.

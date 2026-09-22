@@ -129,7 +129,12 @@ export function countFlags(texts: { flag?: FilterVerdict }[]): number {
 /* ------------------------------------------------------------ Anzeigenamen */
 
 export const NAME_MIN = 3
-export const NAME_MAX = 24
+/**
+ * Muss mindestens so lang sein, dass jeder gewürfelte Name hineinpasst –
+ * sonst erzeugt der Generator Namen, die die eigene Prüfung nicht bestehen.
+ * Ein Test über alle Kombinationen hält das fest.
+ */
+export const NAME_MAX = 28
 
 /**
  * Prüft einen selbst gewählten Anzeigenamen.

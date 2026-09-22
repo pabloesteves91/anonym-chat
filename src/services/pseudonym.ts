@@ -11,8 +11,14 @@
 
 import type { Geschlecht } from './types'
 
-/** Ohne Endung; sie kommt aus dem Geschlecht. */
-const ADJEKTIV_STAMM = [
+/**
+ * Ohne Endung; sie kommt aus dem Geschlecht.
+ *
+ * Alle Stämme sind wohlwollend oder neutral. Ein Name, den man sich nicht
+ * ausgesucht hat, soll niemanden herabsetzen – "Herber Iltis" war beides
+ * nicht.
+ */
+export const ADJEKTIV_STAMM = [
   'Blau',
   'Still',
   'Ruhig',
@@ -25,48 +31,118 @@ const ADJEKTIV_STAMM = [
   'Hell',
   'Spät',
   'Weit',
-  'Wach',
-  'Herb',
-  'Dunkl',
   'Flink',
+  'Sanft',
+  'Frisch',
+  'Warm',
+  'Grün',
+  'Tief',
+  'Zart',
+  'Froh',
+  'Weich',
+  'Leicht',
+  'Sonnig',
+  'Golden',
+  'Silbern',
+  'Dunkl',
+  'Fern',
+  'Stolz',
+  'Klug',
+  'Rein',
+  'Weis',
+  'Wach',
+  'Treu',
+  'Kühn',
+  'Edl',
+  'Schlau',
 ]
 
-const TIERE_MAENNLICH = [
+/**
+ * Maskuline Tiernamen.
+ *
+ * Bewusst nicht dabei: Arten, deren Name im Deutschen als Schimpfwort
+ * dient oder unangenehm konnotiert ist – Iltis und Marder riechen
+ * sprichwörtlich, ein Kauz ist ein Sonderling, und Wolf oder Tiger lesen
+ * sich in einem Chat schnell als Drohung.
+ */
+export const TIERE_MAENNLICH = [
   'Falke',
   'Reiher',
-  'Dachs',
   'Kranich',
   'Luchs',
-  'Marder',
   'Habicht',
-  'Kiebitz',
   'Steinbock',
   'Fuchs',
   'Uhu',
   'Biber',
-  'Iltis',
-  'Salamander',
   'Alpensegler',
   'Waldkauz',
+  'Seeadler',
+  'Schwan',
+  'Specht',
+  'Pirol',
+  'Sperber',
+  'Milan',
+  'Kormoran',
+  'Storch',
+  'Dachs',
+  'Hirsch',
+  'Elch',
+  'Delfin',
+  'Otter',
+  'Salamander',
+  'Kolibri',
+  'Albatros',
+  'Eisvogel',
+  'Buchfink',
+  'Kiebitz',
+  'Zeisig',
+  'Seehund',
+  'Steinadler',
+  'Bergfink',
+  'Wal',
 ]
 
-const TIERE_WEIBLICH = [
+/**
+ * Feminine Tiernamen.
+ *
+ * Hier war die Auswahl heikler: Das Deutsche hat auffällig viele
+ * weibliche Tiernamen, die als Beleidigung oder als Anspielung auf den
+ * Körper dienen. Krähe, Gans, Schnepfe, Elster, Unke und Wildkatze sind
+ * deshalb nicht dabei – niemand soll unter einem Namen chatten müssen,
+ * der gegen sie verwendet werden kann.
+ */
+export const TIERE_WEIBLICH = [
   'Amsel',
-  'Eule',
-  'Elster',
   'Schwalbe',
   'Möwe',
   'Lerche',
-  'Meise',
   'Nachtigall',
   'Gämse',
   'Libelle',
-  'Dohle',
-  'Krähe',
-  'Taube',
-  'Wildkatze',
   'Drossel',
   'Bachstelze',
+  'Dohle',
+  'Eule',
+  'Taube',
+  'Forelle',
+  'Robbe',
+  'Hummel',
+  'Grille',
+  'Zikade',
+  'Rohrdommel',
+  'Seeschwalbe',
+  'Feldlerche',
+  'Goldammer',
+  'Heidelerche',
+  'Wasseramsel',
+  'Ringeltaube',
+  'Alpendohle',
+  'Singdrossel',
+  'Waldohreule',
+  'Felsentaube',
+  'Bergdohle',
+  'Uferschwalbe',
 ]
 
 function pick<T>(list: T[]): T {

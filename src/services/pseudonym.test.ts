@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { generatePseudonym } from './pseudonym'
+import {
+  ADJEKTIV_STAMM,
+  TIERE_MAENNLICH,
+  TIERE_WEIBLICH,
+  generatePseudonym,
+} from './pseudonym'
+import { NAME_MAX, validateDisplayName } from './wordFilter'
 
 /**
  * Der Name ist im Chat das Einzige, was über das Gegenüber etwas aussagt.
- * Er muss deshalb zur Angabe passen – und grammatikalisch stimmen, sonst
- * fällt die Form auf, nicht die Person.
+ * Er muss zur Angabe passen, grammatikalisch stimmen – und die eigene
+ * Namensprüfung bestehen, sonst erzeugt der Dienst Namen, die er selbst
+ * ablehnen würde.
  */
 describe('generatePseudonym', () => {
   const vieleNamen = (geschlecht: 'weiblich' | 'maennlich' | null) =>
-    Array.from({ length: 200 }, () => generatePseudonym(geschlecht))
+    Array.from({ length: 300 }, () => generatePseudonym(geschlecht))
 
   it('gibt weiblichen Konten eine weibliche Form', () => {
     for (const name of vieleNamen('weiblich')) {
@@ -45,7 +52,34 @@ describe('generatePseudonym', () => {
     }
   })
 
-  it('würfelt und liefert nicht immer dasselbe', () => {
-    expect(new Set(vieleNamen('weiblich')).size).toBeGreaterThan(50)
+  it('bietet genug Auswahl, um nicht ständig zu wiederholen', () => {
+    expect(ADJEKTIV_STAMM.length * TIERE_WEIBLICH.length).toBeGreaterThan(1000)
+    expect(ADJEKTIV_STAMM.length * TIERE_MAENNLICH.length).toBeGreaterThan(1000)
+    expect(new Set(vieleNamen('weiblich')).size).toBeGreaterThan(200)
+  })
+})
+
+/**
+ * Nicht stichprobenartig, sondern vollständig: Eine einzige Kombination,
+ * die durchfällt, wäre ein Konto mit einem Namen, den die App im selben
+ * Atemzug für unzulässig erklärt.
+ */
+describe('jede mögliche Kombination besteht die Namensprüfung', () => {
+  const alle = [
+    ...ADJEKTIV_STAMM.flatMap((stamm) => TIERE_MAENNLICH.map((tier) => `${stamm}er ${tier} 4417`)),
+    ...ADJEKTIV_STAMM.flatMap((stamm) => TIERE_WEIBLICH.map((tier) => `${stamm}e ${tier} 4417`)),
+  ]
+
+  it('prüft eine vierstellige Zahl an Kombinationen', () => {
+    expect(alle.length).toBeGreaterThan(2000)
+  })
+
+  it('bleibt überall innerhalb der erlaubten Länge', () => {
+    for (const name of alle) expect(name.length).toBeLessThanOrEqual(NAME_MAX)
+  })
+
+  it('löst nirgends den Wortfilter aus', () => {
+    const abgelehnt = alle.filter((name) => !validateDisplayName(name).ok)
+    expect(abgelehnt).toEqual([])
   })
 })
