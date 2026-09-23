@@ -194,6 +194,20 @@ gebraucht werden, zusätzlich zu „Firebase-Administrator":
 Einzutragen in der **Google-Cloud-Konsole → IAM**, beim Konto
 `firebase-adminsdk-…@anonym-chat-223af.iam.gserviceaccount.com`.
 
+Beim ersten Ausrollen der Firestore-Auslöser (Discord-Benachrichtigungen)
+will Firebase ausserdem drei Rollen an Googles eigene Hintergrundkonten
+vergeben – das darf das Dienstkonto zu Recht nicht. Einmal von Hand, unter
+IAM → *Zugriff gewähren*:
+
+| Hauptkonto | Rolle |
+| --- | --- |
+| `service-417196431125@gcp-sa-pubsub.iam.gserviceaccount.com` | Service Account Token Creator |
+| `417196431125-compute@developer.gserviceaccount.com` | Cloud Run Invoker |
+| `417196431125-compute@developer.gserviceaccount.com` | Eventarc Event Receiver |
+
+Fehlen sie, endet das Ausrollen mit „We failed to modify the IAM policy for
+the project".
+
 ## Wie die Kasse arbeitet
 
 ```
