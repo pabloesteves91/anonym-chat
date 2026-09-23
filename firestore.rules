@@ -181,7 +181,11 @@ service cloud.firestore {
         && request.resource.data.anhaenge is list
         && request.resource.data.anhaenge.size() <= 3;
       allow read: if istModeration() || isOwner(resource.data.userId);
-      allow update, delete: if istModeration();
+      allow update: if istModeration();
+      // Löschen nur, was abgehakt ist. Eine offene Anfrage hat noch niemand
+      // bearbeitet; ein Fehlklick darf sie nicht verschwinden lassen. Die
+      // Sperre sitzt hier und nicht nur als ausgeblendeter Knopf.
+      allow delete: if istModeration() && resource.data.status == 'erledigt';
     }
 
     // Warteschlange.

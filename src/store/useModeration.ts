@@ -74,6 +74,8 @@ interface ModerationState {
   setStatus: (id: string, status: ReportStatus) => Promise<void>
   /** Stand einer Supportanfrage setzen. */
   setSupportStatus: (id: string, status: SupportStatus) => Promise<void>
+  /** Erledigte Supportanfragen endgültig löschen. */
+  loescheSupport: (ids: string[]) => Promise<void>
   clearAll: () => Promise<void>
 }
 
@@ -227,6 +229,19 @@ export const useModeration = create<ModerationState>((set, get) => ({
     } catch (error) {
       set({ error: meldung(error, 'Die Angabe konnte nicht geändert werden.') })
       return false
+    } finally {
+      set({ busy: false })
+    }
+  },
+
+  async loescheSupport(ids) {
+    if (get().busy || ids.length === 0) return
+    set({ busy: true, error: null })
+    try {
+      const support = await api.deleteSupport(ids)
+      set({ support })
+    } catch (error) {
+      set({ error: meldung(error, 'Die Anfragen konnten nicht gelöscht werden.') })
     } finally {
       set({ busy: false })
     }

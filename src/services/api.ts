@@ -53,6 +53,7 @@ export {
   getSupportAnhaenge,
   watchOffeneVorgaenge,
   updateSupportStatus,
+  deleteSupport,
   listBlocked,
   clearReports,
 } from './backend/firestore'

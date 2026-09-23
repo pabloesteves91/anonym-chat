@@ -113,7 +113,7 @@ export const DATENSCHUTZ: Rechtstext = {
         'Ausweisfoto und Selfie werden unmittelbar nach dem Entscheid über die Verifizierung gelöscht. Sie werden nie an Dritte weitergegeben und nie in Ihrem Browser dauerhaft gespeichert.',
         'Chatnachrichten werden 72 Stunden aufbewahrt und danach automatisch gelöscht. Das dient ausschliesslich der Missbrauchsprüfung.',
         'Meldungen und Sperren bleiben so lange bestehen, wie sie für die Durchsetzung der Nutzungsregeln nötig sind.',
-        'Bilder, die Sie einer Supportanfrage anhängen, werden gelöscht, sobald die Anfrage abgeschlossen ist. Der Text der Anfrage bleibt erhalten, weil er begründet, was entschieden wurde.',
+        'Bilder, die Sie einer Supportanfrage anhängen, werden gelöscht, sobald die Anfrage abgeschlossen ist. Der Text der Anfrage bleibt erhalten, bis die Moderation die abgeschlossene Anfrage löscht; bis dahin begründet er, was entschieden wurde.',
         'Kontodaten bleiben bis zur Löschung des Kontos bestehen.',
       ],
     },

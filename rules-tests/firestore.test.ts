@@ -390,6 +390,25 @@ describe('Supportanfragen', () => {
   it('lässt sich nicht als bereits erledigt einreichen', async () => {
     await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-6'), anfrage(ANNA, { id: 'sup-6', status: 'erledigt' })))
   })
+
+  it('lässt die Moderation erledigte Anfragen löschen', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-9'), anfrage(ANNA, { id: 'sup-9', status: 'erledigt' }))
+    })
+    await assertSucceeds(deleteDoc(doc(als(MODERATOR), 'support', 'sup-9')))
+  })
+
+  it('lässt keine offene Anfrage löschen, auch nicht durch die Moderation', async () => {
+    // Eine offene Anfrage hat noch niemand bearbeitet. Ein Fehlklick darf sie
+    // nicht verschwinden lassen – deshalb sitzt die Sperre auf dem Server und
+    // nicht nur als ausgeblendeter Knopf in der Oberfläche.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-10'), anfrage(ANNA, { id: 'sup-10', status: 'offen' }))
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-11'), anfrage(ANNA, { id: 'sup-11', status: 'inArbeit' }))
+    })
+    await assertFails(deleteDoc(doc(als(MODERATOR), 'support', 'sup-10')))
+    await assertFails(deleteDoc(doc(als(MODERATOR), 'support', 'sup-11')))
+  })
 })
 
 describe('Meldungen und Protokoll', () => {

@@ -115,9 +115,59 @@ function Anhaenge({ pfade }: { pfade: string[] }) {
   )
 }
 
+/**
+ * Endgültiges Löschen in zwei Schritten.
+ *
+ * Der erste Klick fragt nur nach, erst der zweite löscht. Direkt an Ort und
+ * Stelle statt in einem Dialogfenster: Die Rückfrage steht dort, wo man
+ * gerade hinschaut, und "Abbrechen" ist so nah wie "Ja".
+ */
+function LoeschKnopf({
+  label,
+  frage,
+  disabled,
+  onLoeschen,
+}: {
+  label: string
+  frage: string
+  disabled: boolean
+  onLoeschen: () => void
+}) {
+  const [fragt, setFragt] = useState(false)
+
+  if (!fragt) {
+    return (
+      <Button size="sm" variant="danger" disabled={disabled} onClick={() => setFragt(true)}>
+        {label}
+      </Button>
+    )
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-2" role="group" aria-label={frage}>
+      <span className="text-sm font-medium text-signal">{frage}</span>
+      <Button
+        size="sm"
+        variant="danger"
+        disabled={disabled}
+        onClick={() => {
+          setFragt(false)
+          onLoeschen()
+        }}
+      >
+        Ja, löschen
+      </Button>
+      <Button size="sm" variant="quiet" onClick={() => setFragt(false)}>
+        Abbrechen
+      </Button>
+    </span>
+  )
+}
+
 function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
   const busy = useModeration((s) => s.busy)
   const setSupportStatus = useModeration((s) => s.setSupportStatus)
+  const loescheSupport = useModeration((s) => s.loescheSupport)
 
   const zeit = new Date(anfrage.createdAt).toLocaleString('de-CH', {
     day: '2-digit',
@@ -175,6 +225,16 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
             Zurück auf offen
           </Button>
         ) : null}
+        {/* Nur Erledigtes lässt sich löschen – die Regeln lehnen alles andere
+            ab, der Knopf erscheint deshalb gar nicht erst. */}
+        {anfrage.status === 'erledigt' ? (
+          <LoeschKnopf
+            label="Löschen"
+            frage="Endgültig löschen?"
+            disabled={busy}
+            onLoeschen={() => void loescheSupport([anfrage.id])}
+          />
+        ) : null}
 
         <span className="ml-auto flex items-center gap-2 text-xs text-muted">
           <a href={`mailto:${anfrage.antwortAn}`} className="underline underline-offset-2 hover:text-ink">
@@ -199,6 +259,9 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
  */
 export function Supportanfragen() {
   const anfragen = useModeration((s) => s.support)
+  const busy = useModeration((s) => s.busy)
+  const loescheSupport = useModeration((s) => s.loescheSupport)
+  const erledigte = anfragen.filter((a) => a.status === 'erledigt')
 
   const zaehler: Record<SupportStatus, number> = {
     offen: anfragen.filter((a) => a.status === 'offen').length,
@@ -214,12 +277,26 @@ export function Supportanfragen() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div>
-        <h2 className="font-display text-2xl font-semibold">Supportanfragen</h2>
-        <p className="mt-1 text-sm text-muted">
-          Was Nutzende über die Supportseite schicken. Die Kennung daneben passt in die Felder der Werkzeuge weiter
-          unten.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-[16rem] flex-1">
+          <h2 className="font-display text-2xl font-semibold">Supportanfragen</h2>
+          <p className="mt-1 text-sm text-muted">
+            Was Nutzende über die Supportseite schicken. Die Kennung daneben passt in die Felder der Werkzeuge weiter
+            unten.
+          </p>
+        </div>
+        {erledigte.length > 0 ? (
+          <LoeschKnopf
+            label={`Erledigte löschen (${erledigte.length})`}
+            frage={
+              erledigte.length === 1
+                ? '1 erledigte Anfrage endgültig löschen?'
+                : `${erledigte.length} erledigte Anfragen endgültig löschen?`
+            }
+            disabled={busy}
+            onLoeschen={() => void loescheSupport(erledigte.map((a) => a.id))}
+          />
+        ) : null}
       </div>
 
       <div className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">

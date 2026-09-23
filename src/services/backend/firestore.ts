@@ -944,6 +944,37 @@ export async function updateSupportStatus(id: string, status: SupportStatus): Pr
   }, 'Der Stand konnte nicht gesetzt werden.')
 }
 
+/**
+ * Erledigte Anfragen endgültig löschen – eine oder mehrere.
+ *
+ * Ein Weg für beide Knöpfe der Moderation, den pro Karte und den für alle
+ * erledigten. Die Regeln lassen nur erledigte Anfragen zu; eine offene in der
+ * Liste liesse den ganzen Stapel scheitern, und das ist gewollt: lieber
+ * nichts löschen als das Falsche.
+ *
+ * Die Anhänge sind beim Abhaken schon weg. Hier werden sie trotzdem noch
+ * einmal angefasst – für Anfragen, die vor dieser Regel abgehakt wurden.
+ */
+export async function deleteSupport(ids: string[]): Promise<SupportAnfrage[]> {
+  return fuehreAus(async () => {
+    const stapel = writeBatch(getDb())
+    for (const id of ids) {
+      const snap = await getDoc(doc(getDb(), PFAD.support, id))
+      const anfrage = snap.data() as SupportAnfrage | undefined
+      for (const pfad of anfrage?.anhaenge ?? []) {
+        try {
+          await deleteObject(ref(getFileStorage(), pfad))
+        } catch {
+          /* schon weg */
+        }
+      }
+      stapel.delete(doc(getDb(), PFAD.support, id))
+    }
+    await stapel.commit()
+    return listSupport()
+  }, 'Die Anfragen konnten nicht gelöscht werden.')
+}
+
 /* --------------------------------------------- Offene Vorgänge (laufend) */
 
 /**
