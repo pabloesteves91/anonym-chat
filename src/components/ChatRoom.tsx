@@ -31,6 +31,7 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
   const error = useChat((s) => s.error)
   const clearError = useChat((s) => s.clearError)
   const entwurf = useChat((s) => s.entwurf)
+  const testModus = useChat((s) => s.testModus)
   const setEntwurf = useChat((s) => s.setEntwurf)
   const vorschlagEinfuegen = useChat((s) => s.vorschlagEinfuegen)
 
@@ -71,7 +72,13 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
               {partnerOnline ? 'anwesend' : 'gerade nicht am Gerät'}
             </p>
           </div>
-          <VerifiedBadge status="verifiziert" size="sm" />
+          {testModus ? (
+            <span className="rounded-sm border border-signal/50 bg-signal-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
+              Test · kein Mensch
+            </span>
+          ) : (
+            <VerifiedBadge status="verifiziert" size="sm" />
+          )}
           <div className="ml-auto flex flex-wrap gap-2">
             <Button size="sm" title="Beendet diesen Chat und sucht sofort mit denselben Filtern weiter" onClick={() => void nextChat()}>
               Nächste Person

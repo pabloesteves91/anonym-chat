@@ -4,6 +4,15 @@ import { generateId } from '../services/pseudonym'
 import { grenzenFuer, verbleibend } from '../services/plans'
 import { erweitereFilter } from '../services/matching'
 import { nachFeedbackFragen, type FeedbackWert } from '../services/feedback'
+import {
+  TEST_ANTWORT_NACH_MS,
+  TEST_HINWEIS,
+  TEST_PARTNER,
+  TEST_RAUM_PRAEFIX,
+  darfTestgespraech,
+  istTestRaum,
+  testAntwort,
+} from '../services/testgespraech'
 import { useSession } from './useSession'
 import type { LiveMessage } from '../services/api'
 import type { MatchFilter, Message, Partner, Report, ReportReason, User } from '../services/types'
@@ -56,6 +65,8 @@ interface ChatState {
   letzterChat: LetzterChat | null
   /** Der Text im Eingabefeld – hier, damit ein Vorschlag ihn füllen kann. */
   entwurf: string
+  /** Läuft gerade ein Testgespräch der Verwaltung? „Nächste Person" bleibt dann im Test. */
+  testModus: boolean
 
   setFilter: (filter: MatchFilter) => void
   /** Sucht mit dem gewählten Filter – auch „Nächste Person" nach dem Ende. */
@@ -76,6 +87,8 @@ interface ChatState {
   vorschlagEinfuegen: (text: string) => void
   /** `false`, wenn es nicht gespeichert werden konnte. */
   gibFeedback: (wert: FeedbackWert) => Promise<boolean>
+  /** Nur Verwaltung: ein Testgespräch mit automatischem Partner, ohne Server. */
+  startTestgespraech: () => void
   feedbackUeberspringen: () => void
 }
 
@@ -88,6 +101,9 @@ let heartbeat: number | null = null
 let letztesTippen = 0
 /** Die laufende Suche – damit eine neue erst beginnt, wenn die alte aufgeräumt hat. */
 let laufendeSuche: Promise<void> | null = null
+/** Antworten des Testpartners, die noch ausstehen. */
+let testTimer: number | null = null
+let testAntworten = 0
 
 function systemMessage(text: string): Message {
   return { id: generateId('sys'), author: 'system', text, ts: Date.now() }
@@ -98,6 +114,10 @@ function toMessage(live: LiveMessage): Message {
 }
 
 function stopRun() {
+  if (testTimer !== null) {
+    window.clearTimeout(testTimer)
+    testTimer = null
+  }
   controller?.abort()
   controller = null
   unsubMessages?.()
@@ -232,12 +252,17 @@ export const useChat = create<ChatState>((set, get) => {
     erweitert: false,
     letzterChat: null,
     entwurf: '',
+    testModus: false,
 
     setFilter(filter) {
       set({ filter })
     },
 
     startSearch() {
+      if (get().testModus) {
+        get().startTestgespraech()
+        return Promise.resolve()
+      }
       laufendeSuche = suche(false)
       return laufendeSuche
     },
@@ -262,6 +287,18 @@ export const useChat = create<ChatState>((set, get) => {
     async sendMessage(text) {
       const { roomId, status } = get()
       if (!roomId || status !== 'aktiv') return
+      if (istTestRaum(roomId)) {
+        const eigene: Message = { id: generateId('test'), author: 'me', text: text.trim(), ts: Date.now() }
+        set({ messages: [...get().messages, eigene], partnerTyping: true })
+        if (testTimer !== null) window.clearTimeout(testTimer)
+        testTimer = window.setTimeout(() => {
+          testTimer = null
+          if (get().roomId !== roomId) return
+          const antwort: Message = { id: generateId('test'), author: 'partner', text: testAntwort(testAntworten++), ts: Date.now() }
+          set({ messages: [...get().messages, antwort], partnerTyping: false })
+        }, TEST_ANTWORT_NACH_MS)
+        return
+      }
       try {
         await api.sendRoomMessage(roomId, text)
       } catch (error) {
@@ -272,7 +309,7 @@ export const useChat = create<ChatState>((set, get) => {
     /** Der Tippindikator wird gedrosselt – nicht bei jedem Anschlag ein Schreibzugriff. */
     notifyTyping() {
       const { roomId, status } = get()
-      if (!roomId || status !== 'aktiv') return
+      if (!roomId || status !== 'aktiv' || istTestRaum(roomId)) return
       const jetzt = Date.now()
       if (jetzt - letztesTippen < 3_000) return
       letztesTippen = jetzt
@@ -282,7 +319,8 @@ export const useChat = create<ChatState>((set, get) => {
     endChat(reason) {
       const { roomId, partner } = get()
       // Ist das Gegenüber gegangen, hat es das Ende schon vermerkt.
-      if (roomId) void api.leaveRoom(roomId, { vermerken: reason !== 'partner' })
+      // Ein Testgespräch hat keinen Raum auf dem Server.
+      if (roomId && !istTestRaum(roomId)) void api.leaveRoom(roomId, { vermerken: reason !== 'partner' })
       stopRun()
       set({
         status: 'beendet',
@@ -303,6 +341,10 @@ export const useChat = create<ChatState>((set, get) => {
     async blockAndEnd() {
       const partner = get().partner
       if (!partner) return
+      if (istTestRaum(get().roomId)) {
+        get().endChat('blockiert')
+        return
+      }
       try {
         await api.blockPartner(partner.id)
         await useSession.getState().refreshBlocks()
@@ -320,6 +362,26 @@ export const useChat = create<ChatState>((set, get) => {
     async report(reason, note, reporter) {
       const { partner, messages, roomId } = get()
       if (!partner) return null
+      // Testgespräch: keine Meldung an die Moderation – nur der Ablauf.
+      if (istTestRaum(roomId)) {
+        const probe: Report = {
+          id: 'test-keine-meldung',
+          createdAt: new Date().toISOString(),
+          reporterId: reporter.id,
+          reporterPseudonym: reporter.pseudonym,
+          reportedId: partner.id,
+          reportedPseudonym: partner.pseudonym,
+          reason,
+          note,
+          excerpt: [],
+          autoFlags: 0,
+          transcriptId: null,
+          status: 'offen',
+        }
+        get().endChat('gemeldet')
+        set({ endReason: 'gemeldet', lastReport: probe })
+        return probe
+      }
       try {
         const report = await api.submitReport({ reason, note, partner, messages, transcriptId: roomId }, reporter)
         if (roomId) await api.markReported(roomId)
@@ -340,7 +402,15 @@ export const useChat = create<ChatState>((set, get) => {
     },
 
     dismissEnded() {
-      set({ status: 'idle', endReason: null, lastReport: null, error: null, grenzeErreicht: false, letzterChat: null })
+      set({
+        status: 'idle',
+        endReason: null,
+        lastReport: null,
+        error: null,
+        grenzeErreicht: false,
+        letzterChat: null,
+        testModus: false,
+      })
     },
 
     setEntwurf(text) {
@@ -358,6 +428,7 @@ export const useChat = create<ChatState>((set, get) => {
       if (!letzter || letzter.feedback !== 'offen') return false
       // Sofort als gesendet markieren: Ein zweiter Tipp geht nicht noch einmal raus.
       set({ letzterChat: { ...letzter, feedback: 'gesendet' } })
+      if (istTestRaum(letzter.roomId)) return true
       try {
         await api.sendeFeedback(letzter.roomId, letzter.partnerId, wert)
         return true
@@ -367,6 +438,26 @@ export const useChat = create<ChatState>((set, get) => {
         if (jetzt?.roomId === letzter.roomId) set({ letzterChat: { ...jetzt, feedback: 'offen' } })
         return false
       }
+    },
+
+    startTestgespraech() {
+      if (!darfTestgespraech(useSession.getState().user)) return
+      stopRun()
+      const begruessung = systemMessage(TEST_HINWEIS)
+      set({
+        status: 'aktiv',
+        testModus: true,
+        roomId: `${TEST_RAUM_PRAEFIX}${generateId('raum')}`,
+        partner: { ...TEST_PARTNER },
+        messages: [begruessung],
+        partnerTyping: false,
+        partnerOnline: true,
+        error: null,
+        grenzeErreicht: false,
+        endReason: null,
+        lastReport: null,
+        entwurf: '',
+      })
     },
 
     feedbackUeberspringen() {

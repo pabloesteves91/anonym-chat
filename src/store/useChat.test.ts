@@ -212,3 +212,55 @@ describe('Feedback', () => {
     expect(useChat.getState().letzterChat?.feedback).toBe('offen')
   })
 })
+
+describe('Testgespräch (nur Verwaltung)', () => {
+  const verwaltung = { ...ich, rolle: 'verwaltung' }
+
+  it('steht normalen Konten nicht offen', () => {
+    useChat.getState().startTestgespraech()
+    expect(useChat.getState().status).toBe('idle')
+  })
+
+  it('läuft ganz ohne Server: kein Raum, keine Nachricht, keine Zählung, kein Feedback, keine Meldung', async () => {
+    vi.useFakeTimers()
+    try {
+      useSession.setState({ user: verwaltung as never })
+      useChat.getState().startTestgespraech()
+      expect(useChat.getState().status).toBe('aktiv')
+      expect(useChat.getState().partner?.pseudonym).toMatch(/Testpartner/)
+
+      await useChat.getState().sendMessage('Hallo')
+      await vi.advanceTimersByTimeAsync(2_000)
+      const autoren = useChat.getState().messages.map((m) => m.author)
+      expect(autoren).toEqual(['system', 'me', 'partner'])
+
+      useChat.getState().endChat('selbst')
+      expect(await useChat.getState().gibFeedback('gut')).toBe(true)
+
+      // „Nächste Person" bleibt im Test, statt echt zu suchen.
+      await useChat.getState().startSearch()
+      expect(useChat.getState().status).toBe('aktiv')
+      await useChat.getState().report('sonstiges', '', verwaltung as never)
+      await useChat.getState().startSearch()
+      await useChat.getState().blockAndEnd()
+
+      for (const aufruf of [
+        api.findMatch,
+        api.registerChatStart,
+        api.leaveRoom,
+        api.sendRoomMessage,
+        api.sendeFeedback,
+        api.submitReport,
+        api.blockPartner,
+      ]) {
+        expect(aufruf).not.toHaveBeenCalled()
+      }
+
+      // Zurück zur Auswahl beendet den Testmodus.
+      useChat.getState().dismissEnded()
+      expect(useChat.getState().testModus).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

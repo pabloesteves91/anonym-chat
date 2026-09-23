@@ -15,6 +15,7 @@ function Ended() {
   const report = useChat((s) => s.lastReport)
   const dismiss = useChat((s) => s.dismissEnded)
   const startSearch = useChat((s) => s.startSearch)
+  const testModus = useChat((s) => s.testModus)
 
   const gemeldet = endReason === 'gemeldet'
   const blockiert = endReason === 'blockiert'
@@ -59,6 +60,13 @@ function Ended() {
           Zugriff wird protokolliert.
         </p>
       )}
+
+      {testModus ? (
+        <Note tone="warn">
+          Das war ein Testgespräch. Nichts davon wurde gespeichert, gezählt oder an die Moderation gemeldet.
+          „Nächste Person" startet ein weiteres Testgespräch.
+        </Note>
+      ) : null}
 
       <GespraechsFeedback />
 

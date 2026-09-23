@@ -7,6 +7,7 @@ import { useSession } from '../store/useSession'
 import { LANGUAGES, MAX_INTERESSEN } from '../services/types'
 import type { Language } from '../services/types'
 import { grenzenFuer, verbleibend } from '../services/plans'
+import { darfTestgespraech } from '../services/testgespraech'
 import { useChat } from '../store/useChat'
 
 /** Ausgangszustand: Filter setzen und Suche starten. */
@@ -14,6 +15,7 @@ export function Lobby() {
   const filter = useChat((s) => s.filter)
   const setFilter = useChat((s) => s.setFilter)
   const startSearch = useChat((s) => s.startSearch)
+  const startTestgespraech = useChat((s) => s.startTestgespraech)
   const error = useChat((s) => s.error)
   const codexAccepted = useSession((s) => s.codexAccepted)
   const acceptCodex = useSession((s) => s.acceptCodex)
@@ -112,6 +114,18 @@ export function Lobby() {
               Unbegrenzt mit Plus
             </Link>
           </p>
+        ) : null}
+
+        {darfTestgespraech(user) ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-sm border border-dashed border-line-strong p-3">
+            <p className="flex-1 text-sm text-muted">
+              Nur für dich als Verwaltung: ein Testgespräch mit automatischem Partner. Nichts wird gespeichert, gezählt
+              oder gemeldet.
+            </p>
+            <Button size="sm" onClick={startTestgespraech}>
+              Testgespräch starten
+            </Button>
+          </div>
         ) : null}
 
         {selfBlocked.length > 0 ? (
