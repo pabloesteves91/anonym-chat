@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
-import { Zeichen } from '../components/Logo'
+import { Wortmarke } from '../components/Logo'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
@@ -45,7 +45,9 @@ export function Landing() {
   return (
     <div className="flex flex-col gap-14">
       <section>
-        <Zeichen className="mb-5 h-14 w-auto sm:h-16" />
+        <div className="mb-5">
+          <Wortmarke className="h-12 sm:h-16" />
+        </div>
         <p className="label-caps mb-3">Identität spielt keine Rolle</p>
         <h1 className="font-display text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
           Reden mit Fremden, ohne mit jedem zu reden.
