@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
-import { GRATIS_CHATS_PRO_TAG, PLAENE, aktiverPlan, preisText, type Plan, type PlanId } from '../services/plans'
+import { GRATIS_CHATS_PRO_TAG, PLAENE, aktiverPlan, preisText, rappenText, type Plan, type PlanId } from '../services/plans'
+import { aktionsStand, datumKurz, rabattiert } from '../services/aktion'
+import { AktionsHinweis } from '../components/AktionsHinweis'
+import { useAktion } from '../store/useAktion'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -62,6 +65,23 @@ const FRAGEN: { frage: string; antwort: string }[] = [
   },
 ]
 
+/** Die Frage zur Release-Aktion – nur, solange sie läuft. */
+function aktionsFragen(stand: ReturnType<typeof aktionsStand>): { frage: string; antwort: string }[] {
+  if (!stand.gratis && !stand.rabatt) return []
+  const teile: string[] = []
+  if (stand.gratis && stand.gratisBis) {
+    teile.push(
+      `Bis und mit ${datumKurz(stand.gratisBis)} hat jedes Konto alle Plus-Funktionen, ohne etwas zu buchen. Danach gilt wieder der eigene Tarif – es verlängert sich nichts von selbst, und es fällt nichts an.`,
+    )
+  }
+  if (stand.rabatt && stand.rabattBis) {
+    teile.push(
+      `Wer bis und mit ${datumKurz(stand.rabattBis)} bucht, zahlt ${stand.rabatt} % weniger. Bei Plus jährlich und Lifetime gilt das für die ganze Zahlung, bei Plus monatlich für den ersten Monat; ab dem zweiten Monat wird der normale Preis abgerechnet.`,
+    )
+  }
+  return [{ frage: 'Was gilt während der Release-Aktion?', antwort: teile.join(' ') }]
+}
+
 function Karte({
   plan,
   aktiv,
@@ -70,8 +90,11 @@ function Karte({
   busy,
   laeuft,
   angemeldet,
+  rabatt,
 }: {
   plan: Plan
+  /** Release-Rabatt in Prozent, 0 heisst keiner. */
+  rabatt: number
   aktiv: boolean
   gewaehlt: boolean
   onWaehlen: () => void
@@ -98,10 +121,26 @@ function Karte({
         <p className="mt-1 text-sm text-muted">{plan.kurz}</p>
       </div>
 
-      <p className="flex items-baseline gap-2">
-        <span className="font-display text-3xl font-semibold">{preisText(plan)}</span>
-        <span className="text-sm text-muted">{taktText[plan.takt]}</span>
-      </p>
+      {rabatt && plan.preisRappen > 0 ? (
+        <div>
+          <p className="flex flex-wrap items-baseline gap-2">
+            <span className="font-display text-3xl font-semibold">{rappenText(rabattiert(plan.preisRappen, rabatt))}</span>
+            <span className="sr-only">statt</span>
+            <s className="text-muted">{preisText(plan)}</s>
+            <span className="text-sm text-muted">{taktText[plan.takt]}</span>
+          </p>
+          <p className="mt-1 text-sm font-medium text-accent-strong">
+            {plan.takt === 'monatlich'
+              ? `−${rabatt} % im ersten Monat, danach ${preisText(plan)}`
+              : `−${rabatt} % Release-Rabatt`}
+          </p>
+        </div>
+      ) : (
+        <p className="flex items-baseline gap-2">
+          <span className="font-display text-3xl font-semibold">{preisText(plan)}</span>
+          <span className="text-sm text-muted">{taktText[plan.takt]}</span>
+        </p>
+      )}
 
       <ul className="flex flex-col gap-1.5 text-sm">
         {plan.vorteile.map((vorteil) => (
@@ -130,7 +169,7 @@ function Karte({
               : plan.id === 'frei'
                 ? 'Gratis nutzen'
                 : KASSE_AKTIV
-                  ? `Für ${preisText(plan)} buchen`
+                  ? `Für ${rappenText(rabatt ? rabattiert(plan.preisRappen, rabatt) : plan.preisRappen)} buchen`
                   : 'Diesen Tarif möchte ich'}
           </Button>
         )}
@@ -153,6 +192,8 @@ export function Preise() {
   const [parameter] = useSearchParams()
   const zahlung = parameter.get('zahlung')
 
+  const aktion = useAktion((s) => s.aktion)
+  const stand = aktionsStand(aktion)
   const meiner = aktiverPlan(user?.membership)
   const imBetrieb = Boolean(user && user.rolle !== 'nutzer')
 
@@ -192,6 +233,8 @@ export function Preise() {
       {zahlung === 'abgebrochen' ? <Note tone="warn">Die Zahlung wurde abgebrochen. Es wurde nichts belastet.</Note> : null}
       {fehler ? <Note tone="warn">{fehler}</Note> : null}
 
+      <AktionsHinweis />
+
       {imBetrieb ? (
         <Note>
           Dein Konto betreibt den Dienst und hat keine Tarifgrenzen. Die Übersicht bleibt hier, damit du siehst, was
@@ -209,6 +252,7 @@ export function Preise() {
             busy={busy || imBetrieb || zahlungLaeuft}
             laeuft={zahlungLaeuft}
             angemeldet={Boolean(konto)}
+            rabatt={stand.rabatt}
             onWaehlen={() => void waehlen(plan.id)}
           />
         ))}
@@ -257,7 +301,7 @@ export function Preise() {
           Häufige Fragen
         </h2>
         <dl className="mt-5 flex flex-col gap-5">
-          {FRAGEN.map((eintrag) => (
+          {[...aktionsFragen(stand), ...FRAGEN].map((eintrag) => (
             <div key={eintrag.frage}>
               <dt className="font-medium">{eintrag.frage}</dt>
               <dd className="mt-1 text-muted">{eintrag.antwort}</dd>

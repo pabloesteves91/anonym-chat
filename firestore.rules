@@ -173,6 +173,31 @@ service cloud.firestore {
       allow delete: if istModeration() || (isOwner(resource.data.userId) && resource.data.status == 'wartet');
     }
 
+    // Die Release-Aktion (siehe src/services/aktion.ts).
+    //
+    // Lesen darf jede und jeder, auch ohne Konto: Die Startseite zeigt den
+    // Hinweis allen. Ändern darf nur die Verwaltung – und nur mit Werten in
+    // denselben Grenzen, die das Formular prüft. Wer geändert hat, trägt sich
+    // ein; das Protokoll auf Discord liest es.
+    match /einstellungen/aktion {
+      allow read: if true;
+      allow create, update: if istVerwaltung()
+        && request.resource.data.keys()
+             .hasOnly(['aktiv', 'start', 'gratisTage', 'rabattProzent', 'rabattTage', 'geaendertVon'])
+        && request.resource.data.aktiv is bool
+        && (request.resource.data.start == null
+            || (request.resource.data.start is string && request.resource.data.start.size() <= 40))
+        && (request.resource.data.aktiv == false || request.resource.data.start != null)
+        && request.resource.data.gratisTage is int
+        && request.resource.data.gratisTage >= 0 && request.resource.data.gratisTage <= 90
+        && request.resource.data.rabattProzent is int
+        && request.resource.data.rabattProzent >= 0 && request.resource.data.rabattProzent <= 90
+        && request.resource.data.rabattTage is int
+        && request.resource.data.rabattTage >= 0 && request.resource.data.rabattTage <= 365
+        && eingetragenAls('geaendertVon');
+      allow delete: if false;
+    }
+
     // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.
     match /reports/{reportId} {
       allow create: if isOwner(request.resource.data.reporterId)

@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog } from './Dialog'
 import { Button, Note } from './ui'
-import { PLAENE, preisText, type Plan, type PlanId } from '../services/plans'
+import { PLAENE, preisText, rappenText, type Plan, type PlanId } from '../services/plans'
+import { aktionsStand, datumKurz, rabattiert } from '../services/aktion'
+import { useAktion } from '../store/useAktion'
 import { useSession } from '../store/useSession'
 import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
 import { ApiError } from '../services/api'
@@ -28,6 +30,7 @@ const taktText: Record<Plan['takt'], string> = {
  */
 export function TarifDialog() {
   const user = useSession((s) => s.user)
+  const stand = aktionsStand(useAktion((s) => s.aktion))
   const ready = useSession((s) => s.ready)
   const loading = useSession((s) => s.loading)
   const busy = useSession((s) => s.busy)
@@ -110,6 +113,12 @@ export function TarifDialog() {
     <Dialog open={sichtbar} onClose={schliessen} title={titel} description={beschreibung}>
       {bestaetigt === null ? (
         <>
+          {stand.gratis && stand.gratisBis ? (
+            <Note>
+              <strong>Release-Aktion:</strong> Bis und mit {datumKurz(stand.gratisBis)} hast du alle Plus-Funktionen
+              gratis – dafür musst du nichts wählen.
+            </Note>
+          ) : null}
           <fieldset className="flex flex-col gap-2 border-0 p-0">
             <legend className="sr-only">Tarif wählen</legend>
             {PLAENE.map((plan) => (
@@ -130,11 +139,24 @@ export function TarifDialog() {
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-medium">{plan.name}</span>
-                    <span className="font-mono text-sm">{preisText(plan)}</span>
+                    {stand.rabatt && plan.preisRappen > 0 ? (
+                      <>
+                        <span className="font-mono text-sm">{rappenText(rabattiert(plan.preisRappen, stand.rabatt))}</span>
+                        <span className="sr-only">statt</span>
+                        <s className="font-mono text-xs text-muted">{preisText(plan)}</s>
+                      </>
+                    ) : (
+                      <span className="font-mono text-sm">{preisText(plan)}</span>
+                    )}
                     <span className="text-xs text-muted">{taktText[plan.takt]}</span>
                     {plan.empfohlen ? <span className="label-caps text-accent-strong">Beliebt</span> : null}
                   </span>
                   <span className="mt-0.5 block text-sm text-muted">{plan.kurz}</span>
+                  {stand.rabatt && plan.takt === 'monatlich' ? (
+                    <span className="mt-0.5 block text-xs text-accent-strong">
+                      −{stand.rabatt} % im ersten Monat, danach {preisText(plan)}
+                    </span>
+                  ) : null}
                 </span>
               </label>
             ))}

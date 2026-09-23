@@ -5,6 +5,7 @@ import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { summeOffen, useOffene } from '../store/useOffene'
 import { useSupport } from '../store/useSupport'
+import { useAktion } from '../store/useAktion'
 import { supportMenue } from '../services/support'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Wortmarke } from './Logo'
@@ -82,6 +83,13 @@ export function AppShell() {
    * Daten, den die Security Rules nicht hineinlassen.
    */
   const zeigtModeration = darfModerieren(konto?.uid)
+
+  // Die Release-Aktion gilt für alle, angemeldet oder nicht. Wer den Stand
+  // abonniert, rendert bei einer Änderung neu – und mit ihm alle Seiten, die
+  // Tarifgrenzen oder Preise zeigen.
+  const beobachteAktion = useAktion((z) => z.beobachte)
+  useAktion((z) => z.aktion)
+  useEffect(() => beobachteAktion(), [beobachteAktion])
 
   // Die laufende Zählung hängt am angemeldeten Konto und endet mit ihm.
   const beobachte = useOffene((z) => z.beobachte)

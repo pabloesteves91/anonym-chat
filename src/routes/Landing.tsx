@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
 import { Wortmarke } from '../components/Logo'
+import { AktionsHinweis } from '../components/AktionsHinweis'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -81,6 +82,8 @@ export function Landing() {
           </span>
         </div>
       </section>
+
+      <AktionsHinweis mitLink />
 
       <section aria-labelledby="ablauf">
         <h2 id="ablauf" className="label-caps mb-4">

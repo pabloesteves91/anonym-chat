@@ -22,6 +22,7 @@ import { generateId, generatePseudonym } from '../pseudonym'
 import { validateDisplayName } from '../wordFilter'
 import { GRATIS_MITGLIEDSCHAFT, grenzenFuer, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
 import { rolleFuer } from '../roles'
+import { AKTION_STANDARD, pruefeAktion, type Aktion } from '../aktion'
 import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
@@ -65,6 +66,7 @@ const PFAD = {
   blocked: 'blocked',
   accessLog: 'accessLog',
   support: 'support',
+  einstellungen: 'einstellungen',
 } as const
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
@@ -1177,4 +1179,41 @@ export function watchOffeneVorgaenge(
     stoppB()
     stoppC()
   }
+}
+
+/* ------------------------------------------------------ Release-Aktion */
+
+const AKTION_DOC = 'aktion'
+
+function zuAktion(daten: Partial<Aktion> | undefined): Aktion {
+  return { ...AKTION_STANDARD, ...(daten ?? {}) }
+}
+
+/** Die Release-Aktion, live. Lesen darf jede und jeder, auch ohne Konto. */
+export function watchAktion(onChange: (aktion: Aktion) => void): Unsubscribe {
+  return onSnapshot(
+    doc(getDb(), PFAD.einstellungen, AKTION_DOC),
+    (schnappschuss) => onChange(zuAktion(schnappschuss.data() as Partial<Aktion> | undefined)),
+    // Nicht lesbar heisst: keine Aktion. Die Seite läuft normal weiter.
+    () => onChange(AKTION_STANDARD),
+  )
+}
+
+/** Speichert die Aktion – nur die Verwaltung. */
+export async function speichereAktion(aktion: Aktion): Promise<void> {
+  const fehler = pruefeAktion(aktion)
+  if (fehler) throw new ApiError(fehler, 'ungueltig')
+  await fuehreAus(
+    () =>
+      setDoc(doc(getDb(), PFAD.einstellungen, AKTION_DOC), {
+        aktiv: aktion.aktiv,
+        start: aktion.start,
+        gratisTage: aktion.gratisTage,
+        rabattProzent: aktion.rabattProzent,
+        rabattTage: aktion.rabattTage,
+        // Für das Protokoll: wer die Aktion geändert hat.
+        geaendertVon: uid(),
+      }),
+    'Die Aktion konnte nicht gespeichert werden.',
+  )
 }

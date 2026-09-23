@@ -1,6 +1,6 @@
 import { getAuth } from 'firebase-admin/auth'
 import { defineSecret } from 'firebase-functions/params'
-import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
+import { onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { GRUENDE, REGION, THEMEN, senden, type Einbettung } from './discord.js'
 
 /**
@@ -182,5 +182,31 @@ export const kontoProtokoll = onDocumentUpdated(
     for (const eintrag of kontoEintraege(event.params.id, vor, nach)) {
       await protokollieren(eintrag, nach.geaendertVon)
     }
+  },
+)
+
+/* ------------------------------------------------------- Release-Aktion */
+
+export function aktionEintrag(nach: Daten | undefined): Eintrag | null {
+  if (!nach) return null
+  if (!nach.aktiv) return { title: '🎉 Release-Aktion ausgeschaltet', color: FARBE_NEUTRAL, felder: [] }
+  const start = typeof nach.start === 'string' ? datum(nach.start) : '–'
+  return {
+    title: '🎉 Release-Aktion eingestellt',
+    color: FARBE_UEBERNOMMEN,
+    felder: [
+      ['Start', start],
+      ['Gratis', `${nach.gratisTage ?? 0} Tage`],
+      ['Rabatt', `${nach.rabattProzent ?? 0} % für ${nach.rabattTage ?? 0} Tage`],
+    ],
+  }
+}
+
+export const aktionProtokoll = onDocumentWritten(
+  { document: 'einstellungen/aktion', region: REGION, secrets: [DISCORD_WEBHOOK_LOG] },
+  async (event) => {
+    const nach = event.data?.after.data()
+    const eintrag = aktionEintrag(nach)
+    if (eintrag) await protokollieren(eintrag, nach?.geaendertVon)
   },
 )

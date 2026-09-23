@@ -12,6 +12,8 @@
  * das erst mit einer Serverfunktion, auch das steht dort.
  */
 
+import { aktionsStand, aktuelleAktion, type Aktion } from './aktion'
+
 export type PlanId = 'frei' | 'plus-monat' | 'plus-jahr' | 'lifetime'
 
 export interface Plan {
@@ -136,9 +138,14 @@ export function grenzenFuer(
   return grenzen(person?.membership, jetzt)
 }
 
-export function grenzen(mitgliedschaft: Membership | null | undefined, jetzt = Date.now()): Grenzen {
+export function grenzen(
+  mitgliedschaft: Membership | null | undefined,
+  jetzt = Date.now(),
+  aktion: Aktion = aktuelleAktion(),
+): Grenzen {
   const plan = aktiverPlan(mitgliedschaft, jetzt)
-  if (plan === 'frei') {
+  // Während der Gratiszeit der Release-Aktion gilt Plus für alle.
+  if (plan === 'frei' && !aktionsStand(aktion, jetzt).gratis) {
     return { chatsProTag: GRATIS_CHATS_PRO_TAG, interessenFilter: false, eigenerName: false, bevorzugt: false }
   }
   return { chatsProTag: null, interessenFilter: true, eigenerName: true, bevorzugt: true }
@@ -172,7 +179,11 @@ export function verbleibend(
 }
 
 export function preisText(plan: Plan): string {
-  if (plan.preisRappen === 0) return 'CHF 0'
-  const betrag = (plan.preisRappen / 100).toFixed(2).replace(/\.00$/, '.–')
+  return rappenText(plan.preisRappen)
+}
+
+export function rappenText(rappen: number): string {
+  if (rappen === 0) return 'CHF 0'
+  const betrag = (rappen / 100).toFixed(2).replace(/\.00$/, '.–')
   return `CHF ${betrag}`
 }

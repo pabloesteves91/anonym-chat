@@ -870,3 +870,41 @@ describe('Discord-Nachrichten', () => {
     await assertFails(setDoc(doc(als(MODERATOR), 'discordNachrichten', 'sup-2'), { ids: ['2'] }))
   })
 })
+
+describe('Release-Aktion', () => {
+  const aktion = (patch: Record<string, unknown> = {}) => ({
+    aktiv: true,
+    start: '2026-10-01T00:00:00.000Z',
+    gratisTage: 14,
+    rabattProzent: 20,
+    rabattTage: 30,
+    geaendertVon: MODERATOR,
+    ...patch,
+  })
+
+  it('ist für alle lesbar, auch ohne Anmeldung', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'einstellungen', 'aktion'), aktion())
+    })
+    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'einstellungen', 'aktion')))
+    await assertSucceeds(getDoc(doc(als(ANNA), 'einstellungen', 'aktion')))
+  })
+
+  it('lässt nur die Verwaltung ändern – mit eigener Kennung', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'einstellungen', 'aktion'), aktion({ geaendertVon: ANNA })))
+    await assertFails(setDoc(doc(als(NUR_MOD), 'einstellungen', 'aktion'), aktion({ geaendertVon: NUR_MOD })))
+    await assertFails(setDoc(doc(als(MODERATOR), 'einstellungen', 'aktion'), aktion({ geaendertVon: NUR_MOD })))
+    await assertSucceeds(setDoc(doc(als(MODERATOR), 'einstellungen', 'aktion'), aktion()))
+    await assertFails(deleteDoc(doc(als(MODERATOR), 'einstellungen', 'aktion')))
+  })
+
+  it('weist Werte ausserhalb der Grenzen ab', async () => {
+    const ref = doc(als(MODERATOR), 'einstellungen', 'aktion')
+    await assertFails(setDoc(ref, aktion({ rabattProzent: 100 })))
+    await assertFails(setDoc(ref, aktion({ gratisTage: -1 })))
+    await assertFails(setDoc(ref, aktion({ rabattTage: 1.5 })))
+    await assertFails(setDoc(ref, aktion({ start: null })))
+    await assertFails(setDoc(ref, aktion({ gratisFuerImmer: true })))
+    await assertSucceeds(setDoc(ref, aktion({ aktiv: false, start: null })))
+  })
+})

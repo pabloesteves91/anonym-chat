@@ -6,6 +6,7 @@ import { setGlobalOptions } from 'firebase-functions/v2/options'
 import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
 import { ABBRUCH_URL, ERFOLG_URL, TARIFE, istEingerichtet, istPlanId, type PlanId } from './tarife.js'
+import { aktuellerRabatt, gutschein } from './aktion.js'
 
 /**
  * Die Kasse.
@@ -64,9 +65,13 @@ export const createCheckoutSession = onCall(
     const abo = tarif.art === 'abo'
 
     try {
-      const sitzung = await stripe().checkout.sessions.create({
+      const kasse = stripe()
+      // Release-Aktion: Rabatt auf die erste Rechnung, wenn er gerade gilt.
+      const rabatt = await aktuellerRabatt()
+      const sitzung = await kasse.checkout.sessions.create({
         mode: abo ? 'subscription' : 'payment',
         line_items: [{ price: tarif.priceId, quantity: 1 }],
+        ...(rabatt > 0 ? { discounts: [{ coupon: await gutschein(kasse, rabatt) }] } : {}),
         // Beide Wege zurück: die Kennung als Referenz und in den Metadaten.
         client_reference_id: uid,
         metadata: { uid, plan },
@@ -239,4 +244,4 @@ export const stripeWebhook = onRequest(
 /* ------------------------------------------------------------ Discord */
 
 export { meldungNachDiscord, supportNachDiscord, supportAntwortNachDiscord, supportErledigtAufraeumen } from './discord.js'
-export { supportfallProtokoll, meldungProtokoll, kontoProtokoll } from './protokoll.js'
+export { supportfallProtokoll, meldungProtokoll, kontoProtokoll, aktionProtokoll } from './protokoll.js'
