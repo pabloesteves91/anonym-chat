@@ -51,7 +51,8 @@ export function Landing() {
         </div>
         <p className="label-caps mb-3">Identität spielt keine Rolle</p>
         <h1 className="font-display text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
-          Reden mit Fremden, ohne mit jedem zu reden.
+          Anonym chatten. <br className="sm:hidden" />
+          Mit echten Menschen.
         </h1>
         <p className="prose-column mt-5 text-lg text-muted">
           Jede Person hier hat sich ausgewiesen. Gesehen wird davon nichts ausser einem Siegel – das Gegenüber kennt
