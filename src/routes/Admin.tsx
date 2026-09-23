@@ -3,6 +3,7 @@ import { Button, Note, PageTitle, Panel } from '../components/ui'
 import { REPORT_REASONS } from '../services/types'
 import type { Report, ReportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
+import { summeOffen, useOffene } from '../store/useOffene'
 import { useAuth } from '../store/useAuth'
 import { ROLLE_LABEL, type Rolle } from '../services/roles'
 import { VerificationQueue } from '../components/VerificationQueue'
@@ -114,9 +115,18 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
   const clearAll = useModeration((s) => s.clearAll)
   const fehler = useModeration((s) => s.error)
 
+  /**
+   * Neu laden, sobald etwas dazukommt.
+   *
+   * Die Ansicht holt ihre Daten sonst nur beim Aufruf. Steht die Seite offen,
+   * während jemand eine Anfrage schickt, zeigt sie weiter "keine Anfragen" –
+   * genau das ist im Betrieb passiert. Die laufende Zählung in der Navigation
+   * meldet die Änderung, und die Liste zieht nach.
+   */
+  const offen = useOffene(summeOffen)
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, offen])
 
   const zaehler: Record<ReportStatus, number> = {
     offen: reports.filter((r) => r.status === 'offen').length,

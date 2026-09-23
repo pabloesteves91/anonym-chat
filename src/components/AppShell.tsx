@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { darfModerieren } from '../services/roles'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
+import { summeOffen, useOffene } from '../store/useOffene'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Wortmarke } from './Logo'
 import { Button, Note, Panel } from './ui'
@@ -79,6 +81,13 @@ export function AppShell() {
    */
   const zeigtModeration = darfModerieren(konto?.uid)
 
+  // Die laufende Zählung hängt am angemeldeten Konto und endet mit ihm.
+  const beobachte = useOffene((z) => z.beobachte)
+  const offen = useOffene(summeOffen)
+  useEffect(() => {
+    beobachte(konto?.uid ?? null)
+  }, [beobachte, konto?.uid])
+
   /**
    * Angemeldet, aber ohne Profil: Ohne eigene Anzeige bliebe hier eine
    * Seite stehen, die auf etwas wartet, das nicht mehr kommt. Die
@@ -109,6 +118,16 @@ export function AppShell() {
                 <NavLink to="/admin" className={modClass}>
                   <ShieldMark className="h-4 w-4 text-accent-strong" />
                   Moderation
+                  {offen > 0 ? (
+                    <span
+                      // Schrift in Flächenfarbe: Auf dem Rot ist das hell im
+                      // hellen und dunkel im dunklen Modus – beides über 5:1.
+                      className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-signal px-1.5 py-0.5 text-[0.6875rem] leading-none font-semibold text-surface tabular-nums"
+                      aria-label={`${offen} offene Vorgänge`}
+                    >
+                      {offen > 99 ? '99+' : offen}
+                    </span>
+                  ) : null}
                 </NavLink>
               ) : null}
             </nav>

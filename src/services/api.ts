@@ -51,6 +51,7 @@ export {
   listSupport,
   listEigeneSupport,
   getSupportAnhaenge,
+  watchOffeneVorgaenge,
   updateSupportStatus,
   listBlocked,
   clearReports,

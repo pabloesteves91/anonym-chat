@@ -6,12 +6,14 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
   updateDoc,
   where,
   writeBatch,
+  type Unsubscribe,
 } from 'firebase/firestore'
 import { deleteObject, getDownloadURL, ref, uploadString } from 'firebase/storage'
 import { getDb, getFileStorage, getFirebaseAuth } from '../firebase'
@@ -933,4 +935,55 @@ export async function updateSupportStatus(id: string, status: SupportStatus): Pr
     await updateDoc(doc(getDb(), PFAD.support, id), { status })
     return listSupport()
   }, 'Der Stand konnte nicht gesetzt werden.')
+}
+
+/* --------------------------------------------- Offene Vorgänge (laufend) */
+
+/**
+ * Zählt laufend mit, was auf Bearbeitung wartet.
+ *
+ * Zwei Zähler statt eines Ladevorgangs, und zwar aus einem konkreten Anlass:
+ * Eine abgeschickte Supportanfrage tauchte in der Moderation nicht auf, weil
+ * die Ansicht ihre Daten nur beim Aufruf holt und die Seite offen stand. Wer
+ * eine Zahl in der Navigation sieht, merkt sofort, dass etwas da ist – und
+ * die Moderationsansicht lädt daraufhin nach.
+ *
+ * Gezählt wird nur, was offen ist. Angefasste Vorgänge ('inArbeit',
+ * 'geprueft') sind keine Benachrichtigung mehr, sonst stünde die Zahl
+ * dauerhaft da und verlöre ihre Bedeutung.
+ *
+ * Gibt eine Funktion zum Abmelden zurück. Ohne sie bliebe die Verbindung
+ * beim Abmelden bestehen und liefe gegen die Regeln.
+ */
+export function watchOffeneVorgaenge(
+  onChange: (offen: { meldungen: number; anfragen: number }) => void,
+): Unsubscribe {
+  const stand = { meldungen: 0, anfragen: 0 }
+  const melde = () => onChange({ ...stand })
+
+  const offeneMeldungen = query(collection(getDb(), PFAD.reports), where('status', '==', 'offen'))
+  const offeneAnfragen = query(collection(getDb(), PFAD.support), where('status', '==', 'offen'))
+
+  const stoppA = onSnapshot(
+    offeneMeldungen,
+    (schnappschuss) => {
+      stand.meldungen = schnappschuss.size
+      melde()
+    },
+    // Ein Fehler darf die Navigation nicht lahmlegen; die Zahl bleibt dann weg.
+    () => {},
+  )
+  const stoppB = onSnapshot(
+    offeneAnfragen,
+    (schnappschuss) => {
+      stand.anfragen = schnappschuss.size
+      melde()
+    },
+    () => {},
+  )
+
+  return () => {
+    stoppA()
+    stoppB()
+  }
 }
