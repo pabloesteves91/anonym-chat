@@ -1,4 +1,4 @@
-# Verifizierter Anonymchat
+# NØNE – verifizierter Zufallschat
 
 Zufallschat für Erwachsene. Jede Person weist sich einmal mit Ausweis aus;
 im Gespräch bleiben beide Seiten anonym. Der Zweck der Verifizierung ist

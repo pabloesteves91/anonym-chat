@@ -42,7 +42,7 @@ export function CodexDialog({
       <ol className="flex flex-col gap-3">
         {REGELN.map((regel, index) => (
           <li key={regel.titel} className="flex gap-3">
-            <span className="mt-0.5 font-mono text-xs text-accent">{String(index + 1).padStart(2, '0')}</span>
+            <span className="mt-0.5 font-mono text-xs text-accent-strong">{String(index + 1).padStart(2, '0')}</span>
             <span>
               <span className="block font-medium">{regel.titel}</span>
               <span className="block text-sm text-muted">{regel.text}</span>

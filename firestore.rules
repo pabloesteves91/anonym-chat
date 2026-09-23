@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Security Rules für den verifizierten Anonymchat.
+// Security Rules für NØNE, den verifizierten Zufallschat.
 //
 // Hier wird entschieden, wer was darf – nicht im Browser. Was nicht
 // ausdrücklich erlaubt ist, ist verboten.

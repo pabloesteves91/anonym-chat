@@ -84,9 +84,9 @@ function Karte({
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-xl font-semibold">{plan.name}</h2>
-          {plan.empfohlen ? <span className="label-caps text-accent">Beliebt</span> : null}
+          {plan.empfohlen ? <span className="label-caps text-accent-strong">Beliebt</span> : null}
           {aktiv ? (
-            <span className="rounded-[2px] border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent uppercase">
+            <span className="rounded-sm border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent-strong uppercase">
               Dein Tarif
             </span>
           ) : null}
@@ -102,7 +102,7 @@ function Karte({
       <ul className="flex flex-col gap-1.5 text-sm">
         {plan.vorteile.map((vorteil) => (
           <li key={vorteil} className="flex gap-2">
-            <span aria-hidden="true" className="text-accent">
+            <span aria-hidden="true" className="text-accent-strong">
               ·
             </span>
             {vorteil}
@@ -118,7 +118,7 @@ function Karte({
         ) : aktiv ? (
           <p className="text-sm text-muted">Läuft bereits.</p>
         ) : gewaehlt ? (
-          <p className="text-sm text-accent">Wunsch ist notiert.</p>
+          <p className="text-sm text-accent-strong">Wunsch ist notiert.</p>
         ) : (
           <Button size="sm" variant={plan.empfohlen ? 'primary' : 'secondary'} disabled={busy} onClick={onWaehlen}>
             {laeuft
@@ -228,7 +228,7 @@ export function Preise() {
                 <th scope="col" className="w-28 py-2 pr-4 font-medium">
                   Frei
                 </th>
-                <th scope="col" className="w-32 py-2 font-medium text-accent">
+                <th scope="col" className="w-32 py-2 font-medium text-accent-strong">
                   Plus
                 </th>
               </tr>

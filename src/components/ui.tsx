@@ -24,7 +24,7 @@ export function Panel({
   className?: string
   as?: 'section' | 'div' | 'article' | 'aside'
 }) {
-  return <Tag className={`rounded-sm border border-line bg-surface ${className}`}>{children}</Tag>
+  return <Tag className={`rounded-sm border border-line bg-surface shadow-[0_1px_2px_rgb(15_26_23/0.04)] ${className}`}>{children}</Tag>
 }
 
 export function PageTitle({ children, kicker }: { children: ReactNode; kicker?: string }) {
@@ -75,7 +75,7 @@ export function TagToggle({
       type="button"
       aria-pressed={active}
       onClick={onToggle}
-      className={`rounded-[2px] border px-2.5 py-1 text-sm transition-colors ${
+      className={`rounded-sm border px-2.5 py-1 text-sm transition-colors ${
         active
           ? 'border-accent bg-accent-soft text-ink'
           : 'border-line-strong bg-surface text-muted hover:text-ink'

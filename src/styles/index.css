@@ -1,56 +1,64 @@
 @import 'tailwindcss';
 
 /* -------------------------------------------------------------------------
-   Designtokens – "Amtsstube, aber warm".
+   Designtokens – NØNE.
    Alle Farben sind hier einmal definiert (Light), werden weiter unten für
    Dark neu belegt und ausschliesslich über die Tailwind-Utilities benutzt.
+
+   Zum Mint: `--accent` (#4ec4b0) ist eine Füllfarbe, keine Schriftfarbe.
+   Weisse Schrift darauf ergibt 2,1:1 – unlesbar. Darum trägt sie dunkle
+   Schrift (`--accent-ink`, 8:1), und für Akzentschrift auf hellem Grund gibt
+   es `--accent-strong` (5:1 auf Weiss). Wer hier etwas ändert, prüft beides.
    ------------------------------------------------------------------------- */
 
 :root {
-  --ground: #edf0ee;
+  --ground: #f4f7f6;
   --surface: #ffffff;
-  --surface-raised: #f7f9f8;
-  --ink: #141f1c;
-  --muted: #5d6b67;
-  --accent: #1f6f63;
-  --accent-ink: #ffffff;
-  --accent-soft: #dce8e4;
+  --surface-raised: #edf3f1;
+  --ink: #0f1a17;
+  --muted: #596a65;
+  --accent: #4ec4b0;
+  --accent-ink: #08201c;
+  --accent-strong: #0e7e6b;
+  --accent-soft: #e9faf5;
   --signal: #9e4130;
   --signal-soft: #f3e1db;
-  --line: #d3dad7;
-  --line-strong: #b9c3bf;
+  --line: #dee6e3;
+  --line-strong: #c4d0cc;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ground: #101615;
-    --surface: #18201e;
-    --surface-raised: #1f2926;
-    --ink: #e7ece9;
-    --muted: #8fa09b;
-    --accent: #57b4a3;
-    --accent-ink: #0c1413;
-    --accent-soft: #1d2e2a;
+    --ground: #0b0f0e;
+    --surface: #141a18;
+    --surface-raised: #1c2422;
+    --ink: #e8edeb;
+    --muted: #94a39e;
+    --accent: #4ec4b0;
+    --accent-ink: #08201c;
+    --accent-strong: #6fd6c3;
+    --accent-soft: #12302a;
     --signal: #d2775f;
     --signal-soft: #32211c;
-    --line: #29332f;
-    --line-strong: #3b4642;
+    --line: #232e2b;
+    --line-strong: #384541;
   }
 }
 
 :root[data-theme='dark'] {
-  --ground: #101615;
-  --surface: #18201e;
-  --surface-raised: #1f2926;
-  --ink: #e7ece9;
-  --muted: #8fa09b;
-  --accent: #57b4a3;
-  --accent-ink: #0c1413;
-  --accent-soft: #1d2e2a;
+  --ground: #0b0f0e;
+  --surface: #141a18;
+  --surface-raised: #1c2422;
+  --ink: #e8edeb;
+  --muted: #94a39e;
+  --accent: #4ec4b0;
+  --accent-ink: #08201c;
+  --accent-strong: #6fd6c3;
+  --accent-soft: #12302a;
   --signal: #d2775f;
   --signal-soft: #32211c;
-  --line: #29332f;
-  --line-strong: #3b4642;
+  --line: #232e2b;
+  --line-strong: #384541;
 }
 
 @theme inline {
@@ -62,14 +70,23 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-strong: var(--accent-strong);
   --color-signal: var(--signal);
   --color-signal-soft: var(--signal-soft);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
 
-  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif;
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Montserrat trägt Überschriften und Fliesstext. Mono bleibt für das
+     Funktionale: Pseudonyme, Versionsnummer, Schrittzahlen – dort ist die
+     feste Laufweite der Zweck, nicht die Marke. */
+  --font-display: 'Montserrat Variable', Montserrat, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Montserrat Variable', Montserrat, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Eine Zeile, die 37 Stellen weicher macht: `rounded-sm` steckt in Karten,
+     Knöpfen, Eingabefeldern und Dialog. Statt überall zu greifen, wird die
+     Skala hier überschrieben. */
+  --radius-sm: 0.5rem;
 }
 
 html,
@@ -90,9 +107,9 @@ body {
 
 /* Sichtbarer Fokus – überall, nicht nur auf Buttons. */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 ::selection {
@@ -101,10 +118,13 @@ body {
 }
 
 /* Utility-Klassen für wiederkehrende Textrollen. */
+/* Die gesperrte Versalzeile aus dem Guideline:
+   ECHTE MENSCHEN · ECHTE GESPRÄCHE · OHNE IDENTITÄT */
 @utility label-caps {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 0.6875rem;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -140,6 +160,7 @@ body {
   inset-block: 0;
   left: 0;
   width: 25%;
+  border-radius: 999px;
   background: var(--accent);
   animation: vac-sweep 1.8s ease-in-out infinite;
 }

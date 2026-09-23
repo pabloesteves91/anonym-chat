@@ -18,7 +18,7 @@ const STATUS_LABEL: Record<ReportStatus, string> = {
 
 const STATUS_STYLE: Record<ReportStatus, string> = {
   offen: 'border-line-strong bg-raised text-muted',
-  geprueft: 'border-accent/45 bg-accent-soft text-accent',
+  geprueft: 'border-accent/45 bg-accent-soft text-accent-strong',
   gesperrt: 'border-signal/45 bg-signal-soft text-signal',
 }
 
@@ -47,7 +47,7 @@ function ReportCard({ report }: { report: Report }) {
 
         <div className="ml-auto flex flex-col items-end gap-2">
           <span
-            className={`rounded-[2px] border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[report.status]}`}
+            className={`rounded-sm border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[report.status]}`}
           >
             {STATUS_LABEL[report.status]}
           </span>
@@ -136,7 +136,7 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
       <div className="flex flex-wrap items-center gap-3 rounded-sm border border-line bg-surface px-4 py-3">
         <span className="label-caps">Angemeldet</span>
         <span className="font-mono text-sm">{email ?? 'unbekannt'}</span>
-        <span className="rounded-[2px] border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent uppercase">
+        <span className="rounded-sm border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent-strong uppercase">
           {ROLLE_LABEL[rolle]}
         </span>
         <Button size="sm" className="ml-auto" onClick={() => void signOut()}>

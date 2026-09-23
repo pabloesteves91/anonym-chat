@@ -50,11 +50,12 @@ const adresse = `${BETREIBER.name}, ${BETREIBER.strasse}, ${BETREIBER.ort}, ${BE
 export const IMPRESSUM: Rechtstext = {
   slug: 'impressum',
   titel: 'Impressum',
-  kicker: 'Wer hinter diesem Dienst steht',
-  vorspann: 'Angaben gemäss Art. 3 Abs. 1 lit. s des Bundesgesetzes gegen den unlauteren Wettbewerb (UWG).',
+  kicker: 'Wer hinter NØNE steht',
+  vorspann:
+    'Angaben zum Betrieb von NØNE gemäss Art. 3 Abs. 1 lit. s des Bundesgesetzes gegen den unlauteren Wettbewerb (UWG).',
   abschnitte: [
     {
-      titel: 'Verantwortlich für diesen Dienst',
+      titel: 'Verantwortlich für NØNE',
       absaetze: [adresse, `E-Mail: ${BETREIBER.email}`],
     },
     {
@@ -87,7 +88,7 @@ export const DATENSCHUTZ: Rechtstext = {
   titel: 'Datenschutzerklärung',
   kicker: 'Welche Daten anfallen und wie lange',
   vorspann:
-    'Diese Erklärung richtet sich nach dem revidierten Schweizer Datenschutzgesetz (revDSG) und, soweit Nutzende aus dem EWR betroffen sind, nach der DSGVO.',
+    'Diese Erklärung gilt für NØNE und richtet sich nach dem revidierten Schweizer Datenschutzgesetz (revDSG) und, soweit Nutzende aus dem EWR betroffen sind, nach der DSGVO.',
   abschnitte: [
     {
       titel: 'Verantwortliche Stelle',
@@ -124,7 +125,7 @@ export const DATENSCHUTZ: Rechtstext = {
     {
       titel: 'Auftragsbearbeiter',
       absaetze: [
-        'Wir betreiben den Dienst auf Google Firebase (Authentifizierung, Datenbank, Dateispeicher). Die Datenbank liegt in der Region "eur3" (Europa), der Dateispeicher in "europe-west3" (Frankfurt).',
+        'Wir betreiben NØNE auf Google Firebase (Authentifizierung, Datenbank, Dateispeicher). Die Datenbank liegt in der Region "eur3" (Europa), der Dateispeicher in "europe-west3" (Frankfurt).',
         'Für den SMS-Versand wird Firebase Phone Authentication eingesetzt; dabei wird Ihre Mobilnummer an Google übermittelt.',
         'Die Auslieferung der Website erfolgt über GitHub Pages. Dabei fallen serverseitige Zugriffsprotokolle an, auf die wir keinen Einfluss haben.',
         'Es findet keine Bearbeitung zu Werbezwecken statt und es werden keine Daten verkauft.',
@@ -157,12 +158,12 @@ export const AGB: Rechtstext = {
   titel: 'Nutzungsbedingungen',
   kicker: 'Die Regeln, auf die wir uns einigen',
   vorspann:
-    'Mit der Anmeldung stimmen Sie diesen Bedingungen zu. Wer sie verletzt, verliert den Zugang – und zwar dauerhaft, weil die Verifizierung an eine Person gebunden ist.',
+    'Mit der Anmeldung bei NØNE stimmen Sie diesen Bedingungen zu. Wer sie verletzt, verliert den Zugang – und zwar dauerhaft, weil die Verifizierung an eine Person gebunden ist.',
   abschnitte: [
     {
       titel: '1. Wer teilnehmen darf',
       absaetze: [
-        'Der Dienst steht ausschliesslich volljährigen Personen ab 18 Jahren offen. Das Alter wird anhand eines amtlichen Ausweises geprüft.',
+        'NØNE steht ausschliesslich volljährigen Personen ab 18 Jahren offen. Das Alter wird anhand eines amtlichen Ausweises geprüft.',
         'Pro Person ist ein Konto zulässig. Der Versuch, eine Sperre mit einem weiteren Konto, einer weiteren Nummer oder fremden Dokumenten zu umgehen, ist untersagt.',
       ],
     },
@@ -209,7 +210,7 @@ export const AGB: Rechtstext = {
     {
       titel: '7. Verfügbarkeit',
       absaetze: [
-        'Der Dienst wird mit Sorgfalt betrieben, aber ohne Zusicherung einer bestimmten Verfügbarkeit. Wartungsarbeiten, Störungen und Weiterentwicklungen können zu Unterbrüchen führen.',
+        'NØNE wird mit Sorgfalt betrieben, aber ohne Zusicherung einer bestimmten Verfügbarkeit. Wartungsarbeiten, Störungen und Weiterentwicklungen können zu Unterbrüchen führen.',
       ],
     },
     {

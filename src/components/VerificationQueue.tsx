@@ -44,7 +44,7 @@ function OffenerAntrag({ request, images }: { request: VerificationRequest; imag
           </p>
           <p className="text-sm text-muted">Eingereicht {datum(request.submittedAt)}</p>
         </div>
-        <span className="ml-auto rounded-[2px] border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+        <span className="ml-auto rounded-sm border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
           Wartet
         </span>
       </div>
@@ -112,8 +112,8 @@ function EntschiedenerAntrag({ request }: { request: VerificationRequest }) {
     <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1 bg-surface px-4 py-3 text-sm">
       <span className="font-mono">{request.pseudonym}</span>
       <span
-        className={`rounded-[2px] border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${
-          freigegeben ? 'border-accent/45 bg-accent-soft text-accent' : 'border-signal/45 bg-signal-soft text-signal'
+        className={`rounded-sm border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${
+          freigegeben ? 'border-accent/45 bg-accent-soft text-accent-strong' : 'border-signal/45 bg-signal-soft text-signal'
         }`}
       >
         {freigegeben ? 'Freigegeben' : 'Abgelehnt'}

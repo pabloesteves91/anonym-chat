@@ -2,17 +2,41 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#edf0ee" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101615" />
-    <meta name="apple-mobile-web-app-title" content="Anonymchat" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f7f6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f0e" />
+    <meta name="apple-mobile-web-app-title" content="NØNE" />
     <meta
       name="description"
-      content="Prototyp: anonymer Zufallschat mit Pflicht-Verifizierung. Simulierte Daten, keine echte Ausweisprüfung."
+      content="Verifizierter Zufallschat ab 18: Jede Person hier hat sich ausgewiesen, gesehen wird davon nichts ausser einem Siegel."
     />
-    <title>Verifizierter Anonymchat</title>
+    <title>NØNE – Identität spielt keine Rolle</title>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NØNE – Identität spielt keine Rolle" />
+    <meta
+      property="og:description"
+      content="Verifizierter Zufallschat ab 18: Jede Person hier hat sich ausgewiesen, gesehen wird davon nichts ausser einem Siegel."
+    />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+
+    <!--
+      Die Darstellung wird gesetzt, bevor React lädt. Ohne diese Zeilen blitzt
+      beim Neuladen kurz die helle Ansicht auf, wenn jemand dunkel gewählt hat –
+      der Zustand steht im Speicher, aber gelesen wird er erst später.
+      Fehlschläge sind egal: Dann greift wieder die Systemvorgabe.
+    -->
+    <script>
+      try {
+        var wahl = localStorage.getItem('vac.v1.theme')
+        if (wahl === 'dark' || wahl === 'light') document.documentElement.setAttribute('data-theme', wahl)
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -76,7 +76,7 @@ export function Lobby() {
         <fieldset className="border-0 p-0" disabled={!darfFiltern}>
           <legend className="label-caps mb-2">
             Interessen · mindestens eine Übereinstimmung
-            {darfFiltern ? null : <span className="ml-2 text-accent">mit Plus</span>}
+            {darfFiltern ? null : <span className="ml-2 text-accent-strong">mit Plus</span>}
           </legend>
           <div className={`flex flex-wrap gap-2 ${darfFiltern ? '' : 'opacity-50'}`}>
             {INTERESTS.map((interest) => (

@@ -132,7 +132,7 @@ export function TarifDialog() {
                     <span className="font-medium">{plan.name}</span>
                     <span className="font-mono text-sm">{preisText(plan)}</span>
                     <span className="text-xs text-muted">{taktText[plan.takt]}</span>
-                    {plan.empfohlen ? <span className="label-caps text-accent">Beliebt</span> : null}
+                    {plan.empfohlen ? <span className="label-caps text-accent-strong">Beliebt</span> : null}
                   </span>
                   <span className="mt-0.5 block text-sm text-muted">{plan.kurz}</span>
                 </span>

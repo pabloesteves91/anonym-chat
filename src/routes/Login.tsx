@@ -74,7 +74,7 @@ export function Login() {
               role="tab"
               aria-selected={modus === wert}
               onClick={() => wechsle(wert)}
-              className={`flex-1 rounded-[2px] px-3 py-2 text-sm transition-colors ${
+              className={`flex-1 rounded-sm px-3 py-2 text-sm transition-colors ${
                 modus === wert ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
               }`}
             >
@@ -170,7 +170,7 @@ export function Login() {
       </Panel>
 
       <div className="mt-6 flex items-start gap-3 text-sm text-muted">
-        <ShieldMark className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        <ShieldMark className="mt-0.5 h-5 w-5 shrink-0 text-accent-strong" />
         <p>
           Nach der Anmeldung folgt die einmalige Verifizierung: Mobilnummer per SMS, Ausweisfoto und Selfie. Geprüft
           wird von Hand, üblicherweise innerhalb weniger Stunden.

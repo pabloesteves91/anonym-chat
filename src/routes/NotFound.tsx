@@ -5,7 +5,7 @@ export function NotFound() {
   return (
     <div>
       <PageTitle kicker="Fehler 404">Diese Seite gibt es nicht</PageTitle>
-      <Link to="/" className="text-accent underline underline-offset-4">
+      <Link to="/" className="text-accent-strong underline underline-offset-4">
         Zurück zum Start
       </Link>
     </div>

@@ -3,6 +3,7 @@ import { darfModerieren } from '../services/roles'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
+import { Wortmarke } from './Logo'
 import { Button, Note, Panel } from './ui'
 import { ThemeToggle } from './ThemeToggle'
 import { TarifDialog } from './TarifDialog'
@@ -83,9 +84,8 @@ export function AppShell() {
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
-          <NavLink to="/" className="flex items-center gap-2 text-ink">
-            <ShieldMark className="h-5 w-5 text-accent" />
-            <span className="font-display text-lg leading-none font-semibold">Anonymchat</span>
+          <NavLink to="/" className="flex items-center text-ink" aria-label="NØNE, zur Startseite">
+            <Wortmarke className="h-5" />
           </NavLink>
 
           {konto ? (
@@ -101,7 +101,7 @@ export function AppShell() {
               </NavLink>
               {zeigtModeration ? (
                 <NavLink to="/admin" className={modClass}>
-                  <ShieldMark className="h-4 w-4 text-accent" />
+                  <ShieldMark className="h-4 w-4 text-accent-strong" />
                   Moderation
                 </NavLink>
               ) : null}
@@ -156,7 +156,7 @@ export function AppShell() {
 
       <footer className="border-t border-line px-4 py-5">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-          <p>Anonymchat · Verifizierter Zufallschat ab 18</p>
+          <p>NØNE · Verifizierter Zufallschat ab 18</p>
           <p className="font-mono" title={`Gebaut am ${new Date(__BUILD_ZEIT__).toLocaleString('de-CH')}`}>
             Version {__BUILD_ID__}
           </p>

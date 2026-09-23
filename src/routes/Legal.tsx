@@ -34,7 +34,7 @@ function Seite({ text }: { text: Rechtstext }) {
               </p>
             ))}
             {abschnitt.liste ? (
-              <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-muted marker:text-accent">
+              <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-muted marker:text-accent-strong">
                 {abschnitt.liste.map((punkt) => (
                   <li key={punkt}>{punkt}</li>
                 ))}

@@ -21,7 +21,7 @@ function StepNav({ current }: { current: VerifyStep }) {
           key={step.key}
           aria-current={i === index ? 'step' : undefined}
           className={`font-mono text-[0.6875rem] tracking-wide uppercase ${
-            i === index ? 'text-accent' : i < index ? 'text-ink' : 'text-muted'
+            i === index ? 'text-accent-strong' : i < index ? 'text-ink' : 'text-muted'
           }`}
         >
           {String(i + 1).padStart(2, '0')} {step.label}
@@ -345,7 +345,7 @@ export function Verify() {
         <PageTitle kicker="Abgeschlossen">Du bist verifiziert</PageTitle>
         <Panel className="p-5">
           <p className="flex items-center gap-2 text-ink">
-            <ShieldMark className="h-5 w-5 text-accent" />
+            <ShieldMark className="h-5 w-5 text-accent-strong" />
             Von der Moderation freigegeben am {datum(user.verifiedAt)}
           </p>
           <p className="mt-3 text-sm text-muted">

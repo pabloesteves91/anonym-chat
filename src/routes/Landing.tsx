@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
+import { Zeichen } from '../components/Logo'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
@@ -44,7 +45,8 @@ export function Landing() {
   return (
     <div className="flex flex-col gap-14">
       <section>
-        <p className="label-caps mb-3">Zufallschat mit Ausweispflicht</p>
+        <Zeichen className="mb-5 h-14 w-auto sm:h-16" />
+        <p className="label-caps mb-3">Identität spielt keine Rolle</p>
         <h1 className="font-display text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
           Reden mit Fremden, ohne mit jedem zu reden.
         </h1>
@@ -83,7 +85,7 @@ export function Landing() {
         <ol className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">
           {ABLAUF.map((schritt, index) => (
             <li key={schritt.titel} className="flex flex-col gap-2 bg-surface p-5">
-              <span className="font-mono text-xs text-accent">{String(index + 1).padStart(2, '0')}</span>
+              <span className="font-mono text-xs text-accent-strong">{String(index + 1).padStart(2, '0')}</span>
               <h3 className="font-display text-xl font-semibold">{schritt.titel}</h3>
               <p className="text-sm text-muted">{schritt.text}</p>
             </li>

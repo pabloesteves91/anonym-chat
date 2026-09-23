@@ -42,7 +42,7 @@ function Verlauf({ transcript, now }: { transcript: ChatTranscript; now: number 
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {transcript.reported ? (
-            <span className="rounded-[2px] border border-signal/45 bg-signal-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
+            <span className="rounded-sm border border-signal/45 bg-signal-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
               Gemeldet
             </span>
           ) : null}
@@ -51,7 +51,7 @@ function Verlauf({ transcript, now }: { transcript: ChatTranscript; now: number 
               {transcript.flagCount} Filtertreffer
             </span>
           ) : null}
-          <span className="rounded-[2px] border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+          <span className="rounded-sm border border-line-strong bg-raised px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
             {restzeit(transcript.expiresAt, now)}
           </span>
         </div>
