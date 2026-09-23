@@ -1,5 +1,12 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth'
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  connectAuthEmulator,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore'
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage'
 import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions'
@@ -63,7 +70,14 @@ const EMULATOR = import.meta.env.VITE_AUTH_EMULATOR as string | undefined
 /** Lädt Firebase erst beim ersten Zugriff, nicht schon beim Laden der Seite. */
 export function getFirebaseAuth(): Auth {
   if (auth) return auth
-  auth = getAuth(getApp())
+  // Die Speicherart steht hier, einmal beim Start – nicht vor jeder
+  // Anmeldung. Ein `setPersistence` vor dem Anmeldefenster lässt Safari das
+  // Fenster blockieren (siehe `oauthSignIn`). Lokaler Speicher zuerst: So
+  // war es bisher, bestehende Anmeldungen bleiben erhalten.
+  auth = initializeAuth(getApp(), {
+    persistence: [browserLocalPersistence, indexedDBLocalPersistence],
+    popupRedirectResolver: browserPopupRedirectResolver,
+  })
   if (EMULATOR) {
     connectAuthEmulator(auth, EMULATOR, { disableWarnings: true })
   }

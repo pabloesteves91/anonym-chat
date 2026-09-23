@@ -129,6 +129,24 @@ muss zusammenpassen.
 meldet die Anmeldung `auth/unauthorized-domain` – und die SMS geht ebenfalls
 nicht raus, weil die unsichtbare reCAPTCHA-Prüfung an derselben Liste hängt.
 
+### Google und Apple auf dem iPhone
+
+Die App meldet mit Google und Apple in einem eigenen Fenster an, nicht per
+Weiterleitung. Der Grund: Die App läuft auf `pabloesteves91.github.io`, die
+Anmeldeseite von Firebase auf `anonym-chat-223af.firebaseapp.com`. Safari (und
+damit jeder Browser auf dem iPhone) trennt den Speicher der beiden Domains.
+Nach einer Weiterleitung käme die Anmeldung deshalb nie in der App an, und es
+bliebe eine leere Seite.
+
+Im Code heisst das: Vor `signInWithPopup` darf nichts abgewartet werden,
+sonst blockiert Safari das Fenster (`oauthSignIn` in `src/services/auth.ts`).
+
+**Mit der eigenen Domain:** Die App über Firebase Hosting auf der eigenen
+Domain ausliefern (siehe „Alternative: Firebase Hosting") und in
+`src/services/firebase.ts` `authDomain` auf dieselbe Domain setzen. Dann
+liegen App und Anmeldeseite auf derselben Domain, und auch die Weiterleitung
+funktioniert überall.
+
 ### SMS-Kontingent
 
 Firebase Phone Authentication hat ein Freikontingent pro Tag; darüber hinaus

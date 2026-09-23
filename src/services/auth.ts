@@ -1,13 +1,11 @@
 import {
   GoogleAuthProvider,
   OAuthProvider,
-  browserLocalPersistence,
   createUserWithEmailAndPassword,
   getRedirectResult,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
-  setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -90,7 +88,9 @@ const FEHLERTEXT: Record<string, string> = {
   'auth/invalid-credential': `E-Mail oder Passwort stimmt nicht. ${OHNE_PASSWORT}`,
   'auth/operation-not-allowed': 'Diese Anmeldeart ist in Firebase nicht aktiviert.',
   'auth/popup-closed-by-user': 'Das Anmeldefenster wurde geschlossen.',
-  'auth/popup-blocked': 'Der Browser hat das Anmeldefenster blockiert.',
+  'auth/popup-blocked':
+    'Dein Browser hat das Anmeldefenster blockiert. Tippe noch einmal auf den Knopf oder erlaube Pop-ups für diese Seite. Mit E-Mail und Passwort geht es ohne Fenster.',
+  'auth/cancelled-popup-request': 'Es war schon ein Anmeldefenster offen. Bitte noch einmal versuchen.',
   'auth/unauthorized-domain': 'Diese Domain ist in Firebase nicht freigegeben.',
   'auth/invalid-email': 'Diese E-Mail-Adresse ist nicht gültig.',
   'auth/user-disabled': 'Dieses Konto ist gesperrt.',
@@ -111,7 +111,6 @@ function authFehler(error: unknown, fallback: string): AuthError {
 
 export async function signInModerator(email: string, password: string): Promise<ModeratorAccess> {
   try {
-    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
     const { user } = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password)
     return await pruefeOderAbmelden(user)
   } catch (error) {
@@ -142,26 +141,28 @@ function providerFor(anbieter: OAuthAnbieter): AuthProvider {
   return apple
 }
 
-/** Gründe, bei denen ein eigenes Fenster nicht geht – dann per Weiterleitung. */
-const BRAUCHT_WEITERLEITUNG = new Set([
-  'auth/popup-blocked',
-  'auth/operation-not-supported-in-this-environment',
-  'auth/cancelled-popup-request',
-])
+/**
+ * Nur wo es gar keine Fenster gibt (eingebettete Browser in anderen Apps),
+ * geht es per Weiterleitung.
+ *
+ * Nicht bei einem blockierten Fenster: Die App läuft auf einer anderen
+ * Domain als die Anmeldeseite von Firebase, und Safari – auf dem iPhone
+ * jeder Browser – trennt deren Speicher. Das Ergebnis der Weiterleitung käme
+ * nie an; übrig bliebe eine leere Seite. Dann lieber eine klare Meldung.
+ */
+const BRAUCHT_WEITERLEITUNG = new Set(['auth/operation-not-supported-in-this-environment'])
 
 /**
- * Anmeldung über Google oder Apple.
+ * Anmeldung über Google oder Apple, im eigenen Fenster.
  *
- * Zuerst im eigenen Fenster, weil man danach dort bleibt, wo man war.
- * Blockiert der Browser das – auf iPhones und in eingebetteten Seiten
- * häufig –, läuft es über eine Weiterleitung: die Seite verlässt den
- * Browser Richtung Anbieter und kommt danach zurück, wo
- * `completeRedirectSignIn()` sie wieder aufnimmt.
+ * Wichtig: `signInWithPopup` muss das Erste sein, was nach dem Tippen
+ * passiert. Safari öffnet ein Fenster nur direkt aus dem Tipp heraus – ein
+ * `await` davor, und es wird blockiert. Die Speicherart ist deshalb schon
+ * beim Start festgelegt (`getFirebaseAuth` in firebase.ts), nicht hier.
  */
 async function oauthSignIn(anbieter: OAuthAnbieter): Promise<User> {
   const provider = providerFor(anbieter)
   try {
-    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
     const { user } = await signInWithPopup(getFirebaseAuth(), provider)
     return user
   } catch (error) {
@@ -258,7 +259,6 @@ export const MIN_PASSWORT_LAENGE = 8
 /** Anmeldung mit E-Mail und Passwort. */
 export async function signInUserWithPassword(email: string, passwort: string): Promise<AppUser> {
   try {
-    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
     const { user } = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), passwort)
     return toAppUser(user) as AppUser
   } catch (error) {
@@ -278,7 +278,6 @@ export async function registerUserWithPassword(email: string, passwort: string):
     throw new AuthError(`Das Passwort braucht mindestens ${MIN_PASSWORT_LAENGE} Zeichen.`)
   }
   try {
-    await setPersistence(getFirebaseAuth(), browserLocalPersistence)
     const { user } = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), passwort)
     try {
       await sendEmailVerification(user)
