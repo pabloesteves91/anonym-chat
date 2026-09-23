@@ -157,6 +157,29 @@ service cloud.firestore {
       allow read, update, delete: if istModeration();
     }
 
+    // Supportanfragen.
+    //
+    // Anders als bei einer Meldung darf die absendende Person hier lesen: Eine
+    // Meldung ist eine Anzeige über jemand anderen, eine Supportanfrage ist die
+    // eigene Sache – und wer nicht sieht, ob sie angekommen ist, schreibt sie
+    // ein zweites Mal.
+    //
+    // Geschrieben wird einmal. Nachträgliches Ändern des eigenen Textes würde
+    // die Grundlage entziehen, auf der entschieden wurde; der Stand gehört
+    // ohnehin der Moderation.
+    match /support/{anfrageId} {
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.status == 'offen'
+        && request.resource.data.betreff is string
+        && request.resource.data.betreff.size() > 0
+        && request.resource.data.betreff.size() <= 80
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000;
+      allow read: if istModeration() || isOwner(resource.data.userId);
+      allow update, delete: if istModeration();
+    }
+
     // Warteschlange.
     //
     // Sie ist für alle Suchenden lesbar – anders lässt sich ohne eigenen

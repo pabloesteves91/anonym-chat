@@ -9,6 +9,7 @@ import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 import { PlanZuteilung } from '../components/PlanZuteilung'
 import { GeschlechtKorrektur } from '../components/GeschlechtKorrektur'
+import { Supportanfragen } from '../components/Supportanfragen'
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   offen: 'Offen',
@@ -200,6 +201,8 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
           ))}
         </div>
       )}
+
+      <Supportanfragen />
 
       <GeschlechtKorrektur />
 

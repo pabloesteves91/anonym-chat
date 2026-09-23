@@ -323,6 +323,66 @@ describe('Nachrichten', () => {
   })
 })
 
+describe('Supportanfragen', () => {
+  const anfrage = (userId: string, patch: Record<string, unknown> = {}) => ({
+    id: 'sup-1',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    userId,
+    pseudonym: 'Anna',
+    thema: 'geschlecht',
+    betreff: 'Falsches Geschlecht gewählt',
+    text: 'Ich habe bei der Anmeldung versehentlich das falsche Geschlecht angegeben.',
+    antwortAn: 'anna@beispiel.ch',
+    verifizierung: 'verifiziert',
+    plan: 'frei',
+    status: 'offen',
+    ...patch,
+  })
+
+  it('lässt die eigene Anfrage anlegen und den Stand nachlesen', async () => {
+    // Anders als bei einer Meldung: Wer nicht sieht, ob die Anfrage
+    // angekommen ist, schreibt sie ein zweites Mal.
+    await assertSucceeds(setDoc(doc(als(ANNA), 'support', 'sup-1'), anfrage(ANNA)))
+    await assertSucceeds(getDoc(doc(als(ANNA), 'support', 'sup-1')))
+    await assertSucceeds(getDoc(doc(als(MODERATOR), 'support', 'sup-1')))
+  })
+
+  it('lässt niemanden eine fremde Anfrage lesen', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-1'), anfrage(ANNA))
+    })
+    await assertFails(getDoc(doc(als(BEN), 'support', 'sup-1')))
+  })
+
+  it('lässt niemanden im fremden Namen schreiben', async () => {
+    await assertFails(setDoc(doc(als(BEN), 'support', 'sup-2'), anfrage(ANNA, { id: 'sup-2' })))
+  })
+
+  it('verhindert die selbst erledigte Anfrage', async () => {
+    // Sonst könnte sich jemand die eigene Anfrage vom Tisch räumen – oder,
+    // schlimmer, sie nachträglich umschreiben, nachdem entschieden wurde.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-1'), anfrage(ANNA))
+    })
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-1'), { status: 'erledigt' }))
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-1'), { text: 'Ganz was anderes' }))
+    await assertFails(deleteDoc(doc(als(ANNA), 'support', 'sup-1')))
+    await assertSucceeds(updateDoc(doc(als(MODERATOR), 'support', 'sup-1'), { status: 'erledigt' }))
+  })
+
+  it('weist leere und übergrosse Anfragen ab', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-3'), anfrage(ANNA, { id: 'sup-3', text: '' })))
+    await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-4'), anfrage(ANNA, { id: 'sup-4', betreff: '' })))
+    await assertFails(
+      setDoc(doc(als(ANNA), 'support', 'sup-5'), anfrage(ANNA, { id: 'sup-5', text: 'x'.repeat(2001) })),
+    )
+  })
+
+  it('lässt sich nicht als bereits erledigt einreichen', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-6'), anfrage(ANNA, { id: 'sup-6', status: 'erledigt' })))
+  })
+})
+
 describe('Meldungen und Protokoll', () => {
   it('lässt melden, aber nicht mitlesen', async () => {
     const meldung = {

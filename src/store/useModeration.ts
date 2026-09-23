@@ -8,6 +8,8 @@ import type {
   PlanRequest,
   Report,
   ReportStatus,
+  SupportAnfrage,
+  SupportStatus,
   VerificationImages,
   VerificationRequest,
 } from '../services/types'
@@ -49,6 +51,7 @@ interface ModerationState {
   /** Warum die Ansicht leer bleibt – sonst lädt sie scheinbar endlos. */
   error: string | null
   reports: Report[]
+  support: SupportAnfrage[]
   blocked: string[]
   requests: VerificationRequest[]
   /** Bildvorschauen je Antrag – nur solange die Browsersitzung läuft. */
@@ -69,6 +72,8 @@ interface ModerationState {
   /** Geschlechtsangabe korrigieren – der Supportfall dazu. */
   setGeschlecht: (userId: string, geschlecht: Geschlecht) => Promise<boolean>
   setStatus: (id: string, status: ReportStatus) => Promise<void>
+  /** Stand einer Supportanfrage setzen. */
+  setSupportStatus: (id: string, status: SupportStatus) => Promise<void>
   clearAll: () => Promise<void>
 }
 
@@ -77,6 +82,7 @@ export const useModeration = create<ModerationState>((set, get) => ({
   busy: false,
   error: null,
   reports: [],
+  support: [],
   blocked: [],
   requests: [],
   images: {},
@@ -88,15 +94,16 @@ export const useModeration = create<ModerationState>((set, get) => ({
   async load() {
     set({ error: null })
     try {
-      const [reports, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
+      const [reports, support, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
         api.listReports(),
+        api.listSupport(),
         api.listBlocked(),
         api.listVerificationRequests(),
         api.listTranscripts(),
         api.listAccessLog(),
         api.listPlanRequests(),
       ])
-      set({ reports, blocked, requests, transcripts, accessLog, planRequests, ready: true })
+      set({ reports, support, blocked, requests, transcripts, accessLog, planRequests, ready: true })
 
       // Die Bilder kommen aus dem Dateispeicher und damit über eine zweite
       // Verbindung. Sie dürfen die Ansicht nicht aufhalten: Wartet die
@@ -187,6 +194,18 @@ export const useModeration = create<ModerationState>((set, get) => ({
     } catch (error) {
       set({ error: meldung(error, 'Die Angabe konnte nicht geändert werden.') })
       return false
+    } finally {
+      set({ busy: false })
+    }
+  },
+
+  async setSupportStatus(id, status) {
+    set({ busy: true, error: null })
+    try {
+      const support = await api.updateSupportStatus(id, status)
+      set({ support })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Stand der Anfrage konnte nicht gesetzt werden.') })
     } finally {
       set({ busy: false })
     }

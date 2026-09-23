@@ -266,14 +266,14 @@ export function Preise() {
         {KASSE_AKTIV ? (
           <Note>
             Bezahlt wird über Stripe – Karte, TWINT, Apple Pay und Google Pay. Wir sehen deine Zahlungsdaten nie; sie
-            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung an <span className="font-mono">{BETREIBER.email}</span>.
+            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung über die Supportseite oder an <span className="font-mono">{BETREIBER.email}</span>.
           </Note>
         ) : (
           <Note tone="warn">
             <strong>Die Kasse fehlt noch.</strong> Zahlen lässt sich hier im Moment nicht: Eine Bezahlung braucht
             einen Server, der die Quittung des Zahlungsanbieters prüft – ein Browser darf über einen bezahlten Zugang
             nicht selbst entscheiden. Wer oben einen bezahlten Tarif wählt, hinterlässt deshalb einen Wunsch;
-            freigeschaltet wird er von Hand. Fragen dazu an <span className="font-mono">{BETREIBER.email}</span>.
+            freigeschaltet wird er von Hand. Fragen dazu über die Supportseite oder an <span className="font-mono">{BETREIBER.email}</span>.
           </Note>
         )}
 

@@ -7,6 +7,7 @@ import { Verify } from './routes/Verify'
 import { Profile } from './routes/Profile'
 import { Chat } from './routes/Chat'
 import { Preise } from './routes/Preise'
+import { Support } from './routes/Support'
 import { Datenschutz, Impressum, Nutzungsbedingungen } from './routes/Legal'
 import { NotFound } from './routes/NotFound'
 import { useAuth } from './store/useAuth'
@@ -75,6 +76,16 @@ export default function App() {
         <Route path="impressum" element={<Impressum />} />
         <Route path="datenschutz" element={<Datenschutz />} />
         <Route path="agb" element={<Nutzungsbedingungen />} />
+        {/* Bewusst ohne `RequireVerified`: Wer bei der Verifizierung hängt
+            oder abgelehnt wurde, muss gerade dann schreiben können. */}
+        <Route
+          path="support"
+          element={
+            <RequireUser>
+              <Support />
+            </RequireUser>
+          }
+        />
         <Route
           path="verifizierung"
           element={

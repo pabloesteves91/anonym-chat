@@ -30,6 +30,9 @@ import type {
   ReportInput,
   ReportStatus,
   Session,
+  SupportAnfrage,
+  SupportInput,
+  SupportStatus,
   TranscriptMessage,
   User,
   VerificationImages,
@@ -57,6 +60,7 @@ const PFAD = {
   messages: 'messages',
   blocked: 'blocked',
   accessLog: 'accessLog',
+  support: 'support',
 } as const
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
@@ -754,4 +758,74 @@ export async function clearReports(): Promise<void> {
     }
     await stapel.commit()
   }, 'Aufräumen fehlgeschlagen.')
+}
+
+/* ------------------------------------------------------------- Support */
+
+/**
+ * Eine Supportanfrage einreichen.
+ *
+ * Gekürzt wird hier und nicht nur im Eingabefeld: `maxLength` im Browser ist
+ * eine Bequemlichkeit, keine Grenze. Die harte Schranke steht zusätzlich in
+ * den Regeln.
+ *
+ * Verifizierungsstand und Tarif wandern als Momentaufnahme mit – so bleibt
+ * nachvollziehbar, in welcher Lage jemand geschrieben hat, auch wenn das
+ * Konto inzwischen freigeschaltet oder gesperrt wurde.
+ */
+export async function submitSupport(input: SupportInput): Promise<SupportAnfrage> {
+  return fuehreAus(async () => {
+    const id = uid()
+    const konto = await ladeUserDoc(id)
+    if (!konto) throw new ApiError('Kein Konto gefunden.', 'nicht-verifiziert')
+
+    const anfrage: SupportAnfrage = {
+      id: generateId('sup'),
+      createdAt: new Date().toISOString(),
+      userId: id,
+      pseudonym: konto.pseudonym,
+      thema: input.thema,
+      betreff: input.betreff.trim().slice(0, 80),
+      text: input.text.trim().slice(0, 2000),
+      antwortAn: input.antwortAn.trim().slice(0, 120),
+      verifizierung: konto.verificationStatus,
+      plan: konto.membership.plan,
+      status: 'offen',
+    }
+
+    await setDoc(doc(getDb(), PFAD.support, anfrage.id), anfrage)
+    return anfrage
+  }, 'Die Anfrage konnte nicht abgeschickt werden.')
+}
+
+/** Alle Anfragen – für die Moderation. */
+export async function listSupport(): Promise<SupportAnfrage[]> {
+  return fuehreAus(async () => {
+    const treffer = await getDocs(query(collection(getDb(), PFAD.support), orderBy('createdAt', 'desc')))
+    return treffer.docs.map((eintrag) => eintrag.data() as SupportAnfrage)
+  }, 'Supportanfragen nicht lesbar.')
+}
+
+/**
+ * Die eigenen Anfragen.
+ *
+ * Ohne `orderBy`: Zusammen mit dem Filter bräuchte das einen
+ * zusammengesetzten Index, und für die paar Zeilen pro Person lohnt sich der
+ * nicht. Sortiert wird nach dem Laden.
+ */
+export async function listEigeneSupport(): Promise<SupportAnfrage[]> {
+  return fuehreAus(async () => {
+    const treffer = await getDocs(query(collection(getDb(), PFAD.support), where('userId', '==', uid())))
+    return treffer.docs
+      .map((eintrag) => eintrag.data() as SupportAnfrage)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }, 'Deine Anfragen konnten nicht geladen werden.')
+}
+
+/** Stand einer Anfrage setzen; gibt die frische Liste zurück. */
+export async function updateSupportStatus(id: string, status: SupportStatus): Promise<SupportAnfrage[]> {
+  return fuehreAus(async () => {
+    await updateDoc(doc(getDb(), PFAD.support, id), { status })
+    return listSupport()
+  }, 'Der Stand konnte nicht gesetzt werden.')
 }

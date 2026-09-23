@@ -132,7 +132,11 @@ export function Profile() {
         {user.geschlecht ? (
           <p className="text-sm text-muted">
             Gebildet als {GESCHLECHTER.find((g) => g.value === user.geschlecht)?.label.toLowerCase()}er Name. Diese
-            Angabe hast du einmal gemacht; ändern kann sie nur der Support.
+            Angabe hast du einmal gemacht; ändern lässt sie sich nur über den{' '}
+            <Link to="/support" className="underline underline-offset-2 hover:text-ink">
+              Support
+            </Link>
+            .
           </p>
         ) : null}
 

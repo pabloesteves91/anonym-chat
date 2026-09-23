@@ -65,7 +65,8 @@ export function GeschlechtDialog() {
 
       <Note tone="warn">
         Diese Angabe lässt sich nur einmal machen. Ändern kann sie danach ausschliesslich der Support – dein
-        Anzeigename hängt daran, und ein Name, der sich beliebig umstellen lässt, sagt nichts mehr aus.
+        Anzeigename hängt daran, und ein Name, der sich beliebig umstellen lässt, sagt nichts mehr aus. Ist sie
+        verrutscht, schreib uns über „Support" unten auf jeder Seite.
       </Note>
 
       <p className="text-sm text-muted">

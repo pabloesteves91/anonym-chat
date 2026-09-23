@@ -46,6 +46,11 @@ export {
   submitReport,
   listReports,
   updateReportStatus,
+  // Support
+  submitSupport,
+  listSupport,
+  listEigeneSupport,
+  updateSupportStatus,
   listBlocked,
   clearReports,
 } from './backend/firestore'

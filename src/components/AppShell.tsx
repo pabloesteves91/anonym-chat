@@ -61,7 +61,13 @@ export function AppShell() {
 
   // Die Moderation ist kein Publikum: Dort hat ein Tarifangebot nichts
   // verloren, und ein Modal davor macht die Ansicht unbedienbar.
+  //
+  // Der Support steht aus einem anderen Grund auf derselben Liste: Der
+  // Geschlechtsdialog lässt sich nicht wegklicken, solange die Angabe fehlt.
+  // Wer zum Support will, *weil* er dort danebengegriffen hat, käme sonst nie
+  // an – die Seite wäre genau für die Leute gesperrt, für die es sie gibt.
   const imModerationsbereich = pathname.startsWith('/admin')
+  const ohneEinblendungen = imModerationsbereich || pathname.startsWith('/support')
 
   /**
    * Der Weg in die Moderation, nur für die berechtigte Kennung.
@@ -151,8 +157,8 @@ export function AppShell() {
 
       {/* Zwei einmalige Fenster nach der ersten Anmeldung, in dieser
           Reihenfolge: Erst die Pflichtangabe, dann das Tarifangebot. */}
-      {konto && !imModerationsbereich ? <GeschlechtDialog /> : null}
-      {konto && !imModerationsbereich ? <TarifDialog /> : null}
+      {konto && !ohneEinblendungen ? <GeschlechtDialog /> : null}
+      {konto && !ohneEinblendungen ? <TarifDialog /> : null}
 
       <footer className="border-t border-line px-4 py-5">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
@@ -160,7 +166,12 @@ export function AppShell() {
           <p className="font-mono" title={`Gebaut am ${new Date(__BUILD_ZEIT__).toLocaleString('de-CH')}`}>
             Version {__BUILD_ID__}
           </p>
-          <nav aria-label="Rechtliches" className="ml-auto flex flex-wrap gap-x-4 gap-y-1">
+          <nav aria-label="Weitere Seiten" className="ml-auto flex flex-wrap gap-x-4 gap-y-1">
+            {konto ? (
+              <Link to="/support" className="underline underline-offset-2 hover:text-ink">
+                Support
+              </Link>
+            ) : null}
             <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
               Tarife
             </Link>

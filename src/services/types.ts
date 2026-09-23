@@ -6,8 +6,11 @@
  * `services/api.ts`.
  */
 
-import type { Membership, Verbrauch } from './plans'
+import type { Membership, PlanId, Verbrauch } from './plans'
 import type { Rolle } from './roles'
+import type { SupportThema } from './support'
+
+export type { SupportThema }
 
 export type Language = 'de' | 'fr' | 'it' | 'en'
 
@@ -241,6 +244,40 @@ export interface ReportInput {
   partner: Partner
   messages: Message[]
   transcriptId?: string | null
+}
+
+/* ------------------------------------------------------------- Support */
+
+export type SupportStatus = 'offen' | 'inArbeit' | 'erledigt'
+
+/**
+ * Eine Supportanfrage.
+ *
+ * Verifizierungsstand und Tarif stehen mit drin, obwohl sie auch im Konto
+ * stehen: Sie sagen, wie die Lage **zum Zeitpunkt der Anfrage** war. Wird
+ * zwischendurch freigeschaltet oder gesperrt, bleibt die Anfrage trotzdem
+ * verständlich.
+ */
+export interface SupportAnfrage {
+  id: string
+  createdAt: string
+  userId: string
+  pseudonym: string
+  thema: SupportThema
+  betreff: string
+  text: string
+  /** Wohin die Antwort geht – Konto-Adresse oder abweichender Wunsch. */
+  antwortAn: string
+  verifizierung: VerificationStatus
+  plan: PlanId
+  status: SupportStatus
+}
+
+export interface SupportInput {
+  thema: SupportThema
+  betreff: string
+  text: string
+  antwortAn: string
 }
 
 /** Schritte des Antragsformulars. */
