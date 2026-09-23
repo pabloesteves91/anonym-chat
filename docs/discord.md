@@ -36,6 +36,12 @@ https://console.cloud.google.com/flows/enableapi?apiid=secretmanager.googleapis.
 Das Dienstkonto aus GitHub darf Dienste nicht selbst einschalten. Fragt
 Google nach einer Zahlungsart: Das Projekt muss auf **Blaze** laufen.
 
+Danach unter **IAM** beim Konto
+`firebase-adminsdk-…@anonym-chat-223af.iam.gserviceaccount.com` die Rollen
+aus [tarife.md](tarife.md#wenn-das-ausrollen-an-rechten-scheitert) vergeben –
+vor allem **Secret Manager Admin**. Fehlt sie, meldet der Ablauf „Secret
+Manager verweigert den Zugriff".
+
 ### 2. Bot anlegen
 
 Im Browser <https://discord.com/developers/applications> öffnen:

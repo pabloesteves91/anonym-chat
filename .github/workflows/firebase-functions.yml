@@ -54,6 +54,7 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
 
       - name: Geheimnisse im Secret Manager
+        id: geheimnisse
         env:
           SK: ${{ secrets.STRIPE_SECRET_KEY }}
           WH: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
@@ -80,6 +81,12 @@ jobs:
 
           platzhalter DISCORD_WEBHOOK_MELDUNGEN nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
           platzhalter DISCORD_WEBHOOK_SUPPORT nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
+
+      # Nur wenn wirklich der Secret Manager gescheitert ist.
+      - name: Hinweis bei fehlenden Rechten im Secret Manager
+        if: failure() && steps.geheimnisse.outcome == 'failure'
+        run: |
+          echo "::error::Secret Manager verweigert den Zugriff. Dem Dienstkonto fehlt die Rolle 'Secret Manager Admin' (Google-Cloud-Konsole → IAM) – siehe docs/discord.md, Schritt 1."
 
       - name: Funktionen ausrollen
         id: ausrollen

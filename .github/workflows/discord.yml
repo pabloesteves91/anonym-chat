@@ -49,11 +49,18 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
 
       - name: Webhooks in den Secret Manager
+        id: geheimnisse
         run: |
           npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_MELDUNGEN \
             --data-file "$RUNNER_TEMP/discord-meldungen.url" --force --project anonym-chat-223af --non-interactive
           npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_SUPPORT \
             --data-file "$RUNNER_TEMP/discord-support.url" --force --project anonym-chat-223af --non-interactive
+
+      # Nur wenn wirklich der Secret Manager gescheitert ist.
+      - name: Hinweis bei fehlenden Rechten im Secret Manager
+        if: failure() && steps.geheimnisse.outcome == 'failure'
+        run: |
+          echo "::error::Secret Manager verweigert den Zugriff. Dem Dienstkonto fehlt die Rolle 'Secret Manager Admin' (Google-Cloud-Konsole → IAM) – siehe docs/discord.md, Schritt 1."
 
       - name: Aufräumen
         if: always()

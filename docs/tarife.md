@@ -186,9 +186,10 @@ gebraucht werden, zusätzlich zu „Firebase-Administrator":
 | --- | --- |
 | Cloud Functions Admin | die Funktionen anlegen und ersetzen |
 | Service Account User | sie unter einem Dienstkonto laufen lassen |
-| Secret Manager Admin | die beiden Stripe-Schlüssel schreiben |
+| Secret Manager Admin | die Stripe-Schlüssel und die Discord-Webhooks ablegen und lesen |
 | Cloud Build Editor | den Build, den Firebase dafür anstösst |
 | Artifact Registry Administrator | das Ablegen des gebauten Abbilds |
+| Eventarc Admin | die Auslöser für neue Meldungen und Supportanfragen |
 
 Einzutragen in der **Google-Cloud-Konsole → IAM**, beim Konto
 `firebase-adminsdk-…@anonym-chat-223af.iam.gserviceaccount.com`.
