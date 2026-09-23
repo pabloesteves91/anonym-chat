@@ -91,31 +91,64 @@ export const useModeration = create<ModerationState>((set, get) => ({
   opened: {},
   accessLog: [],
 
+  /**
+   * Alle Listen der Moderation laden – jede für sich.
+   *
+   * Früher lief das über `Promise.all`: Scheiterte eine Quelle, waren alle
+   * sieben weg. So ist es im Betrieb passiert – die Verläufe scheiterten an
+   * einem fehlenden Datenbank-Index, und Meldungen wie Supportanfragen standen
+   * auf 0, obwohl sie tadellos lesbar waren. Das Abzeichen in der Navigation
+   * zählte derweil richtig, die Liste darunter widersprach ihm.
+   *
+   * Mit `allSettled` bleibt stehen, was gelingt. Was scheitert, bleibt leer
+   * und wird in `error` beim Namen genannt, damit man weiss, welcher Teil fehlt
+   * – statt einer leeren Seite ohne Grund.
+   */
   async load() {
     set({ error: null })
-    try {
-      const [reports, support, blocked, requests, transcripts, accessLog, planRequests] = await Promise.all([
-        api.listReports(),
-        api.listSupport(),
-        api.listBlocked(),
-        api.listVerificationRequests(),
-        api.listTranscripts(),
-        api.listAccessLog(),
-        api.listPlanRequests(),
-      ])
-      set({ reports, support, blocked, requests, transcripts, accessLog, planRequests, ready: true })
 
-      // Die Bilder kommen aus dem Dateispeicher und damit über eine zweite
-      // Verbindung. Sie dürfen die Ansicht nicht aufhalten: Wartet die
-      // Liste auf sie, verschwinden bei einer langsamen oder gesperrten
-      // Antwort auch Anträge, Verläufe und Meldungen – und niemand sähe,
-      // woran es liegt. Sie werden deshalb nachgereicht.
-      void ladeBilder(set, requests)
-    } catch (error) {
-      // Ein Fehlschlag muss enden: Bleibt `ready` auf false, zeigt die
-      // Ansicht für immer "wird geladen" und sieht aus wie ein Hänger.
-      set({ ready: true, error: meldung(error, 'Die Moderationsdaten konnten nicht geladen werden.') })
-    }
+    const quellen = [
+      ['reports', 'Meldungen', api.listReports()],
+      ['support', 'Supportanfragen', api.listSupport()],
+      ['blocked', 'Sperrliste', api.listBlocked()],
+      ['requests', 'Verifizierungsanträge', api.listVerificationRequests()],
+      ['transcripts', 'Verläufe', api.listTranscripts()],
+      ['accessLog', 'Zugriffsprotokoll', api.listAccessLog()],
+      ['planRequests', 'Tarifwünsche', api.listPlanRequests()],
+    ] as const
+
+    const ergebnisse = await Promise.allSettled(quellen.map(([, , anfrage]) => anfrage))
+
+    const geladen: Partial<ModerationState> = {}
+    const fehlend: string[] = []
+    ergebnisse.forEach((ergebnis, i) => {
+      const [feld, name] = quellen[i]
+      if (ergebnis.status === 'fulfilled') {
+        Object.assign(geladen, { [feld]: ergebnis.value })
+      } else {
+        fehlend.push(name)
+        // Der eigentliche Grund gehört in die Konsole – dort steht bei einem
+        // fehlenden Index auch der Verweis, mit dem er sich anlegen lässt.
+        console.error(`[anonymchat] ${name} nicht geladen:`, ergebnis.reason)
+      }
+    })
+
+    // `ready` in jedem Fall: Bliebe es auf false, zeigte die Ansicht für immer
+    // "wird geladen" und sähe aus wie ein Hänger.
+    set({
+      ...geladen,
+      ready: true,
+      error: fehlend.length
+        ? `Nicht geladen: ${fehlend.join(', ')}. Der Rest ist aktuell.`
+        : null,
+    })
+
+    // Die Bilder kommen aus dem Dateispeicher und damit über eine zweite
+    // Verbindung. Sie dürfen die Ansicht nicht aufhalten: Wartet die Liste
+    // auf sie, verschwinden bei einer langsamen oder gesperrten Antwort auch
+    // Anträge, Verläufe und Meldungen – und niemand sähe, woran es liegt. Sie
+    // werden deshalb nachgereicht.
+    if (geladen.requests) void ladeBilder(set, geladen.requests)
   },
 
   async openTranscript(id) {

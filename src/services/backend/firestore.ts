@@ -83,6 +83,13 @@ function uebersetze(error: unknown, fallback: string): ApiError {
   if (code.includes('unavailable') || code.includes('network')) {
     return new ApiError('Keine Verbindung zur Datenbank.', 'speicher')
   }
+  // Ein fehlender Index. Nach dem Ausrollen braucht Firebase einige Minuten,
+  // um ihn aufzubauen – so lange erscheint diese Meldung, danach nicht mehr.
+  // Der Emulator kennt keine Indizes; dieser Fall zeigt sich nur in Betrieb.
+  if (code.includes('failed-precondition')) {
+    console.error('[anonymchat] Index fehlt:', error)
+    return new ApiError('Ein Datenbank-Index fehlt oder wird noch aufgebaut.', 'speicher')
+  }
   if (code.startsWith('storage/')) {
     return new ApiError(
       code.includes('unauthorized')
