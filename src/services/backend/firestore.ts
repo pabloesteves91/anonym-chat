@@ -24,6 +24,7 @@ import { GRATIS_MITGLIEDSCHAFT, grenzenFuer, heute, type Membership, type PlanId
 import { rolleFuer } from '../roles'
 import { CODE_MUSTER, codeId, normiereCode, pruefeAktion, zuAktion, type Aktion } from '../aktion'
 import { pruefeNeuigkeit, sortiert, zuNeuigkeit, type Neuigkeit } from '../neuigkeiten'
+import { FEEDBACK_FRIST_MS, feedbackId, zuStatistik, type FeedbackWert, type Statistik } from '../feedback'
 import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
@@ -69,6 +70,8 @@ const PFAD = {
   support: 'support',
   aktionen: 'aktionen',
   neuigkeiten: 'neuigkeiten',
+  feedback: 'feedback',
+  statistik: 'statistik',
 } as const
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
@@ -1301,4 +1304,34 @@ export async function speichereNeuigkeit(n: Neuigkeit): Promise<string> {
 
 export async function loescheNeuigkeit(id: string): Promise<void> {
   await fuehreAus(() => deleteDoc(doc(getDb(), PFAD.neuigkeiten, id)), 'Die Neuigkeit konnte nicht gelöscht werden.')
+}
+
+/* ------------------------------------------------- Feedback und Statistik */
+
+/**
+ * Bewertet ein beendetes Gespräch – einmal, danach nie wieder.
+ *
+ * Die Regeln prüfen, dass beide im Raum standen, dass er beendet ist und
+ * dass es die erste Bewertung ist. Ausgewertet wird auf dem Server.
+ */
+export async function sendeFeedback(chatId: string, ueber: string, wert: FeedbackWert): Promise<void> {
+  await fuehreAus(async () => {
+    const von = uid()
+    await setDoc(doc(getDb(), PFAD.feedback, feedbackId(chatId, von)), {
+      chatId,
+      von,
+      ueber,
+      wert,
+      at: serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + FEEDBACK_FRIST_MS),
+    })
+  }, 'Feedback konnte nicht gespeichert werden.')
+}
+
+/** Die eigene Statistik. Solange noch nichts gezählt ist, alles null. */
+export async function ladeStatistik(): Promise<Statistik> {
+  return fuehreAus(async () => {
+    const snap = await getDoc(doc(getDb(), PFAD.statistik, uid()))
+    return zuStatistik(snap.data())
+  }, 'Statistik nicht lesbar.')
 }

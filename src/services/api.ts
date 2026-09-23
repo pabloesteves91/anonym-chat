@@ -72,6 +72,9 @@ export {
   watchAlleNeuigkeiten,
   speichereNeuigkeit,
   loescheNeuigkeit,
+  // Feedback und Statistik
+  sendeFeedback,
+  ladeStatistik,
 } from './backend/firestore'
 
 export {

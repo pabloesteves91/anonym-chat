@@ -30,18 +30,25 @@ const WARNUNG: Record<FilterCategory, { titel: string; text: string }> = {
 /**
  * Eingabezeile. Der Wortfilter läuft schon beim Tippen und warnt vorab –
  * gesendet wird trotzdem, markiert wird hinterher.
+ *
+ * Der Text gehört dem Aufrufer (`value`/`onChange`): So kann ein
+ * Gesprächsstarter ihn füllen, ohne ihn zu senden. Gesendet wird nur hier,
+ * mit Enter oder dem Knopf.
  */
 export function Composer({
+  value: text,
+  onChange: setText,
   onSend,
   onTyping,
   disabled,
 }: {
+  value: string
+  onChange: (text: string) => void
   onSend: (text: string) => void
   /** Meldet, dass gerade geschrieben wird – gedrosselt vom Aufrufer. */
   onTyping?: () => void
   disabled?: boolean
 }) {
-  const [text, setText] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const verdict = text.trim().length > 2 ? scanText(text) : null
   // Schwere Treffer brauchen einen zweiten, bewussten Klick.

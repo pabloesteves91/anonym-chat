@@ -101,7 +101,7 @@ export function meldungEintrag(vor: Daten, nach: Daten): Eintrag | null {
     color: farbe,
     felder: [
       ['Gemeldet', kurzkennung(nach.reportedId)],
-      ['Grund', GRUENDE[String(nach.reason)] ?? 'Unbekannt'],
+      ['Grund', nach.automatisch ? 'Automatischer Hinweis' : (GRUENDE[String(nach.reason)] ?? 'Unbekannt')],
     ],
   }
 }

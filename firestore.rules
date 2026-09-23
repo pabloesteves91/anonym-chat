@@ -243,9 +243,17 @@ service cloud.firestore {
     }
 
     // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.
+    //
+    // Automatische Hinweise (drei „unangenehm" von drei Personen, siehe
+    // functions/src/schwelle.ts) legt nur der Server an. Aus der App geht
+    // keine Meldung mit `automatisch`, unter einer Kennung `auto-…` oder mit
+    // einem Grund, den es nicht gibt – sonst liesse sich ein Hinweis fälschen.
     match /reports/{reportId} {
       allow create: if isOwner(request.resource.data.reporterId)
-        && request.resource.data.status == 'offen';
+        && request.resource.data.status == 'offen'
+        && request.resource.data.reason in ['belaestigung', 'sexuell', 'spam', 'minderjaehrig', 'sonstiges']
+        && !('automatisch' in request.resource.data)
+        && !reportId.matches('auto-.*');
       allow read, delete: if istModeration();
       // Wer den Stand ändert, trägt sich ein – siehe eingetragenAls().
       allow update: if istModeration()
@@ -392,11 +400,22 @@ service cloud.firestore {
       // Beide Warteschlangeneinträge sind da, wenn die Transaktion den Raum
       // anlegt (`greife` in `src/services/backend/live.ts`): Regeln sehen den
       // Stand vor der Transaktion, und da stehen beide noch drin.
+      //
+      // Und nie zwischen zwei Menschen, von denen einer den anderen mit
+      // „Nicht mehr verbinden" ausgeschlossen hat – egal, wer greift. Die App
+      // filtert die eigene Liste schon vorher; die fremde kennt sie nicht,
+      // die prüft nur diese Regel.
+      function schliesstAus(konto, anderes) {
+        return anderes in get(/databases/$(database)/documents/users/$(konto)).data.get('selfBlocked', []);
+      }
+
       allow create: if darfChatten()
         && request.resource.data.participants.hasAny([request.auth.uid])
         && request.resource.data.participants.size() == 2
         && exists(/databases/$(database)/documents/queue/$(request.resource.data.participants[0]))
         && exists(/databases/$(database)/documents/queue/$(request.resource.data.participants[1]))
+        && !schliesstAus(request.resource.data.participants[0], request.resource.data.participants[1])
+        && !schliesstAus(request.resource.data.participants[1], request.resource.data.participants[0])
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt > request.time;
 
@@ -440,6 +459,77 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if istModeration();
       }
+    }
+
+    // Gesprächsende: das Zeichen für die Statistik.
+    //
+    // Wer ein Gespräch verlässt, legt es einmal an (`leaveRoom` in
+    // src/services/backend/live.ts); der Server zählt daraufhin für beide
+    // (functions/src/gespraeche.ts). Nur wer im Raum stand, nur wenn der Raum
+    // beendet ist, nur einmal – ein zweites Anlegen wäre eine Änderung, und
+    // die ist verboten. Lesen muss es niemand. Die Frist liegt hinter der des
+    // Raums, damit der Server beim Löschen des Raums noch sieht, dass schon
+    // gezählt wurde.
+    match /gespraechsende/{chatId} {
+      function beendeterRaum() {
+        return get(/databases/$(database)/documents/chats/$(chatId)).data;
+      }
+      allow create: if isSignedIn()
+        && exists(/databases/$(database)/documents/chats/$(chatId))
+        && beendeterRaum().participants.hasAny([request.auth.uid])
+        && beendeterRaum().endedAt != null
+        && request.resource.data.keys().hasOnly(['von', 'at', 'expiresAt'])
+        && request.resource.data.von == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time + duration.value(73, 'h')
+        && request.resource.data.expiresAt < request.time + duration.value(10, 'd');
+      allow read, update, delete: if false;
+    }
+
+    // Gesprächsfeedback: 👍 / 😐 / 👎 nach dem Chat (siehe
+    // src/services/feedback.ts).
+    //
+    // Einmal pro Gespräch und Konto – die Kennung ist `<raum>_<konto>`, und
+    // ändern oder löschen darf niemand. Nur wer im Raum stand, nur über das
+    // Gegenüber, nur nach dem Ende. Lesen darf die bewertende Person ihre
+    // eigene Bewertung, sonst nur die Moderation: Die bewertete Person
+    // erfährt nie davon – weder vom Guten noch vom Unangenehmen.
+    match /feedback/{feedbackId} {
+      function bewerteterRaum() {
+        return get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data;
+      }
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['chatId', 'von', 'ueber', 'wert', 'at', 'expiresAt'])
+        && request.resource.data.von == request.auth.uid
+        && request.resource.data.chatId is string
+        && feedbackId == request.resource.data.chatId + '_' + request.auth.uid
+        && request.resource.data.ueber is string
+        && request.resource.data.ueber != request.auth.uid
+        && request.resource.data.wert in ['gut', 'neutral', 'unangenehm']
+        && request.resource.data.at == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt < request.time + duration.value(10, 'd')
+        && exists(/databases/$(database)/documents/chats/$(request.resource.data.chatId))
+        && bewerteterRaum().participants.hasAll([request.auth.uid, request.resource.data.ueber])
+        && bewerteterRaum().endedAt != null;
+      allow get: if isOwner(resource.data.von) || istModeration();
+      allow list: if istModeration();
+      allow update, delete: if false;
+    }
+
+    // Der Stand der Schwelle pro Konto – nur für den Server. Niemand liest,
+    // wie oft er als unangenehm bewertet wurde, niemand dreht daran.
+    match /feedbackStand/{userId} {
+      allow read, write: if false;
+    }
+
+    // Die eigene Statistik: lesen nur die Person selbst, schreiben nur der
+    // Server (functions/src/gespraeche.ts).
+    match /statistik/{userId} {
+      allow get: if isOwner(userId);
+      allow list, write: if false;
     }
 
     // Abfrage über alle Nachrichten hinweg – nur für das Aufräumen durch

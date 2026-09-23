@@ -30,22 +30,81 @@ function reasonLabel(report: Report) {
   return REPORT_REASONS.find((r) => r.value === report.reason)?.label ?? report.reason
 }
 
+const zeit = (iso: string) => new Date(iso).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' })
+
+/** Automatischer Hinweis aus den Bewertungen – deutlich anders als eine Meldung. */
+function AutomatischerHinweisKasten({ report }: { report: Report }) {
+  const transcripts = useModeration((s) => s.transcripts)
+  const hinweis = report.automatisch
+  if (!hinweis) return null
+  const vorhanden = new Set(transcripts.map((t) => t.id))
+  const noch = hinweis.chatIds.filter((id) => vorhanden.has(id))
+
+  return (
+    <div className="mb-3 rounded-sm border border-signal/45 bg-signal-soft p-3">
+      <p className="font-mono text-[0.6875rem] tracking-wide text-signal uppercase">🤖 Automatischer Hinweis</p>
+      <p className="mt-1 text-sm">
+        Dieses Konto wurde in drei unterschiedlichen Gesprächen als unangenehm bewertet.
+      </p>
+      <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="inline text-muted">Kennung: </dt>
+          <dd className="inline font-mono text-xs">{report.reportedId}</dd>
+        </div>
+        <div>
+          <dt className="inline text-muted">Pseudonym: </dt>
+          <dd className="inline font-mono">{report.reportedPseudonym}</dd>
+        </div>
+        <div>
+          <dt className="inline text-muted">Schwelle erreicht: </dt>
+          <dd className="inline">{zeit(hinweis.erreichtAm)}</dd>
+        </div>
+        <div>
+          <dt className="inline text-muted">Negative Bewertungen: </dt>
+          <dd className="inline">{hinweis.anzahl} (von {hinweis.anzahl} verschiedenen Personen)</dd>
+        </div>
+      </dl>
+      <p className="mt-2 text-sm text-muted">
+        {noch.length > 0 ? (
+          <>
+            Noch einsehbare Verläufe:{' '}
+            {noch.map((id) => (
+              <span key={id} className="mr-2 font-mono text-xs text-ink">
+                {id}
+              </span>
+            ))}
+            (unter „Verläufe", solange die 72 Stunden laufen)
+          </>
+        ) : (
+          'Die zugehörigen Verläufe sind nicht mehr vorhanden.'
+        )}
+      </p>
+      <p className="mt-2 text-xs text-muted">
+        Keine Sperre, keine Meldung einer Person: nur ein Hinweis. Die Entscheidung liegt bei der Moderation.
+      </p>
+    </div>
+  )
+}
+
 function ReportCard({ report }: { report: Report }) {
   const setStatus = useModeration((s) => s.setStatus)
   const busy = useModeration((s) => s.busy)
 
   return (
-    <Panel as="article" className="p-4">
+    <Panel as="article" className={`p-4 ${report.automatisch ? 'border-signal/45' : ''}`}>
+      <AutomatischerHinweisKasten report={report} />
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <p className="font-display text-lg font-semibold">{reasonLabel(report)}</p>
+          <p className="font-display text-lg font-semibold">
+            {report.automatisch ? 'Automatischer Hinweis' : reasonLabel(report)}
+          </p>
           <p className="text-sm text-muted">
             Gemeldet: <span className="font-mono text-ink">{report.reportedPseudonym}</span>{' '}
             <span className="font-mono text-xs">({report.reportedId})</span>
           </p>
           <p className="text-sm text-muted">
-            Melder: <span className="font-mono">{report.reporterPseudonym}</span> ·{' '}
-            {new Date(report.createdAt).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' })}
+            {report.automatisch ? 'Erstellt vom System' : <>Melder: <span className="font-mono">{report.reporterPseudonym}</span></>} ·{' '}
+            {zeit(report.createdAt)}
           </p>
         </div>
 

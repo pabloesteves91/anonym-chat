@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Field, Note, PageTitle, Panel, TagToggle, inputClass } from '../components/ui'
+import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
+import { EigeneStatistik } from '../components/EigeneStatistik'
+import { InteressenAuswahl } from '../components/InteressenAuswahl'
 import { buttonClass } from '../components/buttonClass'
 import { Kontokennung } from '../components/Kontokennung'
 import { aktiverPlan, grenzenFuer, planById, verbleibend } from '../services/plans'
 import { ROLLE_LABEL } from '../services/roles'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
-import { AGE_GROUPS, GESCHLECHTER, INTERESTS, LANGUAGES } from '../services/types'
+import { AGE_GROUPS, GESCHLECHTER, LANGUAGES, MAX_INTERESSEN } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
 import { useSession } from '../store/useSession'
 
-const MAX_INTERESSEN = 5
 
 export function Profile() {
   const navigate = useNavigate()
@@ -188,6 +189,8 @@ export function Profile() {
         hinweis="Bleibt an deine Verifizierung gebunden und ist im Chat niemals sichtbar. Sie ist der Grund, weshalb eine Sperre nicht durch ein neues Konto umgangen werden kann."
       />
 
+      {user.verified ? <EigeneStatistik /> : null}
+
       <Panel className="p-5">
         <form
           className="flex flex-col gap-6"
@@ -233,16 +236,7 @@ export function Profile() {
             <legend className="label-caps mb-2">
               Interessen · {entwurf.interests.length} von {MAX_INTERESSEN}
             </legend>
-            <div className="flex flex-wrap gap-2">
-              {INTERESTS.map((interest) => (
-                <TagToggle
-                  key={interest}
-                  label={interest}
-                  active={entwurf.interests.includes(interest)}
-                  onToggle={() => toggleInterest(interest)}
-                />
-              ))}
-            </div>
+            <InteressenAuswahl gewaehlt={entwurf.interests} onToggle={toggleInterest} max={MAX_INTERESSEN} />
           </fieldset>
 
           <div className="flex flex-wrap items-center gap-3">

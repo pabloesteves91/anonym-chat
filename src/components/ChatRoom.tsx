@@ -4,6 +4,8 @@ import { VerifiedBadge } from './VerifiedBadge'
 import { MessageList } from './MessageList'
 import { Composer } from './Composer'
 import { ReportDialog } from './ReportDialog'
+import { Sicherheitsmenue } from './Sicherheitsmenue'
+import { Vorschlaege } from './Vorschlaege'
 import type { FilterCategory, Message, Partner, ReportReason, User } from '../services/types'
 
 /** Aus einem Filtertreffer den passenden Meldegrund ableiten. */
@@ -28,13 +30,24 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
   const report = useChat((s) => s.report)
   const error = useChat((s) => s.error)
   const clearError = useChat((s) => s.clearError)
+  const entwurf = useChat((s) => s.entwurf)
+  const setEntwurf = useChat((s) => s.setEntwurf)
+  const vorschlagEinfuegen = useChat((s) => s.vorschlagEinfuegen)
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [menueOffen, setMenueOffen] = useState(false)
+  const [vorschlaegeOffen, setVorschlaegeOffen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [grund, setGrund] = useState<ReportReason>('belaestigung')
 
   const meldeNachricht = (message: Message) => {
     if (message.flag) setGrund(GRUND_ZU[message.flag.category])
+    clearError()
+    setDialogOpen(true)
+  }
+
+  const melden = () => {
+    setMenueOffen(false)
     clearError()
     setDialogOpen(true)
   }
@@ -60,28 +73,14 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
           </div>
           <VerifiedBadge status="verifiziert" size="sm" />
           <div className="ml-auto flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => void nextChat()}>
-              Nächster Chat
+            <Button size="sm" title="Beendet diesen Chat und sucht sofort mit denselben Filtern weiter" onClick={() => void nextChat()}>
+              Nächste Person
             </Button>
-            <Button size="sm" onClick={() => endChat('selbst')}>
-              Chat beenden
-            </Button>
-            <Button
-              size="sm"
-              title="Beendet den Chat und verhindert, dass ihr erneut verbunden werdet"
-              onClick={() => void blockAndEnd()}
-            >
-              Nicht mehr verbinden
-            </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() => {
-                clearError()
-                setDialogOpen(true)
-              }}
-            >
-              Melden
+            <Button size="sm" aria-haspopup="dialog" onClick={() => setMenueOffen(true)}>
+              <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M8 1.5 2.5 3.5v4c0 3.2 2.3 5.9 5.5 7 3.2-1.1 5.5-3.8 5.5-7v-4L8 1.5Z" strokeLinejoin="round" />
+              </svg>
+              Sicherheit
             </Button>
           </div>
         </header>
@@ -92,8 +91,43 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
           partnerPseudonym={partner.pseudonym}
           onReport={meldeNachricht}
         />
-        <Composer onSend={(text) => void sendMessage(text)} onTyping={notifyTyping} />
+        {vorschlaegeOffen ? (
+          <Vorschlaege
+            onWaehlen={(text) => {
+              vorschlagEinfuegen(text)
+              setVorschlaegeOffen(false)
+              document.getElementById('nachricht')?.focus()
+            }}
+            onSchliessen={() => setVorschlaegeOffen(false)}
+          />
+        ) : (
+          <div className="flex px-4 py-1.5">
+            <button
+              type="button"
+              onClick={() => setVorschlaegeOffen(true)}
+              className="rounded-sm px-1 py-0.5 text-sm font-medium text-accent-strong underline-offset-4 hover:underline"
+            >
+              ✦ NØNE Vorschläge
+            </button>
+          </div>
+        )}
+        <Composer value={entwurf} onChange={setEntwurf} onSend={(text) => void sendMessage(text)} onTyping={notifyTyping} />
       </Panel>
+
+      <Sicherheitsmenue
+        open={menueOffen}
+        onClose={() => setMenueOffen(false)}
+        partnerPseudonym={partner.pseudonym}
+        onVerlassen={() => {
+          setMenueOffen(false)
+          endChat('selbst')
+        }}
+        onNichtMehrVerbinden={() => {
+          setMenueOffen(false)
+          void blockAndEnd()
+        }}
+        onMelden={melden}
+      />
 
       <ReportDialog
         open={dialogOpen}

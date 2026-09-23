@@ -25,22 +25,31 @@ export type AgeGroup = '18–24' | '25–34' | '35–49' | '50+'
 
 export const AGE_GROUPS: AgeGroup[] = ['18–24', '25–34', '35–49', '50+']
 
-export const INTERESTS = [
-  'Bücher',
-  'Musik',
-  'Wandern',
-  'Kochen',
-  'Filme',
-  'Technik',
-  'Sport',
-  'Reisen',
-  'Kunst',
-  'Games',
-  'Politik',
-  'Tiere',
+/**
+ * Die Interessen, nach Gruppen geordnet.
+ *
+ * Die Gruppen dienen nur der Anzeige – gespeichert und verglichen wird allein
+ * der Begriff. Die ersten zwölf Begriffe gab es schon vorher; sie stehen
+ * unverändert drin, damit gespeicherte Profile und Filter weiter gelten.
+ * Freitext gibt es bewusst nicht: Ein Interesse soll verbinden, nicht
+ * identifizieren.
+ */
+export const INTEREST_GRUPPEN = [
+  { titel: 'Kultur', interessen: ['Bücher', 'Filme', 'Serien', 'Kunst', 'Theater', 'Fotografie', 'Geschichte'] },
+  { titel: 'Musik', interessen: ['Musik', 'Konzerte', 'Instrumente', 'Podcasts'] },
+  { titel: 'Draussen und Bewegung', interessen: ['Wandern', 'Sport', 'Fitness', 'Velo', 'Wintersport', 'Natur', 'Garten'] },
+  { titel: 'Genuss und Alltag', interessen: ['Kochen', 'Backen', 'Kaffee', 'Mode', 'Wohnen', 'Tiere'] },
+  { titel: 'Technik und Spiel', interessen: ['Technik', 'Games', 'Programmieren', 'Wissenschaft', 'Brettspiele', 'Anime'] },
+  { titel: 'Welt und Gesellschaft', interessen: ['Reisen', 'Politik', 'Sprachen', 'Umwelt', 'Philosophie', 'Psychologie'] },
+  { titel: 'Kreativ und Persönlich', interessen: ['Schreiben', 'Handwerk', 'Achtsamkeit', 'Karriere'] },
 ] as const
 
-export type Interest = (typeof INTERESTS)[number]
+export const INTERESTS = INTEREST_GRUPPEN.flatMap((gruppe) => gruppe.interessen)
+
+/** Höchstens so viele Interessen pro Profil und pro Filter. */
+export const MAX_INTERESSEN = 5
+
+export type Interest = (typeof INTEREST_GRUPPEN)[number]['interessen'][number]
 
 export interface Profile {
   language: Language
@@ -238,6 +247,22 @@ export interface Report {
   /** Verweis auf den Chatraum, solange die Frist läuft. */
   transcriptId: string | null
   status: ReportStatus
+  /**
+   * Nur bei automatischen Hinweisen, angelegt vom Server – nie aus der App
+   * (die Regeln verbieten es): drei „unangenehm" von drei verschiedenen
+   * Personen aus drei verschiedenen Gesprächen. Gesperrt wird dadurch nichts.
+   */
+  automatisch?: AutomatischerHinweis
+}
+
+export interface AutomatischerHinweis {
+  art: 'feedback-unangenehm'
+  /** Wie viele verschiedene Personen dazu beigetragen haben. */
+  anzahl: number
+  /** Die Räume; einsehbar nur, solange die 72 Stunden laufen. */
+  chatIds: string[]
+  /** ISO-Zeitpunkt, an dem die Schwelle erreicht wurde. */
+  erreichtAm: string
 }
 
 export interface ReportInput {

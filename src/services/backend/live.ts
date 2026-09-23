@@ -22,7 +22,7 @@ import {
 import { getDb, getFirebaseAuth } from '../firebase'
 import { generateId } from '../pseudonym'
 import { scanText } from '../wordFilter'
-import { nachVorrang, passtZusammen } from '../matching'
+import { kandidatenFiltern } from '../matching'
 import { ApiError, RETENTION_MS, delay } from './shared'
 import type { FilterVerdict, Language, MatchFilter, User } from '../types'
 
@@ -45,6 +45,7 @@ const PFAD = {
   queue: 'queue',
   chats: 'chats',
   messages: 'messages',
+  gespraechsende: 'gespraechsende',
 } as const
 
 /** Ab wann ein Warteschlangeneintrag als verlassen gilt. */
@@ -222,8 +223,18 @@ export async function leaveQueue(): Promise<void> {
 export async function findMatch(
   filter: MatchFilter,
   ich: User,
-  optionen: { bevorzugt: boolean; signal?: AbortSignal; onWartende?: (anzahl: number) => void } ,
+  optionen: {
+    bevorzugt: boolean
+    signal?: AbortSignal
+    /** Konten, die nie zugelost werden – die eigene Liste „Nicht mehr verbinden". */
+    ausgeschlossen?: string[]
+    /** Was die Suche gerade sieht – nur für die Stufe in der Warteschlange. */
+    onSicht?: (sicht: { kandidaten: number; passend: number }) => void
+  },
 ): Promise<Treffer> {
+  // Wer in dieser Suche vom Server abgelehnt wurde (etwa, weil er mich
+  // ausgeschlossen hat), wird nicht immer wieder versucht.
+  const abgelehnt = new Set<string>()
   const meinEintrag: Omit<QueueDoc, 'since'> & { since: unknown } = {
     uid: ich.id,
     pseudonym: ich.pseudonym,
@@ -258,22 +269,27 @@ export async function findMatch(
         ),
       )
 
-      const kandidaten = wartende.docs
-        .map((eintrag) => eintrag.data() as QueueDoc)
-        .filter((eintrag) => eintrag.uid !== ich.id)
-      optionen.onWartende?.(kandidaten.length)
-
-      const passende = nachVorrang(
-        kandidaten.filter((eintrag) => passtZusammen(eintrag, filter, ich.profile.interests)),
+      const { kandidaten, passend } = kandidatenFiltern(
+        wartende.docs.map((eintrag) => eintrag.data() as QueueDoc),
+        {
+          ich: ich.id,
+          ausgeschlossen: [...(optionen.ausgeschlossen ?? []), ...abgelehnt],
+          filter,
+          meineInteressen: ich.profile.interests,
+        },
       )
+      optionen.onSicht?.({ kandidaten: kandidaten.length, passend: passend.length })
 
-      for (const kandidat of passende) {
+      for (const kandidat of passend) {
         if (optionen.signal?.aborted) throw new ApiError('Abgebrochen.', 'abgebrochen')
         try {
           return await greife(kandidat, ich)
         } catch (error) {
           if (error instanceof Belegt) continue
-          // Eine abgelehnte Transaktion heisst meist: jemand war schneller.
+          // Abgelehnt von den Regeln: Einer von beiden hat den anderen
+          // ausgeschlossen. Nicht noch einmal versuchen.
+          if (istVerweigert(error)) abgelehnt.add(kandidat.uid)
+          // Sonst heisst eine abgelehnte Transaktion meist: jemand war schneller.
           continue
         }
       }
@@ -379,7 +395,19 @@ export async function markSeen(roomId: string): Promise<void> {
   }
 }
 
-export async function leaveRoom(roomId: string): Promise<void> {
+/** Das Zeichen für die Statistik überdauert den Raum (72 h) um einen Tag. */
+const GESPRAECHSENDE_FRIST_MS = 4 * 86_400_000
+
+/**
+ * Den Raum verlassen – egal wie: beendet, gemeldet, blockiert, „Nächste
+ * Person" oder weil das Gegenüber ging. Alle Wege führen hierher.
+ *
+ * Danach wird das Gesprächsende vermerkt; daraus zählt der Server die
+ * Statistik beider Seiten, einmal pro Raum. Wer als Zweites geht, findet den
+ * Vermerk schon vor – die Regeln lehnen das zweite Anlegen ab, und das ist
+ * so gewollt.
+ */
+export async function leaveRoom(roomId: string, optionen: { vermerken?: boolean } = {}): Promise<void> {
   try {
     await updateDoc(doc(db(), PFAD.chats, roomId), {
       left: arrayUnion(meineId()),
@@ -387,6 +415,17 @@ export async function leaveRoom(roomId: string): Promise<void> {
     })
   } catch {
     /* Der Raum läuft ohnehin ab. */
+    return
+  }
+  if (optionen.vermerken === false) return
+  try {
+    await setDoc(doc(db(), PFAD.gespraechsende, roomId), {
+      von: meineId(),
+      at: serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + GESPRAECHSENDE_FRIST_MS),
+    })
+  } catch {
+    /* Schon vermerkt – oder der Server zählt beim Ablauf des Raums. */
   }
 }
 
@@ -396,6 +435,11 @@ export async function markReported(roomId: string): Promise<void> {
   } catch {
     /* Die Meldung selbst ist längst gespeichert. */
   }
+}
+
+function istVerweigert(error: unknown): boolean {
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+  return code.includes('permission-denied')
 }
 
 function uebersetze(error: unknown, fallback: string): ApiError {

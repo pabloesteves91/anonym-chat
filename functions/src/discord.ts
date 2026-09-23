@@ -117,6 +117,16 @@ async function merken(fallId: string, nachrichtId: string | null): Promise<void>
 export const meldungNachDiscord = onDocumentCreated(
   { document: 'reports/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_MELDUNGEN] },
   async (event) => {
+    // Automatischer Hinweis aus den Bewertungen (gespraeche.ts): eigener
+    // Titel, damit ihn niemand für eine Meldung einer Person hält.
+    if (event.data?.get('automatisch')) {
+      await senden(DISCORD_WEBHOOK_MELDUNGEN.value(), {
+        title: '🤖 Automatischer Hinweis',
+        description: 'Ein Konto wurde in drei unterschiedlichen Gesprächen als unangenehm bewertet.\n→ Zur Moderation',
+        color: FARBE_MELDUNG,
+      })
+      return
+    }
     const grund = String(event.data?.get('reason') ?? '')
     const vorrang = grund === 'minderjaehrig'
     await senden(DISCORD_WEBHOOK_MELDUNGEN.value(), {

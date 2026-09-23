@@ -568,6 +568,156 @@ describe('Meldungen und Protokoll', () => {
   })
 })
 
+describe('Blockieren beim Zusammenführen', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'queue', ANNA), warteEintrag(ANNA))
+      await setDoc(doc(ctx.firestore(), 'queue', BEN), warteEintrag(BEN))
+    })
+  })
+
+  it('lässt keinen Raum mit jemandem entstehen, den man ausgeschlossen hat', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'users', ANNA), { selfBlocked: [BEN] })
+    })
+    await assertFails(setDoc(doc(als(ANNA), 'chats', 'raum-9'), raum({ id: 'raum-9' })))
+  })
+
+  it('auch nicht, wenn die ausgeschlossene Person greift', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'users', ANNA), { selfBlocked: [BEN] })
+    })
+    await assertFails(setDoc(doc(als(BEN), 'chats', 'raum-9'), raum({ id: 'raum-9' })))
+  })
+})
+
+describe('Meldungen aus der App', () => {
+  const meldung = (patch: Record<string, unknown> = {}) => ({
+    id: 'rep-2',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    reporterId: ANNA,
+    reporterPseudonym: 'Anna',
+    reportedId: BEN,
+    reportedPseudonym: 'Ben',
+    reason: 'belaestigung',
+    note: '',
+    excerpt: [],
+    autoFlags: 0,
+    transcriptId: 'raum-1',
+    status: 'offen',
+    ...patch,
+  })
+
+  it('lässt keinen automatischen Hinweis fälschen', async () => {
+    await assertFails(
+      setDoc(
+        doc(als(ANNA), 'reports', 'rep-2'),
+        meldung({ automatisch: { art: 'feedback-unangenehm', anzahl: 3, chatIds: [], erreichtAm: '' } }),
+      ),
+    )
+    await assertFails(setDoc(doc(als(ANNA), 'reports', `auto-feedback-${BEN}-1`), meldung()))
+    await assertFails(setDoc(doc(als(ANNA), 'reports', 'rep-2'), meldung({ reporterId: 'system' })))
+  })
+
+  it('verlangt einen der bekannten Gründe', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'reports', 'rep-2'), meldung({ reason: 'erfunden' })))
+    await assertSucceeds(setDoc(doc(als(ANNA), 'reports', 'rep-2'), meldung()))
+  })
+})
+
+describe('Gesprächsfeedback', () => {
+  const inAchtTagen = () => Timestamp.fromMillis(Date.now() + 7 * 86_400_000)
+  const bewertung = (patch: Record<string, unknown> = {}) => ({
+    chatId: 'raum-1',
+    von: ANNA,
+    ueber: BEN,
+    wert: 'unangenehm',
+    at: serverTimestamp(),
+    expiresAt: inAchtTagen(),
+    ...patch,
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'chats', 'raum-1'), raum({ endedAt: Timestamp.now(), messageCount: 3 }))
+      await setDoc(doc(ctx.firestore(), 'chats', 'raum-offen'), raum({ id: 'raum-offen' }))
+      await setDoc(doc(ctx.firestore(), 'users', FREMD), konto())
+    })
+  })
+
+  it('lässt genau eine Bewertung pro Gespräch zu', async () => {
+    await assertSucceeds(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung()))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ wert: 'gut' })))
+    await assertFails(updateDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), { wert: 'gut' }))
+    await assertFails(deleteDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`)))
+    // Unter einer anderen Kennung ginge es sonst ein zweites Mal.
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}_2`), bewertung()))
+  })
+
+  it('nur als Beteiligte, nur über das Gegenüber, nur nach dem Ende', async () => {
+    await assertFails(setDoc(doc(als(FREMD), 'feedback', `raum-1_${FREMD}`), bewertung({ von: FREMD })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ ueber: ANNA })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ ueber: FREMD })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-offen_${ANNA}`), bewertung({ chatId: 'raum-offen' })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ von: BEN })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ wert: 'super' })))
+    await assertFails(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung({ sterne: 5 })))
+  })
+
+  it('die bewertete Person erfährt nichts davon, Fremde auch nicht', async () => {
+    await assertSucceeds(setDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`), bewertung()))
+    await assertSucceeds(getDoc(doc(als(ANNA), 'feedback', `raum-1_${ANNA}`)))
+    await assertFails(getDoc(doc(als(BEN), 'feedback', `raum-1_${ANNA}`)))
+    await assertFails(getDoc(doc(als(FREMD), 'feedback', `raum-1_${ANNA}`)))
+    await assertFails(getDocs(query(collection(als(BEN), 'feedback'), where('ueber', '==', BEN))))
+    await assertSucceeds(getDoc(doc(als(MODERATOR), 'feedback', `raum-1_${ANNA}`)))
+  })
+
+  it('lässt niemanden an den Stand der Schwelle', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'feedbackStand', BEN), { offen: [], gezaehlt: [], faelle: 0, verarbeitet: [] })
+    })
+    await assertFails(getDoc(doc(als(BEN), 'feedbackStand', BEN)))
+    await assertFails(setDoc(doc(als(BEN), 'feedbackStand', BEN), { offen: [], faelle: 0 }))
+    await assertFails(setDoc(doc(als(ANNA), 'feedbackStand', BEN), { offen: [], faelle: 99 }))
+    await assertFails(getDoc(doc(als(MODERATOR), 'feedbackStand', BEN)))
+  })
+})
+
+describe('Statistik und Gesprächsende', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'statistik', ANNA), { gespraeche: 2, gut: 1 })
+      await setDoc(doc(ctx.firestore(), 'chats', 'raum-1'), raum({ endedAt: Timestamp.now() }))
+      await setDoc(doc(ctx.firestore(), 'chats', 'raum-offen'), raum({ id: 'raum-offen' }))
+    })
+  })
+
+  it('lässt nur die eigene Statistik lesen und keine schreiben', async () => {
+    await assertSucceeds(getDoc(doc(als(ANNA), 'statistik', ANNA)))
+    await assertFails(getDoc(doc(als(BEN), 'statistik', ANNA)))
+    await assertFails(setDoc(doc(als(ANNA), 'statistik', ANNA), { gespraeche: 999 }))
+    await assertFails(updateDoc(doc(als(ANNA), 'statistik', ANNA), { gut: 50 }))
+    await assertFails(getDocs(collection(als(ANNA), 'statistik')))
+  })
+
+  const ende = (patch: Record<string, unknown> = {}) => ({
+    von: ANNA,
+    at: serverTimestamp(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 4 * 86_400_000),
+    ...patch,
+  })
+
+  it('lässt das Gesprächsende einmal anlegen, nur beendet und nur als Beteiligte', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'gespraechsende', 'raum-offen'), ende()))
+    await assertFails(setDoc(doc(als(FREMD), 'gespraechsende', 'raum-1'), ende({ von: FREMD })))
+    await assertFails(setDoc(doc(als(ANNA), 'gespraechsende', 'raum-1'), ende({ dauerMs: 99_999_999 })))
+    await assertSucceeds(setDoc(doc(als(ANNA), 'gespraechsende', 'raum-1'), ende()))
+    await assertFails(setDoc(doc(als(BEN), 'gespraechsende', 'raum-1'), ende({ von: BEN })))
+    await assertFails(getDoc(doc(als(ANNA), 'gespraechsende', 'raum-1')))
+  })
+})
+
 describe('Verifizierungsanträge', () => {
   const antrag = (userId: string) => ({
     id: 'ver-1',

@@ -5,6 +5,7 @@ import { buttonClass } from '../components/buttonClass'
 import { Lobby } from '../components/Lobby'
 import { Queue } from '../components/Queue'
 import { ChatRoom } from '../components/ChatRoom'
+import { GespraechsFeedback } from '../components/GespraechsFeedback'
 import { REPORT_REASONS } from '../services/types'
 import { useChat } from '../store/useChat'
 import { useSession } from '../store/useSession'
@@ -59,12 +60,17 @@ function Ended() {
         </p>
       )}
 
+      <GespraechsFeedback />
+
+      {/* „Nächste Person" startet einen neuen Chat mit denselben Filtern –
+          Tagesgrenze und Vorrang wie bei jeder Suche. */}
       <div className="mt-6 flex flex-wrap gap-3">
         <Button variant="primary" onClick={() => void startSearch()}>
-          Neuen Chat starten
+          Nächste Person
         </Button>
         <Button onClick={dismiss}>Zurück zur Auswahl</Button>
       </div>
+      <p className="mt-2 text-xs text-muted">„Nächste Person" sucht sofort weiter, mit denselben Filtern.</p>
     </Panel>
   )
 }

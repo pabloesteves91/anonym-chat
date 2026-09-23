@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Field, Note, Panel, TagToggle, inputClass } from './ui'
+import { Button, Field, Note, Panel, inputClass } from './ui'
+import { InteressenAuswahl } from './InteressenAuswahl'
 import { CodexDialog } from './CodexDialog'
 import { useSession } from '../store/useSession'
-import { INTERESTS, LANGUAGES } from '../services/types'
+import { LANGUAGES, MAX_INTERESSEN } from '../services/types'
 import type { Language } from '../services/types'
 import { grenzenFuer, verbleibend } from '../services/plans'
 import { useChat } from '../store/useChat'
@@ -78,15 +79,8 @@ export function Lobby() {
             Interessen · mindestens eine Übereinstimmung
             {darfFiltern ? null : <span className="ml-2 text-accent-strong">mit Plus</span>}
           </legend>
-          <div className={`flex flex-wrap gap-2 ${darfFiltern ? '' : 'opacity-50'}`}>
-            {INTERESTS.map((interest) => (
-              <TagToggle
-                key={interest}
-                label={interest}
-                active={filter.interests.includes(interest)}
-                onToggle={() => toggleInterest(interest)}
-              />
-            ))}
+          <div className={darfFiltern ? '' : 'opacity-50'}>
+            <InteressenAuswahl gewaehlt={filter.interests} onToggle={toggleInterest} max={MAX_INTERESSEN} />
           </div>
           {darfFiltern ? null : (
             <p className="mt-2 text-sm text-muted">
