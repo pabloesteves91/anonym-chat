@@ -90,7 +90,10 @@ jobs:
 
       - name: Funktionen ausrollen
         id: ausrollen
-        run: npx --yes firebase-tools@15 deploy --only functions --project anonym-chat-223af --non-interactive
+        # --force: setzt die Aufräumregel für alte Build-Abbilder (sonst
+        # sammeln sie sich an und kosten monatlich) und würde Funktionen
+        # löschen, die nicht mehr im Code stehen – alle stehen dort.
+        run: npx --yes firebase-tools@15 deploy --only functions --project anonym-chat-223af --non-interactive --force
 
       # Nur wenn wirklich das Ausrollen gescheitert ist. Ein fehlendes
       # Secret hat nichts mit Rollen zu tun, und ein falscher Hinweis
