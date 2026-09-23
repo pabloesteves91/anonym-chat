@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { EigeneStatistik } from '../components/EigeneStatistik'
-import { InteressenAuswahl } from '../components/InteressenAuswahl'
 import { buttonClass } from '../components/buttonClass'
 import { Kontokennung } from '../components/Kontokennung'
 import { aktiverPlan, grenzenFuer, planById, verbleibend } from '../services/plans'
 import { ROLLE_LABEL } from '../services/roles'
 import { NAME_MAX, validateDisplayName } from '../services/wordFilter'
-import { AGE_GROUPS, GESCHLECHTER, LANGUAGES, MAX_INTERESSEN } from '../services/types'
+import { AGE_GROUPS, GESCHLECHTER, LANGUAGES } from '../services/types'
 import type { AgeGroup, Language, Profile as ProfileData } from '../services/types'
 import { useSession } from '../store/useSession'
 
@@ -44,25 +43,13 @@ export function Profile() {
   const meinPlan = planById(aktiverPlan(user.membership))
   const uebrig = verbleibend(user)
   const entwurf = draft ?? user.profile
-  // Reihenfolge der Interessen ist bedeutungslos – sonst gilt ab- und wieder
-  // anwählen fälschlich als Änderung.
-  const vergleichbar = (profile: ProfileData) =>
-    JSON.stringify({ ...profile, interests: [...profile.interests].sort() })
-  const dirty = vergleichbar(entwurf) !== vergleichbar(user.profile)
+  // Interessen gehören nicht mehr ins Profil – gesucht wird mit ihnen in der
+  // Suche (nur dort, mit Plus). Verglichen wird deshalb nur, was hier steht.
+  const dirty = entwurf.language !== user.profile.language || entwurf.ageGroup !== user.profile.ageGroup
 
   const update = (patch: Partial<ProfileData>) => {
     setSaved(false)
     setDraft({ ...entwurf, ...patch })
-  }
-
-  const toggleInterest = (interest: string) => {
-    const active = entwurf.interests.includes(interest)
-    if (!active && entwurf.interests.length >= MAX_INTERESSEN) return
-    update({
-      interests: active
-        ? entwurf.interests.filter((i) => i !== interest)
-        : [...entwurf.interests, interest],
-    })
   }
 
   return (
@@ -201,7 +188,8 @@ export function Profile() {
           className="flex flex-col gap-6"
           onSubmit={async (event) => {
             event.preventDefault()
-            await saveProfile(entwurf)
+            // Früher gespeicherte Profil-Interessen gehen beim Speichern mit weg.
+            await saveProfile({ ...entwurf, interests: [] })
             setSaved(true)
           }}
         >
@@ -236,13 +224,6 @@ export function Profile() {
               </select>
             </Field>
           </div>
-
-          <fieldset className="border-0 p-0">
-            <legend className="label-caps mb-2">
-              Interessen · {entwurf.interests.length} von {MAX_INTERESSEN}
-            </legend>
-            <InteressenAuswahl gewaehlt={entwurf.interests} onToggle={toggleInterest} max={MAX_INTERESSEN} />
-          </fieldset>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" variant="primary" disabled={busy || !dirty}>

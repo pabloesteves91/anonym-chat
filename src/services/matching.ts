@@ -28,18 +28,6 @@ export function passtZusammen(eintrag: Wartend, filter: MatchFilter, meineIntere
   return true
 }
 
-/**
- * Die eigenen Interessen für das Matching: das Profil und das, wonach gerade
- * gesucht wird.
- *
- * Wer nach „Bücher" sucht, interessiert sich selbst für Bücher – auch wenn es
- * nicht im Profil steht. Ohne das fanden sich zwei Personen, die beide nach
- * „Bücher" suchten, nie: Verglichen wurde nur mit dem Profil der anderen Seite.
- */
-export function eigeneInteressen(profil: string[], suche: string[]): string[] {
-  return [...new Set([...profil, ...suche])]
-}
-
 /** Zahlende zuerst – vor den anderen, nicht anstelle von ihnen. */
 export function nachVorrang<T extends { bevorzugt: boolean }>(kandidaten: T[]): T[] {
   return [...kandidaten].sort((a, b) => Number(b.bevorzugt) - Number(a.bevorzugt))

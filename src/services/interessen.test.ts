@@ -21,9 +21,9 @@ describe('Interessen', () => {
     expect(MAX_INTERESSEN).toBe(5)
   })
 
-  it('ein altes Profil findet weiterhin zu einem neuen Filter', () => {
-    const altesProfil = { uid: 'x', language: 'de', interests: ['Bücher', 'Tiere'], wantsInterests: [], bevorzugt: false }
-    expect(passtZusammen(altesProfil, { language: 'de', interests: ['Tiere', 'Podcasts'] }, [])).toBe(true)
-    expect(passtZusammen(altesProfil, { language: 'de', interests: ['Podcasts'] }, [])).toBe(false)
+  it('alte und neue Begriffe passen in der Suche zusammen', () => {
+    const gegenueber = { uid: 'x', language: 'de', interests: ['Bücher', 'Tiere'], wantsInterests: ['Bücher', 'Tiere'], bevorzugt: false }
+    expect(passtZusammen(gegenueber, { language: 'de', interests: ['Tiere', 'Podcasts'] }, ['Tiere', 'Podcasts'])).toBe(true)
+    expect(passtZusammen(gegenueber, { language: 'de', interests: ['Podcasts'] }, ['Podcasts'])).toBe(false)
   })
 })

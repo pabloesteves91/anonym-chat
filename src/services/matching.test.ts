@@ -4,7 +4,6 @@ import {
   ERWEITERUNG_ERNEUT_NACH_MS,
   SUCHSTATUS_TEXT,
   VIELE_AB,
-  eigeneInteressen,
   erweiterbar,
   erweitereFilter,
   kandidatenFiltern,
@@ -133,24 +132,21 @@ describe('suchstatus', () => {
   })
 })
 
-describe('eigeneInteressen', () => {
-  it('zählt, wonach gesucht wird, auch als eigenes Interesse – ohne Doppelte', () => {
-    expect(eigeneInteressen(['Bücher', 'Musik'], ['Bücher', 'Konzerte'])).toEqual(['Bücher', 'Musik', 'Konzerte'])
-  })
-
-  it('zwei leere Profile, beide suchen Bücher und Konzerte: sie finden sich', () => {
+describe('Interessen nur aus der Suche', () => {
+  it('zwei, die beide nach Bücher und Konzerte suchen, finden sich', () => {
     const suche = ['Bücher', 'Konzerte']
-    const a = wartend({ uid: 'a', interests: eigeneInteressen([], suche), wantsInterests: suche })
-    const b = wartend({ uid: 'b', interests: eigeneInteressen([], suche), wantsInterests: suche })
-    const filterBeider = filter({ interests: suche })
-    expect(passtZusammen(b, filterBeider, eigeneInteressen([], suche))).toBe(true)
-    expect(passtZusammen(a, filterBeider, eigeneInteressen([], suche))).toBe(true)
+    const gegenueber = wartend({ uid: 'b', interests: suche, wantsInterests: suche })
+    expect(passtZusammen(gegenueber, filter({ interests: suche }), suche)).toBe(true)
   })
 
-  it('findet wie bisher, wer es im Profil hat, und nicht, wer es nirgends hat', () => {
+  it('wer mit Interessen sucht, trifft nur andere mit mindestens einem davon', () => {
     const suche = filter({ interests: ['Bücher'] })
-    const meine = eigeneInteressen([], ['Bücher'])
-    expect(passtZusammen(wartend({ interests: ['Bücher'] }), suche, meine)).toBe(true)
-    expect(passtZusammen(wartend({ interests: ['Kochen'] }), suche, meine)).toBe(false)
+    expect(passtZusammen(wartend({ interests: ['Bücher', 'Kochen'] }), suche, ['Bücher'])).toBe(true)
+    expect(passtZusammen(wartend({ interests: ['Kochen'] }), suche, ['Bücher'])).toBe(false)
+    expect(passtZusammen(wartend({ interests: [] }), suche, ['Bücher'])).toBe(false)
+  })
+
+  it('ohne Filter auf beiden Seiten passt es', () => {
+    expect(passtZusammen(wartend({ interests: [] }), filter(), [])).toBe(true)
   })
 })

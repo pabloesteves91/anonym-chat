@@ -73,7 +73,10 @@ Meldungen oder den Moderationsstand.
 
 ## Interessen
 
-40 Begriffe in 7 Gruppen (`INTEREST_GRUPPEN` in `src/services/types.ts`).
-Die Gruppen dienen nur der Anzeige. Die zwölf bisherigen Begriffe sind
-unverändert dabei, gespeicherte Profile gelten weiter. Es bleibt bei höchstens
-fünf Interessen und ohne Freitext.
+Interessen gibt es nur in der Suche (mit Plus), nicht mehr im Profil. Wer mit
+Interessen sucht, trifft andere, die mit mindestens einem gleichen Interesse
+suchen. Zur Auswahl stehen 40 Begriffe in 7 Gruppen (`INTEREST_GRUPPEN` in
+`src/services/types.ts`). Die Gruppen dienen nur der Anzeige, die zwölf
+bisherigen Begriffe sind unverändert dabei. Es bleibt bei höchstens fünf und
+ohne Freitext. Früher gespeicherte Profil-Interessen werden nicht mehr
+verwendet und beim nächsten Speichern des Profils entfernt.

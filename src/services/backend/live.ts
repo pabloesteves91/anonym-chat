@@ -22,7 +22,7 @@ import {
 import { getDb, getFirebaseAuth } from '../firebase'
 import { generateId } from '../pseudonym'
 import { scanText } from '../wordFilter'
-import { eigeneInteressen, kandidatenFiltern } from '../matching'
+import { kandidatenFiltern } from '../matching'
 import { ApiError, RETENTION_MS, delay } from './shared'
 import type { FilterVerdict, Language, MatchFilter, User } from '../types'
 
@@ -235,8 +235,9 @@ export async function findMatch(
   // Wer in dieser Suche vom Server abgelehnt wurde (etwa, weil er mich
   // ausgeschlossen hat), wird nicht immer wieder versucht.
   const abgelehnt = new Set<string>()
-  // Wonach gesucht wird, zählt auch als eigenes Interesse (siehe matching.ts).
-  const meineInteressen = eigeneInteressen(ich.profile.interests, filter.interests)
+  // Interessen gibt es nur in der Suche, nicht im Profil: Wer nach „Bücher"
+  // sucht, wird auch von denen gefunden, die nach „Bücher" suchen.
+  const meineInteressen = filter.interests
   const meinEintrag: Omit<QueueDoc, 'since'> & { since: unknown } = {
     uid: ich.id,
     pseudonym: ich.pseudonym,
