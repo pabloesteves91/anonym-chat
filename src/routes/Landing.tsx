@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
 import { Wortmarke } from '../components/Logo'
+import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
@@ -142,6 +143,34 @@ export function Landing() {
           darüber, wie diese Person sich verhält. Trotz Wortfilter und Moderation können dir sexuelle, verstörende
           oder beleidigende Nachrichten begegnen – die Teilnahme geschieht auf eigene Verantwortung. Melden dauert
           zwei Klicks, und jede Meldung wird von einem Menschen angesehen.
+        </p>
+      </section>
+
+      <section aria-labelledby="hilfe" className="prose-column">
+        <h2 id="hilfe" className="font-display text-2xl font-semibold">
+          Fragen und Hilfe
+        </h2>
+        <p className="mt-3 text-muted">
+          Wer ein Konto hat, erreicht uns{' '}
+          {konto ? (
+            <>
+              über die{' '}
+              <Link to="/support" className="text-ink underline underline-offset-2 hover:text-accent-strong">
+                Supportseite
+              </Link>
+            </>
+          ) : (
+            <>
+              nach der{' '}
+              <Link to="/anmelden" className="text-ink underline underline-offset-2 hover:text-accent-strong">
+                Anmeldung
+              </Link>{' '}
+              über die Supportseite
+            </>
+          )}{' '}
+          – mit Formular, Bildanhang und, wenn nötig, einem Chat mit der Moderation. Der Support ist den Mitgliedern
+          vorbehalten. Ohne Konto, oder wenn du nicht mehr hineinkommst: Schreib eine Mail an{' '}
+          <span className="font-mono text-ink">{BETREIBER.email}</span>.
         </p>
       </section>
 

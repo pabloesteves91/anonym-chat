@@ -56,6 +56,10 @@ const FRAGEN: { frage: string; antwort: string }[] = [
     antwort:
       'Nein. Meldungen werden in der Reihenfolge ihres Eingangs geprüft, und eine Sperre trifft ein bezahltes Konto genauso wie ein gratis genutztes. Erstattet wird in dem Fall nichts.',
   },
+  {
+    frage: 'Wie erreiche ich den Support?',
+    antwort: `Mit Konto über die Supportseite, sobald du angemeldet bist: Thema wählen, beschreiben, bei Bedarf Bilder anhängen. Die Moderation antwortet dort, falls nötig in einem Chat. Die Seite steht nur Mitgliedern offen – ohne Konto, oder wenn die Anmeldung nicht klappt, schreib an ${BETREIBER.email}.`,
+  },
 ]
 
 function Karte({
