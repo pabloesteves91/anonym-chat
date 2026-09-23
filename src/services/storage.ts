@@ -22,6 +22,8 @@ export const KEYS = {
   selfBlocked: `${PREFIX}selfblocked`,
   codex: `${PREFIX}codex`,
   theme: `${PREFIX}theme`,
+  /** Kennungen der Neuigkeiten, die dieses Gerät schon gesehen hat. */
+  neuigkeitenGesehen: `${PREFIX}neuigkeiten.gesehen`,
 } as const
 
 /**

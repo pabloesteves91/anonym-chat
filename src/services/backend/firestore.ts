@@ -23,6 +23,7 @@ import { validateDisplayName } from '../wordFilter'
 import { GRATIS_MITGLIEDSCHAFT, grenzenFuer, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
 import { rolleFuer } from '../roles'
 import { CODE_MUSTER, codeId, normiereCode, pruefeAktion, zuAktion, type Aktion } from '../aktion'
+import { pruefeNeuigkeit, sortiert, zuNeuigkeit, type Neuigkeit } from '../neuigkeiten'
 import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
@@ -67,6 +68,7 @@ const PFAD = {
   accessLog: 'accessLog',
   support: 'support',
   aktionen: 'aktionen',
+  neuigkeiten: 'neuigkeiten',
 } as const
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
@@ -1251,4 +1253,52 @@ export async function speichereAktion(aktion: Aktion): Promise<string> {
 
 export async function loescheAktion(id: string): Promise<void> {
   await fuehreAus(() => deleteDoc(doc(getDb(), PFAD.aktionen, id)), 'Die Aktion konnte nicht gelöscht werden.')
+}
+
+/* --------------------------------------------------------- Neuigkeiten */
+
+/**
+ * Veröffentlichte Neuigkeiten, live. Lesen darf jede und jeder.
+ *
+ * Nur gefiltert, nicht sortiert: Filter und Sortierung auf verschiedenen
+ * Feldern bräuchten einen eigenen Index. Sortiert wird hier.
+ */
+export function watchNeuigkeiten(onChange: (liste: Neuigkeit[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(getDb(), PFAD.neuigkeiten), where('veroeffentlicht', '==', true)),
+    (schnappschuss) => onChange(sortiert(schnappschuss.docs.map((d) => zuNeuigkeit(d.id, d.data() as Partial<Neuigkeit>)))),
+    () => onChange([]),
+  )
+}
+
+/** Alle Neuigkeiten samt Entwürfen – nur die Verwaltung. */
+export function watchAlleNeuigkeiten(onChange: (liste: Neuigkeit[]) => void, onFehler: (text: string) => void): Unsubscribe {
+  return onSnapshot(
+    collection(getDb(), PFAD.neuigkeiten),
+    (schnappschuss) => onChange(sortiert(schnappschuss.docs.map((d) => zuNeuigkeit(d.id, d.data() as Partial<Neuigkeit>)))),
+    (error) => onFehler(uebersetze(error, 'Neuigkeiten nicht lesbar.').message),
+  )
+}
+
+export async function speichereNeuigkeit(n: Neuigkeit): Promise<string> {
+  const { id, ...daten } = n
+  const fehler = pruefeNeuigkeit(daten)
+  if (fehler) throw new ApiError(fehler, 'ungueltig')
+  const kennung = id || generateId('neu')
+  await fuehreAus(
+    () =>
+      setDoc(doc(getDb(), PFAD.neuigkeiten, kennung), {
+        ...daten,
+        titel: daten.titel.trim(),
+        text: daten.text.trim(),
+        // Für das Protokoll: wer den Eintrag geändert hat.
+        geaendertVon: uid(),
+      }),
+    'Die Neuigkeit konnte nicht gespeichert werden.',
+  )
+  return kennung
+}
+
+export async function loescheNeuigkeit(id: string): Promise<void> {
+  await fuehreAus(() => deleteDoc(doc(getDb(), PFAD.neuigkeiten, id)), 'Die Neuigkeit konnte nicht gelöscht werden.')
 }

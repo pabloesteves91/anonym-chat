@@ -7,6 +7,7 @@ import { Verify } from './routes/Verify'
 import { Profile } from './routes/Profile'
 import { Chat } from './routes/Chat'
 import { Preise } from './routes/Preise'
+import { Neuigkeiten } from './routes/Neuigkeiten'
 import { Support } from './routes/Support'
 import { Datenschutz, Impressum, Nutzungsbedingungen } from './routes/Legal'
 import { NotFound } from './routes/NotFound'
@@ -73,6 +74,7 @@ export default function App() {
         <Route index element={<Landing />} />
         <Route path="anmelden" element={<Login />} />
         <Route path="preise" element={<Preise />} />
+        <Route path="neuigkeiten" element={<Neuigkeiten />} />
         <Route path="impressum" element={<Impressum />} />
         <Route path="datenschutz" element={<Datenschutz />} />
         <Route path="agb" element={<Nutzungsbedingungen />} />

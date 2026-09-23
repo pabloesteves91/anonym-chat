@@ -10,6 +10,7 @@ import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 import { PlanZuteilung } from '../components/PlanZuteilung'
 import { Aktionen } from '../components/Aktionen'
+import { NeuigkeitenVerwaltung } from '../components/NeuigkeitenVerwaltung'
 import { GeschlechtKorrektur } from '../components/GeschlechtKorrektur'
 import { Supportanfragen } from '../components/Supportanfragen'
 
@@ -220,6 +221,8 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
       {darfVerwalten ? <PlanZuteilung /> : null}
 
       {darfVerwalten ? <Aktionen /> : null}
+
+      {darfVerwalten ? <NeuigkeitenVerwaltung /> : null}
 
       {darfVerwalten ? (
       <Panel className="flex flex-col gap-3 p-5">

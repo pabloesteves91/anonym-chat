@@ -218,3 +218,39 @@ export const aktionProtokoll = onDocumentWritten(
     if (eintrag) await protokollieren(eintrag, nach?.geaendertVon)
   },
 )
+
+/* --------------------------------------------------------- Neuigkeiten */
+
+export function neuigkeitEintrag(vor: Daten | undefined, nach: Daten | undefined): Eintrag | null {
+  const n = nach ?? vor
+  if (!n) return null
+  const titel = `„${String(n.titel ?? '')}"`
+  if (!nach) return { title: `🗑️ Neuigkeit ${titel} gelöscht`, color: FARBE_NEUTRAL, felder: [] }
+  const zuvorSichtbar = Boolean(vor?.veroeffentlicht)
+  const titelText = !nach.veroeffentlicht
+    ? zuvorSichtbar
+      ? `📰 Neuigkeit ${titel} zurückgezogen (Entwurf)`
+      : `📰 Entwurf ${titel} gespeichert`
+    : zuvorSichtbar
+      ? `📰 Neuigkeit ${titel} geändert`
+      : `📰 Neuigkeit ${titel} veröffentlicht`
+  return {
+    title: titelText,
+    color: nach.veroeffentlicht ? FARBE_ERLEDIGT : FARBE_NEUTRAL,
+    felder: [
+      ['Datum', typeof nach.datum === 'string' ? nach.datum.split('-').reverse().join('.') : '–'],
+      ['Version', typeof nach.version === 'string' ? nach.version : '–'],
+    ],
+  }
+}
+
+export const neuigkeitProtokoll = onDocumentWritten(
+  { document: 'neuigkeiten/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_LOG] },
+  async (event) => {
+    const vor = event.data?.before.data()
+    const nach = event.data?.after.data()
+    const eintrag = neuigkeitEintrag(vor, nach)
+    // Beim Löschen steht nicht im Dokument, wer gelöscht hat – also: unbekannt.
+    if (eintrag) await protokollieren(eintrag, nach?.geaendertVon)
+  },
+)

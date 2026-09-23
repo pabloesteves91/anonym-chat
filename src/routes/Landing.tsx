@@ -3,6 +3,8 @@ import { Panel } from '../components/ui'
 import { ShieldMark } from '../components/VerifiedBadge'
 import { Wortmarke } from '../components/Logo'
 import { AktionsHinweis } from '../components/AktionsHinweis'
+import { artLabel, datumLang } from '../services/neuigkeiten'
+import { useNeuigkeiten } from '../store/useNeuigkeiten'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -40,6 +42,8 @@ const SICHERHEIT = [
 export function Landing() {
   const konto = useAuth((s) => s.user)
   const user = useSession((s) => s.user)
+
+  const neueste = useNeuigkeiten((s) => s.liste[0])
 
   const ziel = !konto ? '/anmelden' : user?.verified ? '/chat' : '/verifizierung'
   const label = !konto ? 'Konto anlegen' : user?.verified ? 'Chat starten' : 'Verifizierung abschliessen'
@@ -84,6 +88,21 @@ export function Landing() {
       </section>
 
       <AktionsHinweis mitLink />
+
+      {neueste ? (
+        <Link
+          to="/neuigkeiten"
+          className="group flex flex-col gap-1 rounded-sm border border-line bg-surface px-5 py-4 transition-colors hover:border-accent sm:flex-row sm:items-center sm:gap-4"
+        >
+          <span className="label-caps shrink-0 text-accent-strong">
+            {artLabel(neueste.art)} · {datumLang(neueste.datum)}
+          </span>
+          <span className="min-w-0 flex-1 font-medium">{neueste.titel}</span>
+          <span className="shrink-0 text-sm text-muted underline underline-offset-4 group-hover:text-ink">
+            Alle Neuigkeiten
+          </span>
+        </Link>
+      ) : null}
 
       <section aria-labelledby="ablauf">
         <h2 id="ablauf" className="label-caps mb-4">

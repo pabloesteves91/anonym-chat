@@ -958,3 +958,52 @@ describe('Aktionen', () => {
     await assertSucceeds(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunschMit(null)))
   })
 })
+
+describe('Neuigkeiten', () => {
+  const neuigkeit = (patch: Record<string, unknown> = {}) => ({
+    titel: 'Gutscheine',
+    text: 'Codes auf der Tarifseite.',
+    art: 'neu',
+    datum: '2026-09-23',
+    version: 'c7f1ae6',
+    veroeffentlicht: true,
+    geaendertVon: MODERATOR,
+    ...patch,
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'neuigkeiten', 'n1'), neuigkeit())
+      await setDoc(doc(ctx.firestore(), 'neuigkeiten', 'entwurf'), neuigkeit({ veroeffentlicht: false }))
+    })
+  })
+
+  it('zeigt Veröffentlichtes allen, Entwürfe nur der Verwaltung', async () => {
+    const gast = env.unauthenticatedContext().firestore()
+    await assertSucceeds(getDocs(query(collection(gast, 'neuigkeiten'), where('veroeffentlicht', '==', true))))
+    await assertSucceeds(getDoc(doc(gast, 'neuigkeiten', 'n1')))
+    await assertFails(getDoc(doc(gast, 'neuigkeiten', 'entwurf')))
+    await assertFails(getDocs(collection(als(ANNA), 'neuigkeiten')))
+    await assertSucceeds(getDocs(collection(als(MODERATOR), 'neuigkeiten')))
+  })
+
+  it('lässt nur die Verwaltung schreiben – mit eigener Kennung', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'neuigkeiten', 'n2'), neuigkeit({ geaendertVon: ANNA })))
+    await assertFails(setDoc(doc(als(NUR_MOD), 'neuigkeiten', 'n2'), neuigkeit({ geaendertVon: NUR_MOD })))
+    await assertFails(setDoc(doc(als(MODERATOR), 'neuigkeiten', 'n2'), neuigkeit({ geaendertVon: NUR_MOD })))
+    await assertSucceeds(setDoc(doc(als(MODERATOR), 'neuigkeiten', 'n2'), neuigkeit()))
+    await assertFails(deleteDoc(doc(als(ANNA), 'neuigkeiten', 'n1')))
+    await assertSucceeds(deleteDoc(doc(als(MODERATOR), 'neuigkeiten', 'n1')))
+  })
+
+  it('weist ungültige Einträge ab', async () => {
+    const ref = doc(als(MODERATOR), 'neuigkeiten', 'n3')
+    await assertFails(setDoc(ref, neuigkeit({ titel: '' })))
+    await assertFails(setDoc(ref, neuigkeit({ text: 'x'.repeat(2001) })))
+    await assertFails(setDoc(ref, neuigkeit({ art: 'geheim' })))
+    await assertFails(setDoc(ref, neuigkeit({ datum: '23.09.2026' })))
+    await assertFails(setDoc(ref, neuigkeit({ version: 'v1.2.3' })))
+    await assertFails(setDoc(ref, neuigkeit({ angeheftet: true })))
+    await assertSucceeds(setDoc(ref, neuigkeit({ version: null })))
+  })
+})

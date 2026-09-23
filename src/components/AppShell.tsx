@@ -6,6 +6,8 @@ import { useSession } from '../store/useSession'
 import { summeOffen, useOffene } from '../store/useOffene'
 import { useSupport } from '../store/useSupport'
 import { useAktionen } from '../store/useAktionen'
+import { useNeuigkeiten } from '../store/useNeuigkeiten'
+import { hatUngelesene } from '../services/neuigkeiten'
 import { supportMenue } from '../services/support'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Wortmarke } from './Logo'
@@ -91,6 +93,22 @@ export function AppShell() {
   useAktionen((z) => z.aktionen)
   useEffect(() => beobachteAktionen(), [beobachteAktionen])
 
+  // Neuigkeiten, ebenfalls für alle. Ein Punkt am Menüpunkt, solange das
+  // Gerät einen veröffentlichten Eintrag noch nicht gesehen hat.
+  const beobachteNeuigkeiten = useNeuigkeiten((z) => z.beobachte)
+  const neuigkeitNeu = useNeuigkeiten((z) => hatUngelesene(z.liste, z.gesehen))
+  useEffect(() => beobachteNeuigkeiten(), [beobachteNeuigkeiten])
+  const neuigkeitenLink = (
+    <NavLink
+      to="/neuigkeiten"
+      className={(zustand) => `${navClass(zustand)} flex items-center gap-1.5`}
+      aria-label={neuigkeitNeu ? 'Neuigkeiten – es gibt Neues' : undefined}
+    >
+      Neuigkeiten
+      {neuigkeitNeu ? <span className="inline-block h-2 w-2 rounded-full bg-accent" aria-hidden="true" /> : null}
+    </NavLink>
+  )
+
   // Die laufende Zählung hängt am angemeldeten Konto und endet mit ihm.
   const beobachte = useOffene((z) => z.beobachte)
   const offen = useOffene(summeOffen)
@@ -133,6 +151,7 @@ export function AppShell() {
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
+              {neuigkeitenLink}
               {support.sichtbar ? (
                 <NavLink
                   to="/support"
@@ -173,6 +192,7 @@ export function AppShell() {
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
+              {neuigkeitenLink}
             </nav>
           )}
 
@@ -230,6 +250,9 @@ export function AppShell() {
             ) : null}
             <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
               Tarife
+            </Link>
+            <Link to="/neuigkeiten" className="underline underline-offset-2 hover:text-ink">
+              Neuigkeiten
             </Link>
             <Link to="/impressum" className="underline underline-offset-2 hover:text-ink">
               Impressum

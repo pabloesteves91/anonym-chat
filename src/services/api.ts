@@ -67,6 +67,11 @@ export {
   ladeGutschein,
   speichereAktion,
   loescheAktion,
+  // Neuigkeiten
+  watchNeuigkeiten,
+  watchAlleNeuigkeiten,
+  speichereNeuigkeit,
+  loescheNeuigkeit,
 } from './backend/firestore'
 
 export {
