@@ -238,5 +238,5 @@ export const stripeWebhook = onRequest(
 
 /* ------------------------------------------------------------ Discord */
 
-export { meldungNachDiscord, supportNachDiscord, supportAntwortNachDiscord } from './discord.js'
+export { meldungNachDiscord, supportNachDiscord, supportAntwortNachDiscord, supportErledigtAufraeumen } from './discord.js'
 export { supportfallProtokoll, meldungProtokoll, kontoProtokoll } from './protokoll.js'

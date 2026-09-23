@@ -19,6 +19,12 @@ die des Log-Kanals im Secret `DISCORD_KANAL_LOG`. Wer die Kanäle neu anlegt,
 trägt dort die neuen IDs ein (Entwicklermodus an, lange auf den Kanal drücken
 → *Kanal-ID kopieren*). Sie sind kein Geheimnis.
 
+Ist ein Supportfall **erledigt**, verschwinden seine Benachrichtigungen
+(neue Anfrage und Antworten im Supportchat) wieder aus `#support` – der Kanal
+zeigt, was offen ist. Das Protokoll dazu steht weiter im Log-Kanal.
+Benachrichtigungen von vor dieser Einrichtung (23.09.2026) kennt der Server
+nicht und bleiben stehen; die löscht man einmal von Hand.
+
 Jede Benachrichtigung nennt nur **Art, Kategorie und Zeitpunkt** und
 verlinkt in die Moderation. Kein Pseudonym, kein Text, kein Verlauf, kein
 Anhang: Discord ist ein Dienst ausserhalb der EU. Gelesen und entschieden

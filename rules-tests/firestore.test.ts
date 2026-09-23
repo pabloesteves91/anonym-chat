@@ -858,3 +858,15 @@ describe('Protokoll: wer es war', () => {
     await assertSucceeds(updateDoc(doc(als(ANNA), 'users', ANNA), { pseudonym: 'Stille Amsel 2098' }))
   })
 })
+
+describe('Discord-Nachrichten', () => {
+  // Welche Discord-Nachricht zu welchem Fall gehört, weiss nur der Server.
+  it('ist für die App weder lesbar noch schreibbar', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'discordNachrichten', 'sup-1'), { ids: ['1'] })
+    })
+    await assertFails(getDoc(doc(als(MODERATOR), 'discordNachrichten', 'sup-1')))
+    await assertFails(getDoc(doc(als(ANNA), 'discordNachrichten', 'sup-1')))
+    await assertFails(setDoc(doc(als(MODERATOR), 'discordNachrichten', 'sup-2'), { ids: ['2'] }))
+  })
+})
