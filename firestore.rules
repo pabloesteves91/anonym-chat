@@ -175,7 +175,11 @@ service cloud.firestore {
         && request.resource.data.betreff.size() <= 80
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 2000;
+        && request.resource.data.text.size() <= 2000
+        // Höchstens drei Anhänge. Der Dateispeicher begrenzt sie zusätzlich
+        // über den erlaubten Dateinamen – hier zählt, was im Dokument steht.
+        && request.resource.data.anhaenge is list
+        && request.resource.data.anhaenge.size() <= 3;
       allow read: if istModeration() || isOwner(resource.data.userId);
       allow update, delete: if istModeration();
     }

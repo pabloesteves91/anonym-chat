@@ -4,6 +4,7 @@ import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components
 import { Kontokennung } from '../components/Kontokennung'
 import { BETREIBER } from '../content/legal'
 import { planById } from '../services/plans'
+import { ANHANG_KANTE, ANHANG_MAX_BYTES, ImageError, createPreview, type Preview } from '../services/image'
 import {
   BETREFF_MAX,
   SUPPORT_THEMEN,
@@ -84,6 +85,7 @@ export function Support() {
   // abgeleitet: Solange niemand getippt hat, gilt die Adresse des Kontos –
   // die steht beim ersten Rendern oft noch nicht fest.
   const [eigeneAdresse, setEigeneAdresse] = useState<string | null>(null)
+  const [anhaenge, setAnhaenge] = useState<Preview[]>([])
   const [fehler, setFehler] = useState<string | null>(null)
   const [gesendet, setGesendet] = useState<SupportAnfrage | null>(null)
 
@@ -110,6 +112,28 @@ export function Support() {
     setzen(wert)
   }
 
+  const ANHANG_MAX = 3
+
+  const anhaengen = async (dateien: FileList | null) => {
+    if (!dateien?.length) return
+    setFehler(null)
+
+    const platz = ANHANG_MAX - anhaenge.length
+    const neue: Preview[] = []
+    for (const datei of Array.from(dateien).slice(0, platz)) {
+      try {
+        neue.push(await createPreview(datei, { kante: ANHANG_KANTE, maxBytes: ANHANG_MAX_BYTES }))
+      } catch (error) {
+        setFehler(error instanceof ImageError ? error.message : 'Das Bild konnte nicht gelesen werden.')
+        return
+      }
+    }
+    if (dateien.length > platz) {
+      setFehler(`Höchstens ${ANHANG_MAX} Bilder – die weiteren wurden nicht übernommen.`)
+    }
+    setAnhaenge((bisher) => [...bisher, ...neue].slice(0, ANHANG_MAX))
+  }
+
   const senden = async () => {
     setFehler(null)
     clearError()
@@ -130,6 +154,7 @@ export function Support() {
       betreff: betreff.trim(),
       text: text.trim(),
       antwortAn: antwortAn.trim(),
+      anhaenge: anhaenge.map(({ dataUrl }) => ({ dataUrl })),
     })
     if (!anfrage) return
 
@@ -137,6 +162,7 @@ export function Support() {
     setThema('')
     setBetreff('')
     setText('')
+    setAnhaenge([])
   }
 
   const rest = TEXT_MAX - text.trim().length
@@ -219,6 +245,53 @@ export function Support() {
           </Field>
 
           <Field
+            label="Anhang"
+            htmlFor="support-anhang"
+            hint={`Bildschirmfotos oder abfotografierte Belege, höchstens ${ANHANG_MAX}. Nur Bilder – sie werden vor dem Hochladen verkleinert.`}
+          >
+            <div className="flex flex-col gap-3">
+              {anhaenge.length > 0 ? (
+                <ul className="flex flex-wrap gap-3">
+                  {anhaenge.map((bild, nummer) => (
+                    <li key={`${bild.meta.name}-${nummer}`} className="relative">
+                      <img
+                        src={bild.dataUrl}
+                        alt={`Anhang ${nummer + 1}: ${bild.meta.name}`}
+                        className="h-28 w-36 rounded-sm border border-line bg-raised object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAnhaenge((bisher) => bisher.filter((_, i) => i !== nummer))}
+                        className="absolute -top-2 -right-2 rounded-full border border-line-strong bg-surface px-2 py-0.5 text-xs text-muted transition-colors hover:border-signal hover:text-signal"
+                        aria-label={`Anhang ${nummer + 1} entfernen`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {anhaenge.length < ANHANG_MAX ? (
+                <input
+                  id="support-anhang"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className={`${inputClass} file:mr-3 file:rounded-sm file:border-0 file:bg-raised file:px-3 file:py-1 file:text-sm file:text-ink`}
+                  onChange={(event) => {
+                    void anhaengen(event.target.value ? event.target.files : null)
+                    // Zurücksetzen, sonst löst dieselbe Datei kein zweites Mal aus.
+                    event.target.value = ''
+                  }}
+                />
+              ) : (
+                <p className="text-sm text-muted">Mehr als {ANHANG_MAX} Bilder gehen nicht. Entferne eines, um ein anderes anzuhängen.</p>
+              )}
+            </div>
+          </Field>
+
+          <Field
             label="Antwort an"
             htmlFor="support-antwort"
             hint="Vorbelegt mit der Adresse deines Kontos. Änderbar, falls du dort nicht mitliest."
@@ -245,6 +318,7 @@ export function Support() {
             </ul>
             <p className="mt-2">
               Nichts davon bekommen andere Nutzende zu sehen. Dein Ausweisfoto und deine Mobilnummer gehen nicht mit.
+              Angehängte Bilder sieht nur die Moderation; sie werden gelöscht, sobald die Anfrage erledigt ist.
             </p>
           </Note>
 

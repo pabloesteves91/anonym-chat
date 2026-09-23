@@ -1,11 +1,14 @@
 rules_version = '2';
 
-// Security Rules für Ausweisfotos und Selfies.
+// Security Rules für hochgeladene Bilder: Ausweisfotos, Selfies und Anhänge
+// zu Supportanfragen.
 //
-// Grundsatz: Diese Bilder sind das Heikelste im ganzen System. Hochladen darf
-// sie nur die Person selbst, ansehen nur die Moderation, und nach dem Entscheid
-// werden sie gelöscht (Lebenszyklusregel im Bucket, zusätzlich zum Löschen
-// durch die App).
+// Grundsatz für alle drei: Hochladen darf sie nur die Person selbst, ansehen
+// nur sie und die Moderation, und sobald der Vorgang erledigt ist, werden sie
+// gelöscht. Ausweisbilder sind dabei das Heikelste im ganzen System.
+//
+// Was nicht ausdrücklich erlaubt ist, ist verboten – der Auffangblock unten
+// sperrt jeden anderen Pfad.
 //
 // Deployen mit: firebase deploy --only storage
 
@@ -30,6 +33,33 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
 
       // Die hochladende Person sieht ihre eigene Vorschau, sonst nur die Moderation.
+      allow read: if istModeration() || (request.auth != null && request.auth.uid == userId);
+      allow delete: if istModeration();
+    }
+
+    /**
+     * Anhänge zu Supportanfragen.
+     *
+     * Nur Bilder, und das ist eine Sicherheitsentscheidung, keine Bequemlichkeit:
+     * Ein Bild zeigt der Browser gefahrlos an. Ein PDF oder ein Archiv würde die
+     * Moderation dazu bringen, eine fremde Datei unbekannten Inhalts zu öffnen –
+     * das ist genau der Weg, auf dem man sich etwas einfängt.
+     *
+     * Höchstens drei Dateien pro Anfrage, durchnummeriert. Die Zahl steht
+     * zusätzlich in den Firestore-Regeln; hier begrenzt der Dateiname sie.
+     *
+     * Gelöscht wird beim Abhaken der Anfrage – derselbe Umgang wie mit den
+     * Ausweisbildern: Was nicht mehr gebraucht wird, liegt nicht herum.
+     */
+    match /support/{userId}/{anfrageId}/{datei} {
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+        && datei.matches('^[0-2]\\.jpg$');
+
+      // Lesen darf die Moderation – und die absendende Person ihren eigenen
+      // Anhang, damit sie sieht, was sie geschickt hat.
       allow read: if istModeration() || (request.auth != null && request.auth.uid == userId);
       allow delete: if istModeration();
     }

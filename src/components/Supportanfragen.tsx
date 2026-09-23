@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Note, Panel } from './ui'
 import { themaLabel } from '../services/support'
+import * as api from '../services/api'
 import { planById } from '../services/plans'
 import type { SupportAnfrage, SupportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
@@ -48,6 +49,72 @@ function Kennung({ id }: { id: string }) {
   )
 }
 
+/**
+ * Die Anhänge einer Anfrage.
+ *
+ * Geladen wird pro Karte und erst beim Anzeigen, nicht im `load()` der
+ * Moderationsansicht. Der Grund steht in der Projektgeschichte: Ein Abruf des
+ * Dateispeichers im gemeinsamen Ladevorgang hat die ganze Ansicht für zwei
+ * Minuten lahmgelegt, als der Speicher nicht erreichbar war. Hier scheitert
+ * im schlimmsten Fall eine Kachel, nicht die Seite.
+ */
+function Anhaenge({ pfade }: { pfade: string[] }) {
+  const [adressen, setAdressen] = useState<string[] | null>(null)
+
+  // Die Liste selbst taugt nicht als Abhängigkeit: Sie entsteht bei jedem
+  // Rendern neu, der Effekt liefe endlos. Verglichen wird deshalb ihr Inhalt.
+  const schluessel = pfade.join('|')
+
+  useEffect(() => {
+    if (!schluessel) return
+    let lebt = true
+    void api
+      .getSupportAnhaenge(schluessel.split('|'))
+      .then((gefunden) => lebt && setAdressen(gefunden))
+      .catch(() => lebt && setAdressen([]))
+    return () => {
+      lebt = false
+    }
+  }, [schluessel])
+
+  if (pfade.length === 0) return null
+
+  if (adressen === null) {
+    return (
+      <p className="label-caps mt-3" role="status">
+        Anhänge werden geladen …
+      </p>
+    )
+  }
+
+  if (adressen.length === 0) {
+    return <p className="mt-3 text-sm text-muted">Die Anhänge wurden mit dem Abhaken gelöscht.</p>
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="label-caps mb-2">
+        {adressen.length} {adressen.length === 1 ? 'Anhang' : 'Anhänge'}
+      </p>
+      <ul className="flex flex-wrap gap-3">
+        {adressen.map((adresse, nummer) => (
+          <li key={adresse}>
+            {/* Neuer Tab statt Vergrösserung in der Seite: Die Bilder sind
+                Bildschirmfotos, die man in voller Grösse lesen will. */}
+            <a href={adresse} target="_blank" rel="noopener noreferrer" title="In voller Grösse öffnen">
+              <img
+                src={adresse}
+                alt={`Anhang ${nummer + 1}`}
+                className="h-32 w-40 rounded-sm border border-line bg-raised object-contain transition-colors hover:border-accent"
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
   const busy = useModeration((s) => s.busy)
   const setSupportStatus = useModeration((s) => s.setSupportStatus)
@@ -80,6 +147,8 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
 
       <p className="mt-3 border-l-2 border-line pl-3 text-sm whitespace-pre-wrap">{anfrage.text}</p>
 
+      <Anhaenge pfade={anfrage.anhaenge ?? []} />
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
           size="sm"
@@ -92,6 +161,11 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
           size="sm"
           variant="primary"
           disabled={busy || anfrage.status === 'erledigt'}
+          title={
+            (anfrage.anhaenge?.length ?? 0) > 0
+              ? 'Die angehängten Bilder werden dabei gelöscht.'
+              : undefined
+          }
           onClick={() => void setSupportStatus(anfrage.id, 'erledigt')}
         >
           Erledigt

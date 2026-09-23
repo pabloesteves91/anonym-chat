@@ -50,6 +50,7 @@ export {
   submitSupport,
   listSupport,
   listEigeneSupport,
+  getSupportAnhaenge,
   updateSupportStatus,
   listBlocked,
   clearReports,

@@ -762,6 +762,12 @@ export async function clearReports(): Promise<void> {
 
 /* ------------------------------------------------------------- Support */
 
+/** Höchstens drei – dieselbe Zahl steht in beiden Regeldateien. */
+const ANHANG_MAX = 3
+
+const anhangPfad = (userId: string, anfrageId: string, nummer: number) =>
+  `${PFAD.support}/${userId}/${anfrageId}/${nummer}.jpg`
+
 /**
  * Eine Supportanfrage einreichen.
  *
@@ -779,8 +785,20 @@ export async function submitSupport(input: SupportInput): Promise<SupportAnfrage
     const konto = await ladeUserDoc(id)
     if (!konto) throw new ApiError('Kein Konto gefunden.', 'nicht-verifiziert')
 
+    const anfrageId = generateId('sup')
+
+    // Bilder zuerst, Dokument danach – wie beim Verifizierungsantrag. Bricht
+    // der Upload ab, entsteht gar keine Anfrage; umgekehrt gäbe es eine
+    // Anfrage, die auf Bilder verweist, die nie ankamen.
+    const anhaenge: string[] = []
+    for (const [nummer, bild] of input.anhaenge.slice(0, ANHANG_MAX).entries()) {
+      const pfad = anhangPfad(id, anfrageId, nummer)
+      await uploadString(ref(getFileStorage(), pfad), bild.dataUrl, 'data_url')
+      anhaenge.push(pfad)
+    }
+
     const anfrage: SupportAnfrage = {
-      id: generateId('sup'),
+      id: anfrageId,
       createdAt: new Date().toISOString(),
       userId: id,
       pseudonym: konto.pseudonym,
@@ -790,12 +808,35 @@ export async function submitSupport(input: SupportInput): Promise<SupportAnfrage
       antwortAn: input.antwortAn.trim().slice(0, 120),
       verifizierung: konto.verificationStatus,
       plan: konto.membership.plan,
+      anhaenge,
       status: 'offen',
     }
 
     await setDoc(doc(getDb(), PFAD.support, anfrage.id), anfrage)
     return anfrage
   }, 'Die Anfrage konnte nicht abgeschickt werden.')
+}
+
+/**
+ * Abrufadressen der Anhänge.
+ *
+ * Bewusst getrennt von `listSupport`: Die Adressen kommen aus dem
+ * Dateispeicher und brauchen je einen eigenen Abruf. Liefe das im Laden der
+ * Moderationsansicht mit, stünde die ganze Ansicht still, sobald der Speicher
+ * einmal nicht antwortet – dieser Fehler war schon einmal da.
+ */
+export async function getSupportAnhaenge(anhaenge: string[]): Promise<string[]> {
+  const adressen = await Promise.all(
+    anhaenge.map(async (pfad) => {
+      try {
+        return await getDownloadURL(ref(getFileStorage(), pfad))
+      } catch {
+        // Nach dem Abhaken sind die Bilder gelöscht – das ist kein Fehler.
+        return null
+      }
+    }),
+  )
+  return adressen.filter((adresse): adresse is string => adresse !== null)
 }
 
 /** Alle Anfragen – für die Moderation. */
@@ -822,9 +863,29 @@ export async function listEigeneSupport(): Promise<SupportAnfrage[]> {
   }, 'Deine Anfragen konnten nicht geladen werden.')
 }
 
-/** Stand einer Anfrage setzen; gibt die frische Liste zurück. */
+/**
+ * Stand einer Anfrage setzen; gibt die frische Liste zurück.
+ *
+ * Mit „erledigt" verschwinden die Anhänge. Derselbe Umgang wie mit den
+ * Ausweisbildern: Was seinen Zweck erfüllt hat, liegt nicht weiter herum –
+ * und niemand muss daran denken, es aufzuräumen.
+ *
+ * Der Text der Anfrage bleibt. Er ist die Begründung dafür, was entschieden
+ * wurde, und ohne ihn liesse sich später nichts mehr nachvollziehen.
+ */
 export async function updateSupportStatus(id: string, status: SupportStatus): Promise<SupportAnfrage[]> {
   return fuehreAus(async () => {
+    if (status === 'erledigt') {
+      const snap = await getDoc(doc(getDb(), PFAD.support, id))
+      const anfrage = snap.data() as SupportAnfrage | undefined
+      for (const pfad of anfrage?.anhaenge ?? []) {
+        try {
+          await deleteObject(ref(getFileStorage(), pfad))
+        } catch {
+          /* schon weg */
+        }
+      }
+    }
     await updateDoc(doc(getDb(), PFAD.support, id), { status })
     return listSupport()
   }, 'Der Stand konnte nicht gesetzt werden.')

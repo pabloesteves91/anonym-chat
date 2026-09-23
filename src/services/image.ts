@@ -12,6 +12,16 @@ const QUALITAET = 0.72
 
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 
+/**
+ * Anhänge dürfen grösser bleiben als Ausweisbilder.
+ *
+ * Für die Ausweisprüfung reichen 720 Pixel – erkannt werden muss ein Gesicht.
+ * Ein Bildschirmfoto in einer Supportanfrage wäre bei 720 Pixeln unlesbar,
+ * und ein unlesbarer Beleg ist kein Beleg.
+ */
+export const ANHANG_KANTE = 1600
+export const ANHANG_MAX_BYTES = 8 * 1024 * 1024
+
 export interface Preview {
   /** Verkleinertes Bild als data:-URL. */
   dataUrl: string
@@ -36,16 +46,22 @@ function ladeBild(file: File): Promise<HTMLImageElement> {
   })
 }
 
-export async function createPreview(file: File): Promise<Preview> {
+export async function createPreview(
+  file: File,
+  optionen: { kante?: number; maxBytes?: number } = {},
+): Promise<Preview> {
+  const kante = optionen.kante ?? MAX_KANTE
+  const maxBytes = optionen.maxBytes ?? MAX_UPLOAD_BYTES
+
   if (!file.type.startsWith('image/')) {
-    throw new ImageError('Bitte ein Foto auswählen (JPEG, PNG oder HEIC als JPEG exportiert).')
+    throw new ImageError('Bitte ein Bild auswählen (JPEG, PNG oder HEIC als JPEG exportiert).')
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new ImageError('Das Foto ist zu gross. Bitte eines unter 12 MB wählen.')
+  if (file.size > maxBytes) {
+    throw new ImageError(`Das Bild ist zu gross. Bitte eines unter ${Math.round(maxBytes / 1024 / 1024)} MB wählen.`)
   }
 
   const img = await ladeBild(file)
-  const faktor = Math.min(1, MAX_KANTE / Math.max(img.width, img.height))
+  const faktor = Math.min(1, kante / Math.max(img.width, img.height))
   const breite = Math.max(1, Math.round(img.width * faktor))
   const hoehe = Math.max(1, Math.round(img.height * faktor))
 

@@ -335,6 +335,7 @@ describe('Supportanfragen', () => {
     antwortAn: 'anna@beispiel.ch',
     verifizierung: 'verifiziert',
     plan: 'frei',
+    anhaenge: [],
     status: 'offen',
     ...patch,
   })
@@ -375,6 +376,14 @@ describe('Supportanfragen', () => {
     await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-4'), anfrage(ANNA, { id: 'sup-4', betreff: '' })))
     await assertFails(
       setDoc(doc(als(ANNA), 'support', 'sup-5'), anfrage(ANNA, { id: 'sup-5', text: 'x'.repeat(2001) })),
+    )
+  })
+
+  it('begrenzt die Zahl der Anhänge', async () => {
+    const drei = ['support/a/b/0.jpg', 'support/a/b/1.jpg', 'support/a/b/2.jpg']
+    await assertSucceeds(setDoc(doc(als(ANNA), 'support', 'sup-7'), anfrage(ANNA, { id: 'sup-7', anhaenge: drei })))
+    await assertFails(
+      setDoc(doc(als(ANNA), 'support', 'sup-8'), anfrage(ANNA, { id: 'sup-8', anhaenge: [...drei, 'support/a/b/3.jpg'] })),
     )
   })
 

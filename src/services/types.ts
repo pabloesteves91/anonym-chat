@@ -270,6 +270,14 @@ export interface SupportAnfrage {
   antwortAn: string
   verifizierung: VerificationStatus
   plan: PlanId
+  /**
+   * Pfade der angehängten Bilder im Dateispeicher.
+   *
+   * Gespeichert werden Pfade, keine Adressen: Eine Abrufadresse läuft ab und
+   * wäre morgen falsch. Verschwinden die Dateien beim Abhaken, bleibt die
+   * Liste stehen und sagt, dass es einmal Anhänge gab.
+   */
+  anhaenge: string[]
   status: SupportStatus
 }
 
@@ -278,6 +286,8 @@ export interface SupportInput {
   betreff: string
   text: string
   antwortAn: string
+  /** Verkleinerte Bilder, wie sie `createPreview` liefert. */
+  anhaenge: { dataUrl: string }[]
 }
 
 /** Schritte des Antragsformulars. */
