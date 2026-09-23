@@ -1,0 +1,56 @@
+name: Discord einrichten
+
+# Richtet den Moderationsserver ein und hinterlegt die beiden
+# Webhook-Adressen im Google Secret Manager. Danach startet "Firebase
+# Functions" von selbst und rollt die Benachrichtigungen aus.
+#
+# Nur von Hand gestartet (Actions → Discord einrichten → Run workflow).
+# Beliebig oft startbar: Was besteht, bleibt stehen.
+#
+# Voraussetzungen, siehe docs/discord.md:
+#   - Secret DISCORD_BOT_TOKEN
+#   - Secret DISCORD_SERVER_ID
+#   - Secret FIREBASE_SERVICE_ACCOUNT (wie beim Regel-Ablauf)
+#
+# Die Webhook-Adressen erscheinen nirgends im Protokoll und liegen nie im
+# Repository oder in GitHub – nur im Secret Manager.
+on:
+  workflow_dispatch:
+
+jobs:
+  einrichten:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Server einrichten
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_SERVER_ID: ${{ secrets.DISCORD_SERVER_ID }}
+        run: node scripts/discord-einrichten.mjs
+
+      - name: Schlüssel bereitstellen
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT fehlt. Anleitung: docs/deployment.md"
+            exit 1
+          fi
+          printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
+
+      - name: Webhooks in den Secret Manager
+        run: |
+          npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_MELDUNGEN \
+            --data-file "$RUNNER_TEMP/discord-meldungen.url" --force --project anonym-chat-223af --non-interactive
+          npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_SUPPORT \
+            --data-file "$RUNNER_TEMP/discord-support.url" --force --project anonym-chat-223af --non-interactive
+
+      - name: Aufräumen
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-key.json" "$RUNNER_TEMP"/discord-*.url

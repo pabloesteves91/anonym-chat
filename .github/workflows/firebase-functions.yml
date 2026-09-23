@@ -1,21 +1,25 @@
 name: Firebase Functions
 
-# Rollt die Kasse aus, ohne dass jemand ein Terminal braucht: Die beiden
-# Stripe-Schlüssel liegen als Repository-Secrets und werden von hier in den
-# Google Secret Manager geschrieben.
+# Rollt die Funktionen aus, ohne dass jemand ein Terminal braucht: die Kasse
+# (Stripe) und die Benachrichtigungen an Discord.
 #
 # Voraussetzungen:
 #   - Firebase auf Blaze (Cloud Functions gibt es im Gratistarif nicht)
 #   - Secret FIREBASE_SERVICE_ACCOUNT (wie beim Regel-Ablauf)
+#
+# Freiwillig – was fehlt, bekommt einen Platzhalter und bleibt still:
 #   - Secret STRIPE_SECRET_KEY        (beginnt mit sk_)
 #   - Secret STRIPE_WEBHOOK_SECRET    (beginnt mit whsec_, kommt später)
+#   - DISCORD_WEBHOOK_MELDUNGEN / _SUPPORT setzt der Ablauf "Discord
+#     einrichten" direkt im Secret Manager; nach ihm startet dieser hier.
 #
-# Der Webhook-Schlüssel entsteht erst, wenn die Funktion einmal ausgerollt
-# ist – vorher gibt es keine Adresse, die man in Stripe eintragen könnte.
-# Fehlt er, setzt dieser Ablauf einen Platzhalter, damit der erste Durchgang
-# durchläuft, und sagt es deutlich.
+# Ein Platzhalter wird nur gesetzt, wenn im Secret Manager noch gar nichts
+# steht. Was dort schon liegt – auch von Hand eingetragen –, bleibt.
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Discord einrichten']
+    types: [completed]
   push:
     paths:
       - functions/**
@@ -24,6 +28,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Nach "Discord einrichten" nur, wenn das Einrichten geklappt hat.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -47,24 +53,33 @@ jobs:
           printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
 
-      - name: Stripe-Schlüssel in den Secret Manager
+      - name: Geheimnisse im Secret Manager
         env:
           SK: ${{ secrets.STRIPE_SECRET_KEY }}
           WH: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: |
-          if [ -z "$SK" ]; then
-            echo "::error::Secret STRIPE_SECRET_KEY fehlt. Anleitung: docs/tarife.md"
-            exit 1
-          fi
-          printf '%s' "$SK" | npx --yes firebase-tools@15 functions:secrets:set STRIPE_SECRET_KEY \
-            --data-file - --force --project anonym-chat-223af --non-interactive
+          FB="npx --yes firebase-tools@15"
+          P="--project anonym-chat-223af --non-interactive"
 
-          if [ -z "$WH" ]; then
-            echo "::warning::STRIPE_WEBHOOK_SECRET fehlt – es wird ein Platzhalter gesetzt. Die Kasse nimmt damit keine Quittungen an. Nach dem ersten Ausrollen die Webhook-Adresse in Stripe eintragen, das Geheimnis als Repository-Secret hinterlegen und diesen Ablauf erneut starten."
-            WH="whsec_NOCH_NICHT_GESETZT"
-          fi
-          printf '%s' "$WH" | npx --yes firebase-tools@15 functions:secrets:set STRIPE_WEBHOOK_SECRET \
-            --data-file - --force --project anonym-chat-223af --non-interactive
+          setzen() { printf '%s' "$2" | $FB functions:secrets:set "$1" --data-file - --force $P; }
+          # Nur wenn noch nichts da ist. `get` listet Versionen, nie den Wert.
+          platzhalter() {
+            if $FB functions:secrets:get "$1" $P > /dev/null 2>&1; then
+              echo "$1 ist gesetzt."
+            else
+              echo "::notice::$1 fehlt – Platzhalter gesetzt. $3"
+              setzen "$1" "$2"
+            fi
+          }
+
+          if [ -n "$SK" ]; then setzen STRIPE_SECRET_KEY "$SK"
+          else platzhalter STRIPE_SECRET_KEY sk_NOCH_NICHT_GESETZT "Die Kasse bleibt aus. Anleitung: docs/tarife.md"; fi
+
+          if [ -n "$WH" ]; then setzen STRIPE_WEBHOOK_SECRET "$WH"
+          else platzhalter STRIPE_WEBHOOK_SECRET whsec_NOCH_NICHT_GESETZT "Die Kasse nimmt keine Quittungen an. Anleitung: docs/tarife.md"; fi
+
+          platzhalter DISCORD_WEBHOOK_MELDUNGEN nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
+          platzhalter DISCORD_WEBHOOK_SUPPORT nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
 
       - name: Funktionen ausrollen
         id: ausrollen
