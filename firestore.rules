@@ -156,7 +156,12 @@ service cloud.firestore {
       allow read: if istModeration() || isOwner(userId);
       allow create, update: if isOwner(userId)
         && request.resource.data.userId == userId
-        && request.resource.data.erledigt == false;
+        && request.resource.data.erledigt == false
+        // Ein mitgeschickter Gutschein muss es geben – sonst stünde in der
+        // Liste der Verwaltung ein erfundener Rabatt.
+        && (request.resource.data.get('code', null) == null
+            || (request.resource.data.code is string
+                && exists(/databases/$(database)/documents/aktionen/$('code-' + request.resource.data.code))));
       // Abhaken gehört zur Tarifvergabe und damit zur Verwaltung.
       allow update, delete: if istVerwaltung();
       allow delete: if isOwner(userId);
@@ -173,29 +178,46 @@ service cloud.firestore {
       allow delete: if istModeration() || (isOwner(resource.data.userId) && resource.data.status == 'wartet');
     }
 
-    // Die Release-Aktion (siehe src/services/aktion.ts).
+    // Aktionen: Gratiszeiten, Rabatte, Gutscheine (siehe src/services/aktion.ts).
     //
-    // Lesen darf jede und jeder, auch ohne Konto: Die Startseite zeigt den
-    // Hinweis allen. Ändern darf nur die Verwaltung – und nur mit Werten in
-    // denselben Grenzen, die das Formular prüft. Wer geändert hat, trägt sich
-    // ein; das Protokoll auf Discord liest es.
-    match /einstellungen/aktion {
-      allow read: if true;
-      allow create, update: if istVerwaltung()
-        && request.resource.data.keys()
-             .hasOnly(['aktiv', 'start', 'gratisTage', 'rabattProzent', 'rabattTage', 'geaendertVon'])
-        && request.resource.data.aktiv is bool
-        && (request.resource.data.start == null
-            || (request.resource.data.start is string && request.resource.data.start.size() <= 40))
-        && (request.resource.data.aktiv == false || request.resource.data.start != null)
-        && request.resource.data.gratisTage is int
-        && request.resource.data.gratisTage >= 0 && request.resource.data.gratisTage <= 90
-        && request.resource.data.rabattProzent is int
-        && request.resource.data.rabattProzent >= 0 && request.resource.data.rabattProzent <= 90
-        && request.resource.data.rabattTage is int
-        && request.resource.data.rabattTage >= 0 && request.resource.data.rabattTage <= 365
-        && eingetragenAls('geaendertVon');
-      allow delete: if false;
+    // Öffentliche Aktionen (ohne Code) darf jede und jeder lesen und
+    // auflisten, auch ohne Konto: Die Startseite zeigt sie allen.
+    //
+    // Gutscheine liegen unter `code-<CODE>`. Abrufen lässt sich einer nur mit
+    // seiner Kennung – also mit dem Code. Auflisten darf sie nur die
+    // Verwaltung; sonst stünde jeder Code für alle lesbar in der Seite.
+    //
+    // Ändern darf nur die Verwaltung, mit denselben Grenzen, die das Formular
+    // prüft, und mit eigener Kennung für das Protokoll.
+    function gueltigeAktion(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'aktiv', 'start', 'gratisTage', 'rabattProzent', 'rabattTage',
+                                'tarife', 'aboDauer', 'aboMonate', 'code', 'hinweisTitel', 'hinweisText',
+                                'geaendertVon'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.aktiv is bool
+        && (d.start == null || (d.start is string && d.start.size() <= 40))
+        && (d.aktiv == false || d.start != null)
+        && d.gratisTage is int && d.gratisTage >= 0 && d.gratisTage <= 90
+        && d.rabattProzent is int && d.rabattProzent >= 0 && d.rabattProzent <= 90
+        && d.rabattTage is int && d.rabattTage >= 0 && d.rabattTage <= 365
+        && d.tarife is list && d.tarife.hasOnly(['plus-monat', 'plus-jahr', 'lifetime'])
+        && d.aboDauer in ['einmal', 'monate', 'dauerhaft']
+        && d.aboMonate is int && d.aboMonate >= 1 && d.aboMonate <= 24
+        && d.hinweisTitel is string && d.hinweisTitel.size() <= 80
+        && d.hinweisText is string && d.hinweisText.size() <= 400
+        // Ohne Code: gewöhnliche Kennung. Mit Code: genau `code-<CODE>`, und
+        // ein Gutschein macht nichts gratis.
+        && ((d.code == null && !id.matches('code-.*'))
+            || (d.code is string && d.code.matches('^[A-Z0-9-]{3,20}$')
+                && id == 'code-' + d.code && d.gratisTage == 0));
+    }
+
+    match /aktionen/{id} {
+      allow get: if true;
+      allow list: if resource.data.code == null || istVerwaltung();
+      allow create, update: if istVerwaltung() && gueltigeAktion(id) && eingetragenAls('geaendertVon');
+      allow delete: if istVerwaltung();
     }
 
     // Meldungen: absenden darf jede angemeldete Person, lesen nur die Moderation.

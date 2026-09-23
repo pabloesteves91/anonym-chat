@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Button, Note, PageTitle, Panel } from '../components/ui'
+import { Button, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { buttonClass } from '../components/buttonClass'
 import { GRATIS_CHATS_PRO_TAG, PLAENE, aktiverPlan, preisText, rappenText, type Plan, type PlanId } from '../services/plans'
-import { aktionsStand, datumKurz, rabattiert } from '../services/aktion'
+import { dauerText, datumKurz, hinweis, laufendeAktionen, rabattiert, tarifeText, type Aktion, type Rabatt } from '../services/aktion'
 import { AktionsHinweis } from '../components/AktionsHinweis'
-import { useAktion } from '../store/useAktion'
+import { rabattFuer, useAktionen } from '../store/useAktionen'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -65,21 +65,23 @@ const FRAGEN: { frage: string; antwort: string }[] = [
   },
 ]
 
-/** Die Frage zur Release-Aktion – nur, solange sie läuft. */
-function aktionsFragen(stand: ReturnType<typeof aktionsStand>): { frage: string; antwort: string }[] {
-  if (!stand.gratis && !stand.rabatt) return []
-  const teile: string[] = []
-  if (stand.gratis && stand.gratisBis) {
-    teile.push(
-      `Bis und mit ${datumKurz(stand.gratisBis)} hat jedes Konto alle Plus-Funktionen, ohne etwas zu buchen. Danach gilt wieder der eigene Tarif – es verlängert sich nichts von selbst, und es fällt nichts an.`,
-    )
-  }
-  if (stand.rabatt && stand.rabattBis) {
-    teile.push(
-      `Wer bis und mit ${datumKurz(stand.rabattBis)} bucht, zahlt ${stand.rabatt} % weniger. Bei Plus jährlich und Lifetime gilt das für die ganze Zahlung, bei Plus monatlich für den ersten Monat; ab dem zweiten Monat wird der normale Preis abgerechnet.`,
-    )
-  }
-  return [{ frage: 'Was gilt während der Release-Aktion?', antwort: teile.join(' ') }]
+/** Die Frage zu laufenden Aktionen – nur, solange eine läuft. */
+function aktionsFragen(laufend: Aktion[]): { frage: string; antwort: string }[] {
+  if (!laufend.length) return []
+  // Die Fakten, nicht der Werbetext: hier zählt, was genau gilt.
+  const saetze = laufend.flatMap((aktion) => hinweis(aktion, Date.now(), false).punkte)
+  const schluss =
+    'Danach gilt wieder der eigene Tarif – es verlängert sich nichts von selbst. Überschneiden sich Aktionen, gilt pro Tarif der höchste Rabatt; Rabatte werden nicht zusammengezählt.'
+  return [{ frage: 'Was gilt während der laufenden Aktion?', antwort: `${saetze.join(' ')} ${schluss}` }]
+}
+
+/** Was unter dem rabattierten Preis steht. */
+function rabattZeile(plan: Plan, rabatt: Rabatt): string {
+  const dauer = dauerText(rabatt.aktion, plan.id)
+  const quelle = rabatt.aktion.code ? ` mit Code ${rabatt.aktion.code}` : ''
+  if (!dauer) return `−${rabatt.prozent} %${quelle}`
+  if (rabatt.aktion.aboDauer === 'dauerhaft') return `−${rabatt.prozent} %${quelle}, ${dauer}`
+  return `−${rabatt.prozent} %${quelle} ${dauer}, danach ${preisText(plan)}`
 }
 
 function Karte({
@@ -93,8 +95,8 @@ function Karte({
   rabatt,
 }: {
   plan: Plan
-  /** Release-Rabatt in Prozent, 0 heisst keiner. */
-  rabatt: number
+  /** Der beste Rabatt aus Aktionen und Gutschein, oder keiner. */
+  rabatt: Rabatt | null
   aktiv: boolean
   gewaehlt: boolean
   onWaehlen: () => void
@@ -124,16 +126,15 @@ function Karte({
       {rabatt && plan.preisRappen > 0 ? (
         <div>
           <p className="flex flex-wrap items-baseline gap-2">
-            <span className="font-display text-3xl font-semibold">{rappenText(rabattiert(plan.preisRappen, rabatt))}</span>
+            <span className="font-display text-3xl font-semibold">
+              {rappenText(rabattiert(plan.preisRappen, rabatt.prozent))}
+            </span>
             <span className="sr-only">statt</span>
             <s className="text-muted">{preisText(plan)}</s>
             <span className="text-sm text-muted">{taktText[plan.takt]}</span>
           </p>
-          <p className="mt-1 text-sm font-medium text-accent-strong">
-            {plan.takt === 'monatlich'
-              ? `−${rabatt} % im ersten Monat, danach ${preisText(plan)}`
-              : `−${rabatt} % Release-Rabatt`}
-          </p>
+          <p className="mt-1 text-sm font-medium text-accent-strong">{rabattZeile(plan, rabatt)}</p>
+          <p className="text-xs text-muted">Bis und mit {datumKurz(rabatt.bis)}</p>
         </div>
       ) : (
         <p className="flex items-baseline gap-2">
@@ -169,7 +170,7 @@ function Karte({
               : plan.id === 'frei'
                 ? 'Gratis nutzen'
                 : KASSE_AKTIV
-                  ? `Für ${rappenText(rabatt ? rabattiert(plan.preisRappen, rabatt) : plan.preisRappen)} buchen`
+                  ? `Für ${rappenText(rabatt ? rabattiert(plan.preisRappen, rabatt.prozent) : plan.preisRappen)} buchen`
                   : 'Diesen Tarif möchte ich'}
           </Button>
         )}
@@ -179,6 +180,58 @@ function Karte({
 }
 
 /** Tarifübersicht. Gebucht wird noch nicht hier – siehe Hinweis unten. */
+/** Einen Gutscheincode einlösen – oder den eingelösten wieder entfernen. */
+function GutscheinFeld() {
+  const gutschein = useAktionen((s) => s.gutschein)
+  const fehler = useAktionen((s) => s.gutscheinFehler)
+  const prueft = useAktionen((s) => s.gutscheinPrueft)
+  const einloesen = useAktionen((s) => s.einloesen)
+  const entfernen = useAktionen((s) => s.entfernen)
+  const [eingabe, setEingabe] = useState('')
+
+  if (gutschein) {
+    return (
+      <div className="prose-column flex flex-wrap items-center gap-3 rounded-sm border border-accent/45 bg-accent-soft px-4 py-3 text-sm">
+        <span>
+          Code <strong className="font-mono">{gutschein.code}</strong> eingelöst: −{gutschein.rabattProzent} % auf{' '}
+          {tarifeText(gutschein.tarife)}. Gilt ein anderer Rabatt höher, zählt der höhere.
+        </span>
+        <Button size="sm" variant="quiet" onClick={entfernen}>
+          Entfernen
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <form
+      className="prose-column flex flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void einloesen(eingabe).then((ok) => ok && setEingabe(''))
+      }}
+    >
+      <label htmlFor="gutschein" className="text-sm font-medium">
+        Gutscheincode
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="gutschein"
+          className={`${inputClass} max-w-xs font-mono uppercase`}
+          value={eingabe}
+          onChange={(event) => setEingabe(event.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={20}
+        />
+        <Button type="submit" size="sm" disabled={prueft || !eingabe.trim()}>
+          {prueft ? 'Prüft …' : 'Einlösen'}
+        </Button>
+      </div>
+      {fehler ? <Note tone="warn">{fehler}</Note> : null}
+    </form>
+  )
+}
+
 export function Preise() {
   const konto = useAuth((s) => s.user)
   const user = useSession((s) => s.user)
@@ -192,10 +245,21 @@ export function Preise() {
   const [parameter] = useSearchParams()
   const zahlung = parameter.get('zahlung')
 
-  const aktion = useAktion((s) => s.aktion)
-  const stand = aktionsStand(aktion)
+  const aktionen = useAktionen((s) => s.aktionen)
+  const gutschein = useAktionen((s) => s.gutschein)
+  const laufend = laufendeAktionen(gutschein ? [...aktionen, gutschein] : aktionen)
   const meiner = aktiverPlan(user?.membership)
   const imBetrieb = Boolean(user && user.rolle !== 'nutzer')
+
+  // Ein Link wie /preise?code=SOMMER25 löst den Code gleich ein.
+  const einloesen = useAktionen((s) => s.einloesen)
+  const codeImLink = parameter.get('code')
+  useEffect(() => {
+    if (codeImLink) void einloesen(codeImLink)
+  }, [codeImLink, einloesen])
+
+  /** Der Code geht nur mit, wenn er für diesen Tarif den besten Rabatt gibt. */
+  const codeFuer = (plan: PlanId) => rabattFuer({ aktionen, gutschein }, plan)?.aktion.code ?? null
 
   const waehlen = async (plan: PlanId) => {
     setFehler(null)
@@ -203,14 +267,14 @@ export function Preise() {
       setZahlungLaeuft(true)
       try {
         // Ab hier verlässt die Seite den Browser Richtung Stripe.
-        await starteZahlung(plan)
+        await starteZahlung(plan, codeFuer(plan))
       } catch (error) {
         setFehler(error instanceof ApiError ? error.message : 'Die Zahlung konnte nicht gestartet werden.')
         setZahlungLaeuft(false)
       }
       return
     }
-    const ok = await choosePlan(plan)
+    const ok = await choosePlan(plan, codeFuer(plan))
     if (ok) setGewaehlt(plan)
   }
 
@@ -252,11 +316,13 @@ export function Preise() {
             busy={busy || imBetrieb || zahlungLaeuft}
             laeuft={zahlungLaeuft}
             angemeldet={Boolean(konto)}
-            rabatt={stand.rabatt}
+            rabatt={rabattFuer({ aktionen, gutschein }, plan.id)}
             onWaehlen={() => void waehlen(plan.id)}
           />
         ))}
       </div>
+
+      <GutscheinFeld />
 
       <section aria-labelledby="vergleich">
         <h2 id="vergleich" className="font-display text-2xl font-semibold">
@@ -301,7 +367,7 @@ export function Preise() {
           Häufige Fragen
         </h2>
         <dl className="mt-5 flex flex-col gap-5">
-          {[...aktionsFragen(stand), ...FRAGEN].map((eintrag) => (
+          {[...aktionsFragen(laufend), ...FRAGEN].map((eintrag) => (
             <div key={eintrag.frage}>
               <dt className="font-medium">{eintrag.frage}</dt>
               <dd className="mt-1 text-muted">{eintrag.antwort}</dd>

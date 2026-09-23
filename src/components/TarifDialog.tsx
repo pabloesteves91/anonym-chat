@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { Dialog } from './Dialog'
 import { Button, Note } from './ui'
 import { PLAENE, preisText, rappenText, type Plan, type PlanId } from '../services/plans'
-import { aktionsStand, datumKurz, rabattiert } from '../services/aktion'
-import { useAktion } from '../store/useAktion'
+import { dauerText, datumKurz, rabattiert } from '../services/aktion'
+import { gratisZeitBis, rabattFuer, useAktionen } from '../store/useAktionen'
 import { useSession } from '../store/useSession'
 import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
 import { ApiError } from '../services/api'
@@ -30,7 +30,10 @@ const taktText: Record<Plan['takt'], string> = {
  */
 export function TarifDialog() {
   const user = useSession((s) => s.user)
-  const stand = aktionsStand(useAktion((s) => s.aktion))
+  const aktionen = useAktionen((s) => s.aktionen)
+  const gutschein = useAktionen((s) => s.gutschein)
+  const gratisBis = gratisZeitBis({ aktionen })
+  const rabattVon = (plan: PlanId) => rabattFuer({ aktionen, gutschein }, plan)
   const ready = useSession((s) => s.ready)
   const loading = useSession((s) => s.loading)
   const busy = useSession((s) => s.busy)
@@ -81,14 +84,14 @@ export function TarifDialog() {
       setZahlungLaeuft(true)
       try {
         // Ab hier verlässt die Seite den Browser Richtung Stripe.
-        await starteZahlung(auswahl)
+        await starteZahlung(auswahl, rabattVon(auswahl)?.aktion.code ?? null)
       } catch (error) {
         setFehler(error instanceof ApiError ? error.message : 'Die Zahlung konnte nicht gestartet werden.')
         setZahlungLaeuft(false)
       }
       return
     }
-    const ok = await choosePlan(auswahl)
+    const ok = await choosePlan(auswahl, rabattVon(auswahl)?.aktion.code ?? null)
     if (ok) setBestaetigt(auswahl)
     else setFehler('Die Auswahl konnte nicht gespeichert werden. Du kannst sie später unter „Tarife" treffen.')
   }
@@ -113,10 +116,10 @@ export function TarifDialog() {
     <Dialog open={sichtbar} onClose={schliessen} title={titel} description={beschreibung}>
       {bestaetigt === null ? (
         <>
-          {stand.gratis && stand.gratisBis ? (
+          {gratisBis ? (
             <Note>
-              <strong>Release-Aktion:</strong> Bis und mit {datumKurz(stand.gratisBis)} hast du alle Plus-Funktionen
-              gratis – dafür musst du nichts wählen.
+              <strong>Aktion:</strong> Bis und mit {datumKurz(gratisBis)} hast du alle Plus-Funktionen gratis – dafür
+              musst du nichts wählen.
             </Note>
           ) : null}
           <fieldset className="flex flex-col gap-2 border-0 p-0">
@@ -139,9 +142,11 @@ export function TarifDialog() {
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-medium">{plan.name}</span>
-                    {stand.rabatt && plan.preisRappen > 0 ? (
+                    {rabattVon(plan.id) && plan.preisRappen > 0 ? (
                       <>
-                        <span className="font-mono text-sm">{rappenText(rabattiert(plan.preisRappen, stand.rabatt))}</span>
+                        <span className="font-mono text-sm">
+                          {rappenText(rabattiert(plan.preisRappen, rabattVon(plan.id)!.prozent))}
+                        </span>
                         <span className="sr-only">statt</span>
                         <s className="font-mono text-xs text-muted">{preisText(plan)}</s>
                       </>
@@ -152,11 +157,16 @@ export function TarifDialog() {
                     {plan.empfohlen ? <span className="label-caps text-accent-strong">Beliebt</span> : null}
                   </span>
                   <span className="mt-0.5 block text-sm text-muted">{plan.kurz}</span>
-                  {stand.rabatt && plan.takt === 'monatlich' ? (
-                    <span className="mt-0.5 block text-xs text-accent-strong">
-                      −{stand.rabatt} % im ersten Monat, danach {preisText(plan)}
-                    </span>
-                  ) : null}
+                  {(() => {
+                    const rabatt = rabattVon(plan.id)
+                    const dauer = rabatt ? dauerText(rabatt.aktion, plan.id) : null
+                    if (!rabatt || !dauer || rabatt.aktion.aboDauer === 'dauerhaft') return null
+                    return (
+                      <span className="mt-0.5 block text-xs text-accent-strong">
+                        −{rabatt.prozent} % {dauer}, danach {preisText(plan)}
+                      </span>
+                    )
+                  })()}
                 </span>
               </label>
             ))}

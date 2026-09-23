@@ -110,6 +110,8 @@ export interface PlanRequest {
   plan: string
   at: string
   erledigt: boolean
+  /** Eingelöster Gutscheincode, falls einer galt. */
+  code?: string | null
 }
 
 /**

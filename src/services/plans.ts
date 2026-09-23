@@ -12,7 +12,7 @@
  * das erst mit einer Serverfunktion, auch das steht dort.
  */
 
-import { aktionsStand, aktuelleAktion, type Aktion } from './aktion'
+import { aktuelleAktionen, gratisBis, type Aktion } from './aktion'
 
 export type PlanId = 'frei' | 'plus-monat' | 'plus-jahr' | 'lifetime'
 
@@ -141,11 +141,11 @@ export function grenzenFuer(
 export function grenzen(
   mitgliedschaft: Membership | null | undefined,
   jetzt = Date.now(),
-  aktion: Aktion = aktuelleAktion(),
+  aktionen: Aktion[] = aktuelleAktionen(),
 ): Grenzen {
   const plan = aktiverPlan(mitgliedschaft, jetzt)
-  // Während der Gratiszeit der Release-Aktion gilt Plus für alle.
-  if (plan === 'frei' && !aktionsStand(aktion, jetzt).gratis) {
+  // Während einer Gratisaktion gilt Plus für alle.
+  if (plan === 'frei' && !gratisBis(aktionen, jetzt)) {
     return { chatsProTag: GRATIS_CHATS_PRO_TAG, interessenFilter: false, eigenerName: false, bevorzugt: false }
   }
   return { chatsProTag: null, interessenFilter: true, eigenerName: true, bevorzugt: true }

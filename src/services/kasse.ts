@@ -47,13 +47,14 @@ const FEHLERTEXT: Record<string, string> = {
  * wirklich gilt, sagt nicht diese Rückkehr, sondern das Konto – gesetzt hat
  * es die Serverfunktion, nachdem Stripe die Quittung gemeldet hat.
  */
-export async function starteZahlung(plan: BezahlbarerPlan): Promise<void> {
+export async function starteZahlung(plan: BezahlbarerPlan, code: string | null = null): Promise<void> {
   try {
-    const aufruf = httpsCallable<{ plan: string }, { url: string }>(
+    const aufruf = httpsCallable<{ plan: string; code: string | null }, { url: string }>(
       getServerFunctions(),
       'createCheckoutSession',
     )
-    const { data } = await aufruf({ plan })
+    // Der Code ist nur ein Hinweis: Ob und wie viel Rabatt er gibt, prüft der Server.
+    const { data } = await aufruf({ plan, code })
     if (!data?.url) throw new ApiError('Die Kasse hat keine Adresse zurückgegeben.', 'speicher')
     window.location.assign(data.url)
   } catch (error) {

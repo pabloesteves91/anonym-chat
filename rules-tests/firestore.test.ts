@@ -871,40 +871,90 @@ describe('Discord-Nachrichten', () => {
   })
 })
 
-describe('Release-Aktion', () => {
+describe('Aktionen', () => {
   const aktion = (patch: Record<string, unknown> = {}) => ({
+    name: 'Release',
     aktiv: true,
     start: '2026-10-01T00:00:00.000Z',
     gratisTage: 14,
     rabattProzent: 20,
     rabattTage: 30,
+    tarife: ['plus-monat', 'plus-jahr', 'lifetime'],
+    aboDauer: 'einmal',
+    aboMonate: 1,
+    code: null,
+    hinweisTitel: '',
+    hinweisText: '',
     geaendertVon: MODERATOR,
     ...patch,
   })
+  const gutschein = (patch: Record<string, unknown> = {}) =>
+    aktion({ name: 'Sommer', gratisTage: 0, rabattProzent: 25, code: 'SOMMER25', ...patch })
 
-  it('ist für alle lesbar, auch ohne Anmeldung', async () => {
+  beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'einstellungen', 'aktion'), aktion())
+      await setDoc(doc(ctx.firestore(), 'aktionen', 'release'), aktion())
+      await setDoc(doc(ctx.firestore(), 'aktionen', 'code-SOMMER25'), gutschein())
     })
-    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'einstellungen', 'aktion')))
-    await assertSucceeds(getDoc(doc(als(ANNA), 'einstellungen', 'aktion')))
   })
 
-  it('lässt nur die Verwaltung ändern – mit eigener Kennung', async () => {
-    await assertFails(setDoc(doc(als(ANNA), 'einstellungen', 'aktion'), aktion({ geaendertVon: ANNA })))
-    await assertFails(setDoc(doc(als(NUR_MOD), 'einstellungen', 'aktion'), aktion({ geaendertVon: NUR_MOD })))
-    await assertFails(setDoc(doc(als(MODERATOR), 'einstellungen', 'aktion'), aktion({ geaendertVon: NUR_MOD })))
-    await assertSucceeds(setDoc(doc(als(MODERATOR), 'einstellungen', 'aktion'), aktion()))
-    await assertFails(deleteDoc(doc(als(MODERATOR), 'einstellungen', 'aktion')))
+  it('zeigt öffentliche Aktionen allen, auch ohne Anmeldung', async () => {
+    const gast = env.unauthenticatedContext().firestore()
+    await assertSucceeds(getDocs(query(collection(gast, 'aktionen'), where('code', '==', null))))
+    await assertSucceeds(getDoc(doc(gast, 'aktionen', 'release')))
+  })
+
+  it('lässt Gutscheine nicht auflisten – nur mit Code abrufen', async () => {
+    const gast = env.unauthenticatedContext().firestore()
+    await assertFails(getDocs(collection(gast, 'aktionen')))
+    await assertFails(getDocs(collection(als(ANNA), 'aktionen')))
+    await assertSucceeds(getDoc(doc(gast, 'aktionen', 'code-SOMMER25')))
+    await assertSucceeds(getDocs(collection(als(MODERATOR), 'aktionen')))
+  })
+
+  it('lässt nur die Verwaltung schreiben – mit eigener Kennung', async () => {
+    await assertFails(setDoc(doc(als(ANNA), 'aktionen', 'neu'), aktion({ geaendertVon: ANNA })))
+    await assertFails(setDoc(doc(als(NUR_MOD), 'aktionen', 'neu'), aktion({ geaendertVon: NUR_MOD })))
+    await assertFails(setDoc(doc(als(MODERATOR), 'aktionen', 'neu'), aktion({ geaendertVon: NUR_MOD })))
+    await assertSucceeds(setDoc(doc(als(MODERATOR), 'aktionen', 'neu'), aktion()))
+    await assertFails(deleteDoc(doc(als(ANNA), 'aktionen', 'release')))
+    await assertSucceeds(deleteDoc(doc(als(MODERATOR), 'aktionen', 'release')))
+  })
+
+  it('verlangt für Gutscheine die passende Kennung und nichts Gratis', async () => {
+    const db = als(MODERATOR)
+    await assertSucceeds(setDoc(doc(db, 'aktionen', 'code-HERBST10'), gutschein({ code: 'HERBST10' })))
+    await assertFails(setDoc(doc(db, 'aktionen', 'code-FALSCH'), gutschein({ code: 'HERBST10' })))
+    await assertFails(setDoc(doc(db, 'aktionen', 'irgendwas'), gutschein({ code: 'HERBST10' })))
+    await assertFails(setDoc(doc(db, 'aktionen', 'code-TARN'), aktion()))
+    await assertFails(setDoc(doc(db, 'aktionen', 'code-GRATIS'), gutschein({ code: 'GRATIS', gratisTage: 5 })))
+    await assertFails(setDoc(doc(db, 'aktionen', 'code-ab'), gutschein({ code: 'ab' })))
   })
 
   it('weist Werte ausserhalb der Grenzen ab', async () => {
-    const ref = doc(als(MODERATOR), 'einstellungen', 'aktion')
+    const ref = doc(als(MODERATOR), 'aktionen', 'neu')
     await assertFails(setDoc(ref, aktion({ rabattProzent: 100 })))
     await assertFails(setDoc(ref, aktion({ gratisTage: -1 })))
     await assertFails(setDoc(ref, aktion({ rabattTage: 1.5 })))
     await assertFails(setDoc(ref, aktion({ start: null })))
+    await assertFails(setDoc(ref, aktion({ tarife: ['frei'] })))
+    await assertFails(setDoc(ref, aktion({ aboDauer: 'immer' })))
+    await assertFails(setDoc(ref, aktion({ name: '' })))
     await assertFails(setDoc(ref, aktion({ gratisFuerImmer: true })))
     await assertSucceeds(setDoc(ref, aktion({ aktiv: false, start: null })))
+  })
+
+  it('nimmt im Tarifwunsch nur Codes an, die es gibt', async () => {
+    const wunschMit = (code: unknown) => ({
+      userId: ANNA,
+      pseudonym: 'Anna',
+      plan: 'plus-jahr',
+      at: '2026-10-02T00:00:00.000Z',
+      erledigt: false,
+      code,
+    })
+    await assertFails(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunschMit('ERFUNDEN50')))
+    await assertSucceeds(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunschMit('SOMMER25')))
+    await assertSucceeds(setDoc(doc(als(ANNA), 'planRequests', ANNA), wunschMit(null)))
   })
 })

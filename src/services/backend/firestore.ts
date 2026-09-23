@@ -22,7 +22,7 @@ import { generateId, generatePseudonym } from '../pseudonym'
 import { validateDisplayName } from '../wordFilter'
 import { GRATIS_MITGLIEDSCHAFT, grenzenFuer, heute, type Membership, type PlanId, type Verbrauch } from '../plans'
 import { rolleFuer } from '../roles'
-import { AKTION_STANDARD, pruefeAktion, type Aktion } from '../aktion'
+import { CODE_MUSTER, codeId, normiereCode, pruefeAktion, zuAktion, type Aktion } from '../aktion'
 import { ApiError, EXCERPT_LENGTH, maskPhone } from './shared'
 import type {
   AccessLogEntry,
@@ -66,7 +66,7 @@ const PFAD = {
   blocked: 'blocked',
   accessLog: 'accessLog',
   support: 'support',
-  einstellungen: 'einstellungen',
+  aktionen: 'aktionen',
 } as const
 
 const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interests: [] }
@@ -397,7 +397,7 @@ export async function setMembership(userId: string, plan: PlanId, laufzeitTage: 
  * Wunsch, den die Moderation sieht. Das ist der ehrliche Zwischenschritt,
  * solange die Kasse fehlt: kein Knopf, der Bezahlung vortäuscht.
  */
-export async function choosePlan(plan: PlanId): Promise<void> {
+export async function choosePlan(plan: PlanId, code: string | null = null): Promise<void> {
   await fuehreAus(async () => {
     const id = uid()
     const data = await ladeUserDoc(id)
@@ -415,6 +415,8 @@ export async function choosePlan(plan: PlanId): Promise<void> {
       plan,
       at: new Date().toISOString(),
       erledigt: false,
+      // Ein eingelöster Gutschein, damit die Verwaltung ihn bei der Freischaltung sieht.
+      code,
     }
     await setDoc(doc(getDb(), PFAD.planRequests, id), wunsch)
   }, 'Die Auswahl konnte nicht gespeichert werden.')
@@ -1181,39 +1183,72 @@ export function watchOffeneVorgaenge(
   }
 }
 
-/* ------------------------------------------------------ Release-Aktion */
+/* ------------------------------------------------------------ Aktionen */
 
-const AKTION_DOC = 'aktion'
-
-function zuAktion(daten: Partial<Aktion> | undefined): Aktion {
-  return { ...AKTION_STANDARD, ...(daten ?? {}) }
+function ohneId(aktion: Aktion): Omit<Aktion, 'id'> {
+  const { id: _id, ...rest } = aktion
+  void _id
+  return rest
 }
 
-/** Die Release-Aktion, live. Lesen darf jede und jeder, auch ohne Konto. */
-export function watchAktion(onChange: (aktion: Aktion) => void): Unsubscribe {
+/** Die öffentlichen Aktionen, live. Lesen darf jede und jeder, auch ohne Konto. */
+export function watchAktionen(onChange: (aktionen: Aktion[]) => void): Unsubscribe {
   return onSnapshot(
-    doc(getDb(), PFAD.einstellungen, AKTION_DOC),
-    (schnappschuss) => onChange(zuAktion(schnappschuss.data() as Partial<Aktion> | undefined)),
+    // Gutscheine (mit Code) lassen sich nicht auflisten – die Regeln verlangen
+    // genau diese Einschränkung.
+    query(collection(getDb(), PFAD.aktionen), where('code', '==', null)),
+    (schnappschuss) => onChange(schnappschuss.docs.map((d) => zuAktion(d.id, d.data() as Partial<Aktion>))),
     // Nicht lesbar heisst: keine Aktion. Die Seite läuft normal weiter.
-    () => onChange(AKTION_STANDARD),
+    () => onChange([]),
   )
 }
 
-/** Speichert die Aktion – nur die Verwaltung. */
-export async function speichereAktion(aktion: Aktion): Promise<void> {
-  const fehler = pruefeAktion(aktion)
-  if (fehler) throw new ApiError(fehler, 'ungueltig')
-  await fuehreAus(
-    () =>
-      setDoc(doc(getDb(), PFAD.einstellungen, AKTION_DOC), {
-        aktiv: aktion.aktiv,
-        start: aktion.start,
-        gratisTage: aktion.gratisTage,
-        rabattProzent: aktion.rabattProzent,
-        rabattTage: aktion.rabattTage,
-        // Für das Protokoll: wer die Aktion geändert hat.
-        geaendertVon: uid(),
-      }),
-    'Die Aktion konnte nicht gespeichert werden.',
+/** Alle Aktionen samt Gutscheinen – nur die Verwaltung. */
+export function watchAlleAktionen(onChange: (aktionen: Aktion[]) => void, onFehler: (text: string) => void): Unsubscribe {
+  return onSnapshot(
+    collection(getDb(), PFAD.aktionen),
+    (schnappschuss) =>
+      onChange(
+        schnappschuss.docs
+          .map((d) => zuAktion(d.id, d.data() as Partial<Aktion>))
+          .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? '') || a.name.localeCompare(b.name)),
+      ),
+    (error) => onFehler(uebersetze(error, 'Aktionen nicht lesbar.').message),
   )
+}
+
+/** Einen Gutschein über seinen Code holen. `null`: gibt es nicht. */
+export async function ladeGutschein(eingabe: string): Promise<Aktion | null> {
+  const code = normiereCode(eingabe)
+  if (!CODE_MUSTER.test(code)) return null
+  return fuehreAus(async () => {
+    const snap = await getDoc(doc(getDb(), PFAD.aktionen, codeId(code)))
+    return snap.exists() ? zuAktion(snap.id, snap.data() as Partial<Aktion>) : null
+  }, 'Der Code konnte nicht geprüft werden.')
+}
+
+/**
+ * Speichert eine Aktion – nur die Verwaltung. Gibt die Kennung zurück.
+ *
+ * Gutscheine liegen unter `code-<CODE>`. Ändert sich der Code (oder kommt
+ * einer dazu, oder fällt weg), zieht die Aktion unter die neue Kennung um:
+ * neu anlegen und alt löschen in einem Schritt.
+ */
+export async function speichereAktion(aktion: Aktion): Promise<string> {
+  const daten = ohneId(aktion)
+  const fehler = pruefeAktion(daten)
+  if (fehler) throw new ApiError(fehler, 'ungueltig')
+  const neueId = daten.code ? codeId(daten.code) : aktion.id && !aktion.id.startsWith('code-') ? aktion.id : generateId('akt')
+  return fuehreAus(async () => {
+    const stapel = writeBatch(getDb())
+    // Für das Protokoll: wer die Aktion geändert hat.
+    stapel.set(doc(getDb(), PFAD.aktionen, neueId), { ...daten, geaendertVon: uid() })
+    if (aktion.id && aktion.id !== neueId) stapel.delete(doc(getDb(), PFAD.aktionen, aktion.id))
+    await stapel.commit()
+    return neueId
+  }, 'Die Aktion konnte nicht gespeichert werden.')
+}
+
+export async function loescheAktion(id: string): Promise<void> {
+  await fuehreAus(() => deleteDoc(doc(getDb(), PFAD.aktionen, id)), 'Die Aktion konnte nicht gelöscht werden.')
 }

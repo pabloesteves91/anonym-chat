@@ -137,6 +137,11 @@ function Wunschliste({
           <li key={wunsch.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-surface px-3 py-2 text-sm">
             <span className="font-mono">{wunsch.pseudonym}</span>
             <span className="text-accent-strong">{planById(wunsch.plan as PlanId).name}</span>
+            {wunsch.code ? (
+              <span className="rounded-sm border border-line-strong px-1.5 font-mono text-xs" title="Eingelöster Gutschein">
+                Code {wunsch.code}
+              </span>
+            ) : null}
             <span className="text-muted">
               {new Date(wunsch.at).toLocaleDateString('de-CH', { dateStyle: 'short' })}
             </span>

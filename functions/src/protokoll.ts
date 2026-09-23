@@ -185,28 +185,36 @@ export const kontoProtokoll = onDocumentUpdated(
   },
 )
 
-/* ------------------------------------------------------- Release-Aktion */
+/* ------------------------------------------------------------ Aktionen */
 
-export function aktionEintrag(nach: Daten | undefined): Eintrag | null {
-  if (!nach) return null
-  if (!nach.aktiv) return { title: '🎉 Release-Aktion ausgeschaltet', color: FARBE_NEUTRAL, felder: [] }
-  const start = typeof nach.start === 'string' ? datum(nach.start) : '–'
+export function aktionEintrag(vor: Daten | undefined, nach: Daten | undefined): Eintrag | null {
+  const aktion = nach ?? vor
+  if (!aktion) return null
+  const name = `„${String(aktion.name ?? 'ohne Namen')}"${aktion.code ? ` (Code ${String(aktion.code)})` : ''}`
+  if (!nach) return { title: `🗑️ Aktion ${name} gelöscht`, color: FARBE_NEUTRAL, felder: [] }
+  const teile: [string, string][] = [
+    ['Stand', nach.aktiv ? 'eingeschaltet' : 'ausgeschaltet'],
+    ['Start', typeof nach.start === 'string' ? datum(nach.start) : '–'],
+  ]
+  if (Number(nach.gratisTage) > 0) teile.push(['Gratis', `${String(nach.gratisTage)} Tage`])
+  if (Number(nach.rabattProzent) > 0) {
+    teile.push(['Rabatt', `${String(nach.rabattProzent)} % für ${String(nach.rabattTage)} Tage`])
+  }
   return {
-    title: '🎉 Release-Aktion eingestellt',
+    title: vor ? `🎉 Aktion ${name} geändert` : `🎉 Aktion ${name} angelegt`,
     color: FARBE_UEBERNOMMEN,
-    felder: [
-      ['Start', start],
-      ['Gratis', `${nach.gratisTage ?? 0} Tage`],
-      ['Rabatt', `${nach.rabattProzent ?? 0} % für ${nach.rabattTage ?? 0} Tage`],
-    ],
+    felder: teile,
   }
 }
 
 export const aktionProtokoll = onDocumentWritten(
-  { document: 'einstellungen/aktion', region: REGION, secrets: [DISCORD_WEBHOOK_LOG] },
+  { document: 'aktionen/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_LOG] },
   async (event) => {
+    const vor = event.data?.before.data()
     const nach = event.data?.after.data()
-    const eintrag = aktionEintrag(nach)
+    const eintrag = aktionEintrag(vor, nach)
+    // Beim Löschen steht nicht im Dokument, wer gelöscht hat – die letzte
+    // Änderung stammt womöglich von jemand anderem. Also ehrlich: unbekannt.
     if (eintrag) await protokollieren(eintrag, nach?.geaendertVon)
   },
 )

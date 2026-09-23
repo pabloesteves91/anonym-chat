@@ -28,7 +28,7 @@ interface SessionState {
   refreshUser: () => Promise<void>
   acceptCodex: () => Promise<void>
   /** Tarif auswählen: gratis gilt sofort, bezahlt wird ein Wunsch daraus. */
-  choosePlan: (plan: PlanId) => Promise<boolean>
+  choosePlan: (plan: PlanId, code?: string | null) => Promise<boolean>
   /** Einmalige Angabe bei der Registrierung; setzt zugleich den Namen. */
   setGeschlecht: (geschlecht: Geschlecht) => Promise<boolean>
   refreshBlocks: () => Promise<void>
@@ -110,10 +110,10 @@ export const useSession = create<SessionState>((set, get) => ({
     }
   },
 
-  async choosePlan(plan) {
+  async choosePlan(plan, code = null) {
     set({ busy: true, error: null })
     try {
-      await api.choosePlan(plan)
+      await api.choosePlan(plan, code)
       await get().refreshUser()
       set({ busy: false })
       return true

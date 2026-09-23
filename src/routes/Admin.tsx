@@ -9,7 +9,7 @@ import { ROLLE_LABEL, type Rolle } from '../services/roles'
 import { VerificationQueue } from '../components/VerificationQueue'
 import { TranscriptList } from '../components/TranscriptList'
 import { PlanZuteilung } from '../components/PlanZuteilung'
-import { ReleaseAktion } from '../components/ReleaseAktion'
+import { Aktionen } from '../components/Aktionen'
 import { GeschlechtKorrektur } from '../components/GeschlechtKorrektur'
 import { Supportanfragen } from '../components/Supportanfragen'
 
@@ -219,7 +219,7 @@ export function Admin({ rolle, email }: { rolle: Rolle; email: string | null }) 
 
       {darfVerwalten ? <PlanZuteilung /> : null}
 
-      {darfVerwalten ? <ReleaseAktion /> : null}
+      {darfVerwalten ? <Aktionen /> : null}
 
       {darfVerwalten ? (
       <Panel className="flex flex-col gap-3 p-5">

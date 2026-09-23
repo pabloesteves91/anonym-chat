@@ -61,9 +61,12 @@ export {
   markiereSupportGelesen,
   listBlocked,
   clearReports,
-  // Release-Aktion
-  watchAktion,
+  // Aktionen
+  watchAktionen,
+  watchAlleAktionen,
+  ladeGutschein,
   speichereAktion,
+  loescheAktion,
 } from './backend/firestore'
 
 export {
