@@ -85,7 +85,7 @@ export function Profile() {
         </div>
 
         <form
-          className="flex flex-wrap items-end gap-3"
+          className="flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={async (event) => {
             event.preventDefault()
             const wert = nameEntwurf ?? user.pseudonym
@@ -94,7 +94,8 @@ export function Profile() {
             if (ok) setNameEntwurf(null)
           }}
         >
-          <div className="flex-1">
+          {/* Auf dem Handy: Feld über die ganze Breite, Knöpfe darunter. */}
+          <div className="w-full sm:min-w-0 sm:flex-1">
             <label htmlFor="anzeigename" className="sr-only">
               Anzeigename
             </label>
@@ -110,24 +111,28 @@ export function Profile() {
               }}
             />
           </div>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={busy || !darfUmbenennen || nameEntwurf === null || nameEntwurf === user.pseudonym}
-          >
-            Namen speichern
-          </Button>
-          <Button
-            type="button"
-            disabled={busy}
-            onClick={async () => {
-              setNameEntwurf(null)
-              setNameMeldung(null)
-              await newPseudonym()
-            }}
-          >
-            Würfeln
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1 sm:flex-none"
+              disabled={busy || !darfUmbenennen || nameEntwurf === null || nameEntwurf === user.pseudonym}
+            >
+              Speichern
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 sm:flex-none"
+              disabled={busy}
+              onClick={async () => {
+                setNameEntwurf(null)
+                setNameMeldung(null)
+                await newPseudonym()
+              }}
+            >
+              Würfeln
+            </Button>
+          </div>
         </form>
 
         {user.geschlecht ? (
