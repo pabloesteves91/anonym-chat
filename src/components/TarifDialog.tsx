@@ -219,8 +219,8 @@ export function TarifDialog() {
       ) : (
         <>
           <p className="text-muted">
-            Zehn Chats pro Tag, Suche nach Sprache. Wechseln kannst du jederzeit unter „Tarife" – dein Zugang zum
-            Dienst hängt nicht daran.
+            Zehn Chats pro Tag, Suche nach deiner Sprache. Wechseln kannst du jederzeit unter „Tarife" – dein Zugang
+            zum Dienst wird nicht beeinträchtigt.
           </p>
           <div>
             <Button type="button" variant="primary" onClick={schliessen}>

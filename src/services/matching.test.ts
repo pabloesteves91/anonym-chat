@@ -4,6 +4,7 @@ import {
   ERWEITERUNG_ERNEUT_NACH_MS,
   SUCHSTATUS_TEXT,
   VIELE_AB,
+  eigeneInteressen,
   erweiterbar,
   erweitereFilter,
   kandidatenFiltern,
@@ -129,5 +130,27 @@ describe('suchstatus', () => {
     expect(suchstatus({ kandidaten: 4, passend: 0, filterAktiv: true })).toBe('filterEng')
     expect(suchstatus({ kandidaten: 0, passend: 0, filterAktiv: true })).toBe('wenige')
     for (const text of Object.values(SUCHSTATUS_TEXT)) expect(text).not.toMatch(/\d/)
+  })
+})
+
+describe('eigeneInteressen', () => {
+  it('zählt, wonach gesucht wird, auch als eigenes Interesse – ohne Doppelte', () => {
+    expect(eigeneInteressen(['Bücher', 'Musik'], ['Bücher', 'Konzerte'])).toEqual(['Bücher', 'Musik', 'Konzerte'])
+  })
+
+  it('zwei leere Profile, beide suchen Bücher und Konzerte: sie finden sich', () => {
+    const suche = ['Bücher', 'Konzerte']
+    const a = wartend({ uid: 'a', interests: eigeneInteressen([], suche), wantsInterests: suche })
+    const b = wartend({ uid: 'b', interests: eigeneInteressen([], suche), wantsInterests: suche })
+    const filterBeider = filter({ interests: suche })
+    expect(passtZusammen(b, filterBeider, eigeneInteressen([], suche))).toBe(true)
+    expect(passtZusammen(a, filterBeider, eigeneInteressen([], suche))).toBe(true)
+  })
+
+  it('findet wie bisher, wer es im Profil hat, und nicht, wer es nirgends hat', () => {
+    const suche = filter({ interests: ['Bücher'] })
+    const meine = eigeneInteressen([], ['Bücher'])
+    expect(passtZusammen(wartend({ interests: ['Bücher'] }), suche, meine)).toBe(true)
+    expect(passtZusammen(wartend({ interests: ['Kochen'] }), suche, meine)).toBe(false)
   })
 })
