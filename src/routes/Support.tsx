@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Field, Note, PageTitle, Panel, inputClass } from '../components/ui'
 import { Kontokennung } from '../components/Kontokennung'
+import { SupportChat } from '../components/SupportChat'
 import { BETREIBER } from '../content/legal'
 import { planById } from '../services/plans'
 import { ANHANG_KANTE, ANHANG_MAX_BYTES, ImageError, createPreview, type Preview } from '../services/image'
@@ -74,7 +75,6 @@ export function Support() {
   const ready = useSupport((s) => s.ready)
   const busy = useSupport((s) => s.busy)
   const storeFehler = useSupport((s) => s.error)
-  const load = useSupport((s) => s.load)
   const absenden = useSupport((s) => s.absenden)
   const clearError = useSupport((s) => s.clearError)
 
@@ -89,15 +89,17 @@ export function Support() {
   const [fehler, setFehler] = useState<string | null>(null)
   const [gesendet, setGesendet] = useState<SupportAnfrage | null>(null)
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
   // Überschreiben darf man sie: Wer sich über Apple mit verdeckter Adresse
   // angemeldet hat, liest dort womöglich nicht mit.
   const antwortAn = eigeneAdresse ?? konto?.email ?? ''
 
   const gewaehlt = useMemo(() => SUPPORT_THEMEN.find((t) => t.value === thema), [thema])
+
+  // Nur, was die Moderation eröffnet hat. Laufende zuerst; erledigte bleiben
+  // lesbar, bis die Moderation die Anfrage löscht.
+  const chats = eigene
+    .filter((a) => a.chatOffen === true)
+    .sort((a, b) => Number(a.status === 'erledigt') - Number(b.status === 'erledigt'))
 
   /**
    * Wer etwas ändert, hat auf die Meldung reagiert.
@@ -175,6 +177,29 @@ export function Support() {
         Manches lässt sich im Dienst nicht selbst erledigen – die Geschlechtsangabe zum Beispiel, oder die Löschung
         deines Kontos. Schreib uns hier, und wir kümmern uns von Hand darum.
       </p>
+
+      {chats.length > 0 ? (
+        <section className="flex flex-col gap-4" aria-labelledby="support-chats">
+          <h2 id="support-chats" className="font-display text-xl font-semibold">
+            {chats.length === 1 ? 'Chat mit dem Support' : 'Chats mit dem Support'}
+          </h2>
+          {chats.map((anfrage) => (
+            <Panel key={anfrage.id} className="flex flex-col gap-3 p-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-medium">{anfrage.betreff}</p>
+                <span className="text-sm text-muted">{themaLabel(anfrage.thema)}</span>
+              </div>
+              <SupportChat
+                anfrageId={anfrage.id}
+                seite="nutzer"
+                gegenueber="Support"
+                schreibbar={anfrage.status !== 'erledigt'}
+                ungelesen={anfrage.ungelesenNutzer === true}
+              />
+            </Panel>
+          ))}
+        </section>
+      ) : null}
 
       {gesendet ? (
         <Panel className="border-accent/40 bg-accent-soft p-6">

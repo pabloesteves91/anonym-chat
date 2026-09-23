@@ -119,3 +119,24 @@ export function validateAntwortadresse(wert: string): { ok: boolean; error?: str
 export function themaLabel(thema: SupportThema): string {
   return SUPPORT_THEMEN.find((t) => t.value === thema)?.label ?? thema
 }
+
+/**
+ * Der Menüpunkt "Support" für die Person selbst.
+ *
+ * Sichtbar nur, solange es einen Chat gibt, den die Moderation eröffnet hat,
+ * zu einer Anfrage, die noch nicht erledigt ist – "offen" im Sinn von
+ * unerledigt, also auch "in Arbeit". Sonst wäre der Punkt ausgerechnet dann
+ * weg, wenn die Moderation zu schreiben beginnt.
+ *
+ * Blinken soll er nur bei einer ungelesenen Antwort. Ein Punkt, der dauernd
+ * blinkt, wird übersehen wie einer, der nie blinkt.
+ */
+export function supportMenue(
+  anfragen: { status: string; chatOffen?: boolean; ungelesenNutzer?: boolean }[],
+): { sichtbar: boolean; ungelesen: boolean } {
+  const laufend = anfragen.filter((a) => a.chatOffen === true && a.status !== 'erledigt')
+  return {
+    sichtbar: laufend.length > 0,
+    ungelesen: laufend.some((a) => a.ungelesenNutzer === true),
+  }
+}

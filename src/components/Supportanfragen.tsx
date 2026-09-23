@@ -5,6 +5,7 @@ import * as api from '../services/api'
 import { planById } from '../services/plans'
 import type { SupportAnfrage, SupportStatus } from '../services/types'
 import { useModeration } from '../store/useModeration'
+import { SupportChat } from './SupportChat'
 
 const STATUS_LABEL: Record<SupportStatus, string> = {
   offen: 'Offen',
@@ -168,6 +169,12 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
   const busy = useModeration((s) => s.busy)
   const setSupportStatus = useModeration((s) => s.setSupportStatus)
   const loescheSupport = useModeration((s) => s.loescheSupport)
+  const oeffneSupportChat = useModeration((s) => s.oeffneSupportChat)
+
+  // Aufgeklappt, wer eine ungelesene Antwort hat – die will man sehen, ohne
+  // erst zu suchen. Sonst zu, damit die Liste überschaubar bleibt.
+  const neueAntwort = anfrage.ungelesenModeration === true
+  const [chatSichtbar, setChatSichtbar] = useState(neueAntwort)
 
   const zeit = new Date(anfrage.createdAt).toLocaleString('de-CH', {
     day: '2-digit',
@@ -188,10 +195,17 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
             {planById(anfrage.plan).name}
           </p>
         </div>
-        <span
-          className={`rounded-sm border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[anfrage.status]}`}
-        >
-          {STATUS_LABEL[anfrage.status]}
+        <span className="flex flex-col items-end gap-1.5">
+          <span
+            className={`rounded-sm border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[anfrage.status]}`}
+          >
+            {STATUS_LABEL[anfrage.status]}
+          </span>
+          {neueAntwort ? (
+            <span className="rounded-sm bg-signal px-2 py-0.5 text-[0.6875rem] font-semibold tracking-wide text-surface uppercase">
+              Neue Antwort
+            </span>
+          ) : null}
         </span>
       </div>
 
@@ -199,7 +213,38 @@ function Anfragekarte({ anfrage }: { anfrage: SupportAnfrage }) {
 
       <Anhaenge pfade={anfrage.anhaenge ?? []} />
 
+      {anfrage.chatOffen && chatSichtbar ? (
+        <div className="mt-4">
+          <p className="label-caps mb-2">Chat mit {anfrage.pseudonym}</p>
+          <SupportChat
+            anfrageId={anfrage.id}
+            seite="moderation"
+            gegenueber={anfrage.pseudonym}
+            schreibbar={anfrage.status !== 'erledigt'}
+            ungelesen={neueAntwort}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        {!anfrage.chatOffen && anfrage.status !== 'erledigt' ? (
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={busy}
+            onClick={() => {
+              setChatSichtbar(true)
+              void oeffneSupportChat(anfrage.id)
+            }}
+          >
+            Chat eröffnen
+          </Button>
+        ) : null}
+        {anfrage.chatOffen ? (
+          <Button size="sm" onClick={() => setChatSichtbar((sichtbar) => !sichtbar)}>
+            {chatSichtbar ? 'Chat zuklappen' : 'Chat anzeigen'}
+          </Button>
+        ) : null}
         <Button
           size="sm"
           disabled={busy || anfrage.status === 'inArbeit'}

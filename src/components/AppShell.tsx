@@ -4,6 +4,8 @@ import { darfModerieren } from '../services/roles'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { summeOffen, useOffene } from '../store/useOffene'
+import { useSupport } from '../store/useSupport'
+import { supportMenue } from '../services/support'
 import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Wortmarke } from './Logo'
 import { Button, Note, Panel } from './ui'
@@ -88,6 +90,15 @@ export function AppShell() {
     beobachte(konto?.uid ?? null)
   }, [beobachte, konto?.uid])
 
+  // Die eigenen Supportanfragen, ebenfalls laufend: Sie tragen den Menüpunkt
+  // "Support", der nur erscheint, wenn die Moderation einen Chat eröffnet hat.
+  const beobachteSupport = useSupport((z) => z.beobachte)
+  const eigeneAnfragen = useSupport((z) => z.eigene)
+  const support = supportMenue(eigeneAnfragen)
+  useEffect(() => {
+    beobachteSupport(konto?.uid ?? null)
+  }, [beobachteSupport, konto?.uid])
+
   /**
    * Angemeldet, aber ohne Profil: Ohne eigene Anzeige bliebe hier eine
    * Seite stehen, die auf etwas wartet, das nicht mehr kommt. Die
@@ -114,6 +125,24 @@ export function AppShell() {
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
+              {support.sichtbar ? (
+                <NavLink
+                  to="/support"
+                  className={({ isActive }) =>
+                    `flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
+                      isActive || support.ungelesen
+                        ? 'border-accent bg-accent-soft text-ink'
+                        : 'border-line-strong text-muted hover:border-accent hover:text-ink'
+                    }`
+                  }
+                  aria-label={support.ungelesen ? 'Support – neue Antwort' : 'Support – laufender Chat'}
+                >
+                  Support
+                  {support.ungelesen ? (
+                    <span className="ruf-punkt inline-block h-2 w-2 rounded-full bg-signal" aria-hidden="true" />
+                  ) : null}
+                </NavLink>
+              ) : null}
               {zeigtModeration ? (
                 <NavLink to="/admin" className={modClass}>
                   <ShieldMark className="h-4 w-4 text-accent-strong" />

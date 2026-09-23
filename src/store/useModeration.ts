@@ -76,6 +76,8 @@ interface ModerationState {
   setSupportStatus: (id: string, status: SupportStatus) => Promise<void>
   /** Erledigte Supportanfragen endgültig löschen. */
   loescheSupport: (ids: string[]) => Promise<void>
+  /** Einen Chat zu einer Anfrage eröffnen. */
+  oeffneSupportChat: (id: string) => Promise<void>
   clearAll: () => Promise<void>
 }
 
@@ -229,6 +231,19 @@ export const useModeration = create<ModerationState>((set, get) => ({
     } catch (error) {
       set({ error: meldung(error, 'Die Angabe konnte nicht geändert werden.') })
       return false
+    } finally {
+      set({ busy: false })
+    }
+  },
+
+  async oeffneSupportChat(id) {
+    if (get().busy) return
+    set({ busy: true, error: null })
+    try {
+      const support = await api.oeffneSupportChat(id)
+      set({ support })
+    } catch (error) {
+      set({ error: meldung(error, 'Der Chat konnte nicht eröffnet werden.') })
     } finally {
       set({ busy: false })
     }

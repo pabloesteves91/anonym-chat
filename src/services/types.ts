@@ -279,6 +279,33 @@ export interface SupportAnfrage {
    */
   anhaenge: string[]
   status: SupportStatus
+  /**
+   * Hat die Moderation einen Chat zu dieser Anfrage eröffnet?
+   *
+   * Nur sie kann das. Solange es nicht geschehen ist, gibt es für die Person
+   * keinen Chat und keinen Menüpunkt. Ältere Anfragen haben das Feld nicht;
+   * dort gilt es als nicht eröffnet.
+   */
+  chatOffen?: boolean
+  /** Eine Antwort der Moderation, die die Person noch nicht gesehen hat. */
+  ungelesenNutzer?: boolean
+  /** Eine Antwort der Person, die die Moderation noch nicht gesehen hat. */
+  ungelesenModeration?: boolean
+}
+
+/**
+ * Eine Nachricht im Supportchat.
+ *
+ * Wer auf Seiten der Moderation geschrieben hat, steht bewusst nicht drin –
+ * die Person sieht "Support", nicht die Adresse oder den Namen dahinter. Das
+ * schützt die Moderation genauso, wie der Zufallsname die Nutzenden schützt.
+ */
+export interface SupportNachricht {
+  id: string
+  von: 'moderation' | 'nutzer'
+  text: string
+  /** Millisekunden; bis der Server die Zeit gesetzt hat: jetzt. */
+  at: number
 }
 
 export interface SupportInput {

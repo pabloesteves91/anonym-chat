@@ -9,6 +9,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -34,6 +35,7 @@ import type {
   Session,
   SupportAnfrage,
   SupportInput,
+  SupportNachricht,
   SupportStatus,
   TranscriptMessage,
   User,
@@ -863,6 +865,12 @@ export async function submitSupport(input: SupportInput): Promise<SupportAnfrage
       plan: konto.membership.plan,
       anhaenge,
       status: 'offen',
+      // Einen Chat eröffnet nur die Moderation; die Regeln lehnen alles
+      // andere ab. Die Felder stehen trotzdem da, damit sie später nur
+      // umgeschaltet und nicht erst angelegt werden müssen.
+      chatOffen: false,
+      ungelesenNutzer: false,
+      ungelesenModeration: false,
     }
 
     await setDoc(doc(getDb(), PFAD.support, anfrage.id), anfrage)
@@ -968,11 +976,129 @@ export async function deleteSupport(ids: string[]): Promise<SupportAnfrage[]> {
           /* schon weg */
         }
       }
+      // Firestore löscht Untersammlungen nicht mit. Ohne diesen Schritt blieben
+      // die Chatnachrichten einer gelöschten Anfrage für immer liegen.
+      const nachrichten = await getDocs(collection(getDb(), PFAD.support, id, NACHRICHTEN))
+      nachrichten.forEach((eintrag) => stapel.delete(eintrag.ref))
       stapel.delete(doc(getDb(), PFAD.support, id))
     }
     await stapel.commit()
     return listSupport()
   }, 'Die Anfragen konnten nicht gelöscht werden.')
+}
+
+/* ---------------------------------------------------------- Supportchat */
+
+/** Eigener Name statt "messages" – siehe die Begründung in `firestore.rules`. */
+const NACHRICHTEN = 'nachrichten'
+
+/**
+ * Die eigenen Anfragen, laufend.
+ *
+ * Trägt den Menüpunkt "Support": Er erscheint, sobald die Moderation einen
+ * Chat eröffnet, und blinkt bei einer Antwort – ohne dass jemand neu lädt.
+ * Die Abfrage ist auf das eigene Konto beschränkt; genau das verlangen auch
+ * die Regeln.
+ */
+export function watchEigeneSupport(onChange: (anfragen: SupportAnfrage[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(getDb(), PFAD.support), where('userId', '==', uid())),
+    (schnappschuss) =>
+      onChange(
+        schnappschuss.docs
+          .map((eintrag) => eintrag.data() as SupportAnfrage)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      ),
+    // Ein Fehler darf die Navigation nicht lahmlegen.
+    () => onChange([]),
+  )
+}
+
+/**
+ * Einen Chat zu einer Anfrage eröffnen – nur die Moderation.
+ *
+ * Eine offene Anfrage gilt damit als übernommen: Wer schreibt, bearbeitet.
+ */
+export async function oeffneSupportChat(id: string): Promise<SupportAnfrage[]> {
+  return fuehreAus(async () => {
+    const snap = await getDoc(doc(getDb(), PFAD.support, id))
+    const anfrage = snap.data() as SupportAnfrage | undefined
+    await updateDoc(doc(getDb(), PFAD.support, id), {
+      chatOffen: true,
+      ...(anfrage?.status === 'offen' ? { status: 'inArbeit' } : {}),
+    })
+    return listSupport()
+  }, 'Der Chat konnte nicht eröffnet werden.')
+}
+
+export function watchSupportNachrichten(
+  anfrageId: string,
+  onChange: (nachrichten: SupportNachricht[]) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(collection(getDb(), PFAD.support, anfrageId, NACHRICHTEN), orderBy('at', 'asc')),
+    (schnappschuss) =>
+      onChange(
+        schnappschuss.docs.map((eintrag) => {
+          const daten = eintrag.data()
+          const at = daten.at as Timestamp | null
+          return {
+            id: eintrag.id,
+            von: daten.von as SupportNachricht['von'],
+            text: String(daten.text ?? ''),
+            // Bis der Server die Zeit setzt, gilt jetzt – sonst springt die
+            // eigene Nachricht beim Eintreffen an eine andere Stelle.
+            at: at?.toMillis() ?? Date.now(),
+          }
+        }),
+      ),
+    () => onChange([]),
+  )
+}
+
+/**
+ * Eine Nachricht schicken und die Gegenseite als "ungelesen" markieren.
+ *
+ * Beides in einem Stapel: Eine Nachricht ohne Markierung bliebe unbemerkt,
+ * eine Markierung ohne Nachricht wäre ein Fehlalarm.
+ *
+ * Wer schreibt, hat gelesen – die eigene Markierung geht deshalb gleich mit
+ * weg. Für die Person ist das ausserdem Pflicht: Die Regeln lassen sie nur
+ * mit "gelesen" auf der eigenen Seite schreiben.
+ */
+export async function sendeSupportNachricht(
+  anfrageId: string,
+  text: string,
+  von: SupportNachricht['von'],
+): Promise<void> {
+  return fuehreAus(async () => {
+    const inhalt = text.trim().slice(0, 2000)
+    if (!inhalt) return
+
+    const stapel = writeBatch(getDb())
+    stapel.set(doc(collection(getDb(), PFAD.support, anfrageId, NACHRICHTEN)), {
+      von,
+      text: inhalt,
+      at: serverTimestamp(),
+    })
+    stapel.update(
+      doc(getDb(), PFAD.support, anfrageId),
+      von === 'moderation'
+        ? { ungelesenNutzer: true, ungelesenModeration: false }
+        : { ungelesenModeration: true, ungelesenNutzer: false },
+    )
+    await stapel.commit()
+  }, 'Die Nachricht konnte nicht gesendet werden.')
+}
+
+/** Die eigene Seite als gelesen markieren. */
+export async function markiereSupportGelesen(anfrageId: string, seite: SupportNachricht['von']): Promise<void> {
+  return fuehreAus(async () => {
+    await updateDoc(
+      doc(getDb(), PFAD.support, anfrageId),
+      seite === 'moderation' ? { ungelesenModeration: false } : { ungelesenNutzer: false },
+    )
+  }, 'Konnte nicht als gelesen markiert werden.')
 }
 
 /* --------------------------------------------- Offene Vorgänge (laufend) */
@@ -1001,6 +1127,16 @@ export function watchOffeneVorgaenge(
 
   const offeneMeldungen = query(collection(getDb(), PFAD.reports), where('status', '==', 'offen'))
   const offeneAnfragen = query(collection(getDb(), PFAD.support), where('status', '==', 'offen'))
+  const ungeleseneAntworten = query(collection(getDb(), PFAD.support), where('ungelesenModeration', '==', true))
+
+  // Eine Anfrage kann offen sein UND eine ungelesene Antwort haben. Gezählt
+  // wird sie trotzdem einmal – deshalb Kennungen statt Summen.
+  let offenIds = new Set<string>()
+  let antwortIds = new Set<string>()
+  const zaehleAnfragen = () => {
+    stand.anfragen = new Set([...offenIds, ...antwortIds]).size
+    melde()
+  }
 
   const stoppA = onSnapshot(
     offeneMeldungen,
@@ -1014,8 +1150,16 @@ export function watchOffeneVorgaenge(
   const stoppB = onSnapshot(
     offeneAnfragen,
     (schnappschuss) => {
-      stand.anfragen = schnappschuss.size
-      melde()
+      offenIds = new Set(schnappschuss.docs.map((d) => d.id))
+      zaehleAnfragen()
+    },
+    () => {},
+  )
+  const stoppC = onSnapshot(
+    ungeleseneAntworten,
+    (schnappschuss) => {
+      antwortIds = new Set(schnappschuss.docs.map((d) => d.id))
+      zaehleAnfragen()
     },
     () => {},
   )
@@ -1023,5 +1167,6 @@ export function watchOffeneVorgaenge(
   return () => {
     stoppA()
     stoppB()
+    stoppC()
   }
 }

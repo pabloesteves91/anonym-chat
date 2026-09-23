@@ -54,6 +54,11 @@ export {
   watchOffeneVorgaenge,
   updateSupportStatus,
   deleteSupport,
+  watchEigeneSupport,
+  oeffneSupportChat,
+  watchSupportNachrichten,
+  sendeSupportNachricht,
+  markiereSupportGelesen,
   listBlocked,
   clearReports,
 } from './backend/firestore'

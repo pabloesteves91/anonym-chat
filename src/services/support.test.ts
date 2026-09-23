@@ -4,6 +4,7 @@ import {
   SUPPORT_THEMEN,
   TEXT_MAX,
   TEXT_MIN,
+  supportMenue,
   themaLabel,
   validateAntwortadresse,
   validateSupportAnfrage,
@@ -88,5 +89,40 @@ describe('SUPPORT_THEMEN', () => {
 
   it('führt jedes Thema auf einen lesbaren Namen zurück', () => {
     expect(themaLabel('konto-loeschen')).toBe('Konto löschen')
+  })
+})
+
+describe('supportMenue', () => {
+  it('bleibt verborgen ohne eröffneten Chat', () => {
+    expect(supportMenue([])).toEqual({ sichtbar: false, ungelesen: false })
+    expect(supportMenue([{ status: 'offen' }])).toEqual({ sichtbar: false, ungelesen: false })
+    expect(supportMenue([{ status: 'inArbeit', chatOffen: false }]).sichtbar).toBe(false)
+  })
+
+  it('erscheint bei einem Chat zu einer offenen oder übernommenen Anfrage', () => {
+    expect(supportMenue([{ status: 'offen', chatOffen: true }]).sichtbar).toBe(true)
+    // "In Arbeit" zählt als offen – sonst verschwände der Punkt, sobald die
+    // Moderation übernimmt und zu schreiben beginnt.
+    expect(supportMenue([{ status: 'inArbeit', chatOffen: true }]).sichtbar).toBe(true)
+  })
+
+  it('verschwindet, sobald die Anfrage erledigt ist', () => {
+    expect(supportMenue([{ status: 'erledigt', chatOffen: true, ungelesenNutzer: true }])).toEqual({
+      sichtbar: false,
+      ungelesen: false,
+    })
+  })
+
+  it('blinkt nur bei einer ungelesenen Antwort', () => {
+    expect(supportMenue([{ status: 'inArbeit', chatOffen: true }]).ungelesen).toBe(false)
+    expect(supportMenue([{ status: 'inArbeit', chatOffen: true, ungelesenNutzer: true }]).ungelesen).toBe(true)
+  })
+
+  it('zählt eine erledigte Anfrage nicht mit, wenn daneben eine laufende steht', () => {
+    const lage = supportMenue([
+      { status: 'erledigt', chatOffen: true, ungelesenNutzer: true },
+      { status: 'inArbeit', chatOffen: true, ungelesenNutzer: false },
+    ])
+    expect(lage).toEqual({ sichtbar: true, ungelesen: false })
   })
 })

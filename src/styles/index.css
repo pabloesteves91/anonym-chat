@@ -179,6 +179,23 @@ body {
   animation: vac-blink 1.2s ease-in-out infinite;
 }
 
+/* Der Menüpunkt "Support" bei einer ungelesenen Antwort: Er pulsiert mit
+   einem Ring, statt hart an- und auszugehen. Hartes Blinken ist für manche
+   Menschen belastend und wird von anderen schnell weggefiltert. */
+@keyframes vac-ruf {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--signal) 55%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--signal) 0%, transparent);
+  }
+}
+
+.ruf-punkt {
+  animation: vac-ruf 1.6s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sweep::after {
     width: 100%;
@@ -188,5 +205,10 @@ body {
   .typing-dot {
     animation: none;
     opacity: 0.6;
+  }
+  /* Ohne Bewegung bleibt der Punkt stehen – die Nachricht geht nicht verloren,
+     sie drängt sich nur nicht auf. */
+  .ruf-punkt {
+    animation: none;
   }
 }

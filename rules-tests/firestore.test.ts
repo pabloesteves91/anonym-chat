@@ -14,9 +14,11 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
 
 /**
@@ -408,6 +410,124 @@ describe('Supportanfragen', () => {
     })
     await assertFails(deleteDoc(doc(als(MODERATOR), 'support', 'sup-10')))
     await assertFails(deleteDoc(doc(als(MODERATOR), 'support', 'sup-11')))
+  })
+})
+
+describe('Supportchat', () => {
+  const anfrage = (patch: Record<string, unknown> = {}) => ({
+    id: 'sup-c',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    userId: ANNA,
+    pseudonym: 'Anna',
+    thema: 'sonstiges',
+    betreff: 'Frage',
+    text: 'Eine Frage an den Support, lang genug.',
+    antwortAn: 'anna@beispiel.ch',
+    verifizierung: 'verifiziert',
+    plan: 'frei',
+    anhaenge: [],
+    status: 'inArbeit',
+    chatOffen: true,
+    ungelesenNutzer: false,
+    ungelesenModeration: false,
+    ...patch,
+  })
+  const nachricht = (von: string, text = 'Hallo') => ({ von, text, at: serverTimestamp() })
+  const ablegen = async (patch: Record<string, unknown> = {}) => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'support', 'sup-c'), anfrage(patch))
+    })
+  }
+  const pfad = 'support/sup-c/nachrichten'
+
+  it('lässt beim Anlegen keinen Chat selbst eröffnen', async () => {
+    // Einen Chat eröffnet nur die Moderation.
+    const neu = { ...anfrage({ id: 'sup-x', status: 'offen' }) }
+    await assertFails(setDoc(doc(als(ANNA), 'support', 'sup-x'), neu))
+    await assertSucceeds(
+      setDoc(doc(als(ANNA), 'support', 'sup-y'), {
+        ...neu,
+        id: 'sup-y',
+        chatOffen: false,
+        ungelesenNutzer: false,
+        ungelesenModeration: false,
+      }),
+    )
+  })
+
+  it('lässt beide Seiten in einem eröffneten Chat schreiben und lesen', async () => {
+    await ablegen()
+    await assertSucceeds(setDoc(doc(als(MODERATOR), pfad, 'n1'), nachricht('moderation')))
+    await assertSucceeds(setDoc(doc(als(ANNA), pfad, 'n2'), nachricht('nutzer')))
+    await assertSucceeds(getDocs(collection(als(ANNA), pfad)))
+    await assertSucceeds(getDocs(collection(als(MODERATOR), pfad)))
+  })
+
+  it('lässt ohne eröffneten Chat niemanden schreiben', async () => {
+    await ablegen({ chatOffen: false })
+    await assertFails(setDoc(doc(als(ANNA), pfad, 'n1'), nachricht('nutzer')))
+    await assertFails(setDoc(doc(als(MODERATOR), pfad, 'n2'), nachricht('moderation')))
+  })
+
+  it('schliesst den Chat für die Person, sobald die Anfrage erledigt ist', async () => {
+    await ablegen({ status: 'erledigt' })
+    await assertFails(setDoc(doc(als(ANNA), pfad, 'n1'), nachricht('nutzer')))
+    // Lesen bleibt möglich: Was besprochen wurde, soll nicht verschwinden.
+    await assertSucceeds(getDocs(collection(als(ANNA), pfad)))
+  })
+
+  it('lässt niemanden sich als Support ausgeben', async () => {
+    await ablegen()
+    await assertFails(setDoc(doc(als(ANNA), pfad, 'n1'), nachricht('moderation')))
+  })
+
+  it('hält Fremde aus dem Chat heraus', async () => {
+    await ablegen()
+    await assertFails(getDocs(collection(als(BEN), pfad)))
+    await assertFails(setDoc(doc(als(BEN), pfad, 'n1'), nachricht('nutzer')))
+  })
+
+  it('lässt Geschriebenes nicht mehr ändern', async () => {
+    await ablegen()
+    await setDoc(doc(als(ANNA), pfad, 'n1'), nachricht('nutzer'))
+    await assertFails(updateDoc(doc(als(ANNA), pfad, 'n1'), { text: 'Anders gemeint' }))
+    await assertFails(deleteDoc(doc(als(ANNA), pfad, 'n1')))
+  })
+
+  it('verlangt die Serverzeit, keine erfundene', async () => {
+    await ablegen()
+    await assertFails(setDoc(doc(als(ANNA), pfad, 'n1'), { von: 'nutzer', text: 'Hallo', at: Timestamp.fromMillis(0) }))
+  })
+
+  it('lässt die Person nur "gelesen" und "geantwortet" markieren', async () => {
+    await ablegen({ ungelesenNutzer: true })
+    // gelesen
+    await assertSucceeds(updateDoc(doc(als(ANNA), 'support', 'sup-c'), { ungelesenNutzer: false }))
+    // geantwortet: Nachricht und Markierung zusammen, wie die App es tut.
+    // Eine Instanz für den ganzen Stapel – `als()` erzeugt bei jedem Aufruf
+    // eine neue, und ein Stapel nimmt nur Dokumente derselben an.
+    const anna = als(ANNA)
+    const stapel = writeBatch(anna)
+    stapel.set(doc(anna, pfad, 'n1'), nachricht('nutzer'))
+    stapel.update(doc(anna, 'support', 'sup-c'), { ungelesenModeration: true, ungelesenNutzer: false })
+    await assertSucceeds(stapel.commit())
+  })
+
+  it('lässt die Person eine Antwort nicht vor der Moderation verstecken', async () => {
+    await ablegen({ ungelesenModeration: true })
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-c'), { ungelesenModeration: false }))
+  })
+
+  it('lässt die Person weder Stand noch Chat selbst ändern', async () => {
+    await ablegen()
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-c'), { chatOffen: false }))
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-c'), { status: 'offen' }))
+  })
+
+  it('lässt ohne eröffneten Chat auch keine Markierung setzen', async () => {
+    // Sonst liesse sich das Abzeichen der Moderation von aussen hochzählen.
+    await ablegen({ chatOffen: false })
+    await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-c'), { ungelesenModeration: true }))
   })
 })
 

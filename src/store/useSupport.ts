@@ -4,11 +4,15 @@ import { OFFEN_MAX } from '../services/support'
 import type { SupportAnfrage, SupportInput } from '../services/types'
 
 /**
- * Die eigenen Supportanfragen.
+ * Die eigenen Supportanfragen – laufend beobachtet.
  *
- * Getrennt von `useSession`, weil die Supportseite die einzige Stelle ist, die
- * das braucht – der Rest der App soll die Liste nicht bei jedem Seitenaufruf
- * mitladen.
+ * Früher einmal geladen, jetzt über eine offene Verbindung: Seit es den
+ * Supportchat gibt, muss der Menüpunkt erscheinen, sobald die Moderation
+ * einen Chat eröffnet, und blinken, sobald sie antwortet – ohne dass jemand
+ * neu lädt. Dieselbe Quelle trägt auch die Liste auf der Supportseite, damit
+ * es nicht zwei Meinungen über denselben Stand gibt.
+ *
+ * Die Verbindung hängt am angemeldeten Konto und endet mit ihm.
  */
 
 interface SupportState {
@@ -16,8 +20,12 @@ interface SupportState {
   busy: boolean
   error: string | null
   eigene: SupportAnfrage[]
+  /** Für welches Konto gerade beobachtet wird – verhindert Doppelanmeldungen. */
+  uid: string | null
+  stopp: (() => void) | null
 
-  load: () => Promise<void>
+  /** Beginnt oder wechselt die Beobachtung; `null` beendet sie. */
+  beobachte: (uid: string | null) => void
   absenden: (eingabe: SupportInput) => Promise<SupportAnfrage | null>
   clearError: () => void
 }
@@ -30,16 +38,20 @@ export const useSupport = create<SupportState>((set, get) => ({
   busy: false,
   error: null,
   eigene: [],
+  uid: null,
+  stopp: null,
 
-  async load() {
-    try {
-      const eigene = await api.listEigeneSupport()
-      set({ eigene, ready: true, error: null })
-    } catch (error) {
-      // Auch im Fehlerfall `ready` setzen: Sonst steht dort für immer "wird
-      // geladen" und sieht aus wie ein Hänger.
-      set({ ready: true, error: meldung(error, 'Deine Anfragen konnten nicht geladen werden.') })
+  beobachte(uid) {
+    if (get().uid === uid) return
+    get().stopp?.()
+
+    if (!uid) {
+      set({ uid: null, stopp: null, eigene: [], ready: false })
+      return
     }
+
+    const stopp = api.watchEigeneSupport((eigene) => set({ eigene, ready: true }))
+    set({ uid, stopp })
   },
 
   async absenden(eingabe) {
@@ -59,9 +71,8 @@ export const useSupport = create<SupportState>((set, get) => ({
 
     set({ busy: true, error: null })
     try {
-      const anfrage = await api.submitSupport(eingabe)
-      set({ eigene: [anfrage, ...get().eigene] })
-      return anfrage
+      // Die Liste aktualisiert sich über die Beobachtung von selbst.
+      return await api.submitSupport(eingabe)
     } catch (error) {
       set({ error: meldung(error, 'Die Anfrage konnte nicht abgeschickt werden.') })
       return null

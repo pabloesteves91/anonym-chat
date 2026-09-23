@@ -179,13 +179,71 @@ service cloud.firestore {
         // Höchstens drei Anhänge. Der Dateispeicher begrenzt sie zusätzlich
         // über den erlaubten Dateinamen – hier zählt, was im Dokument steht.
         && request.resource.data.anhaenge is list
-        && request.resource.data.anhaenge.size() <= 3;
+        && request.resource.data.anhaenge.size() <= 3
+        // Einen Chat eröffnet nur die Moderation. Wer ihn beim Anlegen selbst
+        // mitschickt, hätte sich einen Kanal gebaut, den nie jemand geöffnet hat.
+        && request.resource.data.get('chatOffen', false) == false
+        && request.resource.data.get('ungelesenNutzer', false) == false
+        && request.resource.data.get('ungelesenModeration', false) == false;
       allow read: if istModeration() || isOwner(resource.data.userId);
-      allow update: if istModeration();
+
+      // Die Moderation darf alles ändern. Die Person selbst genau zwei Dinge,
+      // und nur in einem eröffneten Chat: ihre eigene Markierung "ungelesen"
+      // wegnehmen (sie hat gelesen) und die der Moderation setzen (sie hat
+      // geschrieben). Wegnehmen kann sie die der Moderation nicht – sonst
+      // liesse sich eine Antwort vor der Moderation verstecken.
+      allow update: if istModeration()
+        || (isOwner(resource.data.userId)
+            && resource.data.get('chatOffen', false) == true
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['ungelesenNutzer', 'ungelesenModeration'])
+            && request.resource.data.get('ungelesenNutzer', false) == false
+            && (request.resource.data.get('ungelesenModeration', false) == true
+                || request.resource.data.get('ungelesenModeration', false)
+                     == resource.data.get('ungelesenModeration', false)));
+
       // Löschen nur, was abgehakt ist. Eine offene Anfrage hat noch niemand
       // bearbeitet; ein Fehlklick darf sie nicht verschwinden lassen. Die
       // Sperre sitzt hier und nicht nur als ausgeblendeter Knopf.
       allow delete: if istModeration() && resource.data.status == 'erledigt';
+
+      /**
+       * Der Supportchat zu einer Anfrage.
+       *
+       * Eigener Name statt "messages": Die Aufräumabfrage der Moderation geht
+       * über alle Sammlungen namens "messages" hinweg und soll den Supportchat
+       * nicht mitnehmen.
+       *
+       * Lesen dürfen die Moderation und die Person, der die Anfrage gehört.
+       * Schreiben nur in einem eröffneten Chat, jeweils unter dem eigenen
+       * Absender – niemand gibt sich als "Support" aus. Die Person nur, solange
+       * die Anfrage nicht erledigt ist; danach ist der Chat geschlossen.
+       * Geschriebenes bleibt, wie es ist.
+       */
+      match /nachrichten/{nachrichtId} {
+        function anfrage() {
+          return get(/databases/$(database)/documents/support/$(anfrageId)).data;
+        }
+        function gehoertMir() {
+          return isSignedIn() && anfrage().userId == request.auth.uid;
+        }
+        function gueltigeNachricht() {
+          return request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000
+            && request.resource.data.at == request.time;
+        }
+
+        allow read: if istModeration() || gehoertMir();
+        allow create: if gueltigeNachricht()
+          && anfrage().get('chatOffen', false) == true
+          && ((istModeration() && request.resource.data.von == 'moderation')
+              || (gehoertMir()
+                  && request.resource.data.von == 'nutzer'
+                  && anfrage().status != 'erledigt'));
+        allow update: if false;
+        allow delete: if istModeration();
+      }
     }
 
     // Warteschlange.
