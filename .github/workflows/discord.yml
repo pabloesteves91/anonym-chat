@@ -1,16 +1,19 @@
 name: Discord einrichten
 
-# Richtet den Moderationsserver ein und hinterlegt die beiden
-# Webhook-Adressen im Google Secret Manager. Danach startet "Firebase
+# Legt in den beiden Benachrichtigungskanälen je einen Webhook an und
+# hinterlegt die Adressen im Google Secret Manager. Danach startet "Firebase
 # Functions" von selbst und rollt die Benachrichtigungen aus.
 #
 # Nur von Hand gestartet (Actions → Discord einrichten → Run workflow).
-# Beliebig oft startbar: Was besteht, bleibt stehen.
+# Beliebig oft startbar. Die Kanäle selbst fasst er nicht an.
 #
 # Voraussetzungen, siehe docs/discord.md:
 #   - Secret DISCORD_BOT_TOKEN
-#   - Secret DISCORD_SERVER_ID
 #   - Secret FIREBASE_SERVICE_ACCOUNT (wie beim Regel-Ablauf)
+#   - Google-Cloud-Dienst Secret Manager eingeschaltet
+#
+# Die Kanal-IDs sind kein Geheimnis – ohne Zugang zum Server nützen sie
+# nichts. Wer die Kanäle neu anlegt, trägt hier die neuen IDs ein.
 #
 # Die Webhook-Adressen erscheinen nirgends im Protokoll und liegen nie im
 # Repository oder in GitHub – nur im Secret Manager.
@@ -27,10 +30,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Server einrichten
+      - name: Webhooks anlegen
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          DISCORD_SERVER_ID: ${{ secrets.DISCORD_SERVER_ID }}
+          DISCORD_KANAL_MELDUNGEN: '1552305430670217327'
+          DISCORD_KANAL_SUPPORT: '1552305324583551056'
         run: node scripts/discord-einrichten.mjs
 
       - name: Schlüssel bereitstellen

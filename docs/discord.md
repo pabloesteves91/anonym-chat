@@ -1,17 +1,21 @@
 # Discord für die Moderation
 
 Ein privater Server, auf dem neue Meldungen und Supportanfragen als
-Benachrichtigung ankommen und das Team sich abspricht. Eingerichtet wird er
-vom Ablauf **Discord einrichten** – du legst nur den leeren Server und einen
-Bot an. Alles geht auch vom Handy aus.
+Benachrichtigung ankommen und das Team sich abspricht. Server, Kanäle und
+Rollen richtest du selbst ein. Der Ablauf **Discord einrichten** legt nur in
+zwei Kanälen je einen Webhook an und hinterlegt die Adressen im Google Secret
+Manager. Alles geht auch vom Handy aus.
 
-## Was am Ende da ist
+## Was ankommt
 
-| Kanal | Wofür |
-| --- | --- |
-| `#meldungen` | neue Meldungen aus dem Chat – nur lesen |
-| `#support` | neue Supportanfragen und Antworten im Supportchat – nur lesen |
-| `#mod-chat` | Absprachen im Team |
+| Kanal | Kanal-ID | Wofür |
+| --- | --- | --- |
+| `#meldungen` | `1552305430670217327` | neue Meldungen aus dem Chat |
+| `#support` | `1552305324583551056` | neue Supportanfragen und Antworten im Supportchat |
+
+Die IDs stehen in `.github/workflows/discord.yml`. Wer die Kanäle neu anlegt,
+trägt dort die neuen IDs ein (Entwicklermodus an, lange auf den Kanal drücken
+→ *Kanal-ID kopieren*). Sie sind kein Geheimnis.
 
 Jede Benachrichtigung nennt nur **Art, Kategorie und Zeitpunkt** und
 verlinkt in die Moderation. Kein Pseudonym, kein Text, kein Verlauf, kein
@@ -21,11 +25,16 @@ kommen mit 🔴 und „Vorrang".
 
 ## Einrichten
 
-### 1. Server anlegen
+### 1. Google-Cloud-Dienste einschalten (einmal)
 
-Discord → **+** → *Eigenen erstellen* → *Für mich und meine Freunde*.
-Name zum Beispiel „NØNE Moderation", als Bild das Ø-Logo. Sonst nichts
-anlegen – die Kanäle kommen gleich.
+Mit dem Google-Konto, dem das Firebase-Projekt gehört:
+
+```
+https://console.cloud.google.com/flows/enableapi?apiid=secretmanager.googleapis.com,cloudfunctions.googleapis.com,cloudbuild.googleapis.com,artifactregistry.googleapis.com,run.googleapis.com,eventarc.googleapis.com,pubsub.googleapis.com&project=anonym-chat-223af
+```
+
+Das Dienstkonto aus GitHub darf Dienste nicht selbst einschalten. Fragt
+Google nach einer Zahlungsart: Das Projekt muss auf **Blaze** laufen.
 
 ### 2. Bot anlegen
 
@@ -48,37 +57,35 @@ Links **General Information** → *Application ID* kopieren und in diese
 Adresse einsetzen:
 
 ```
-https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=805383184
+https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=536871936
 ```
 
-Öffnen, deinen Server wählen, *Autorisieren*. Die Zahl steht für genau diese
-Rechte, nicht mehr: Kanäle ansehen, Nachrichten senden, Nachrichten
-verwalten (zum Anheften), Verlauf lesen, Kanäle verwalten, Rollen verwalten
-(für „nur lesen"), Webhooks verwalten.
+Öffnen, deinen Server wählen, *Autorisieren*. Die Zahl steht für genau zwei
+Rechte: **Kanäle ansehen** und **Webhooks verwalten**. Wer den Bot schon mit
+mehr Rechten eingeladen hat, muss nichts ändern.
 
-### 4. Server-ID hinterlegen
+### 4. Bot in die beiden Kanäle lassen
 
-Discord → Einstellungen → *Erweitert* → **Entwicklermodus** an. Dann lange
-auf das Server-Symbol drücken (am Rechner: Rechtsklick) → *Server-ID
-kopieren*. Als GitHub-Secret `DISCORD_SERVER_ID` hinterlegen.
+Sind `#meldungen` und `#support` privat, sieht der Bot sie nicht – der
+Ablauf meldet dann „Missing Access". Für beide Kanäle:
+*Kanal bearbeiten* → *Berechtigungen* → Rolle **NØNE** (die Rolle des Bots)
+hinzufügen → **Kanal ansehen** und **Webhooks verwalten** erlauben.
 
-### 5. Einrichten lassen
+### 5. Webhooks anlegen lassen
 
 GitHub → Actions → **Discord einrichten** → *Run workflow*.
 
-Der Ablauf legt Kategorie, Kanäle und Webhooks an, heftet in jedem Kanal
-einen kurzen Hinweis an und schreibt die beiden Webhook-Adressen direkt in
-den **Google Secret Manager** (`DISCORD_WEBHOOK_MELDUNGEN`,
-`DISCORD_WEBHOOK_SUPPORT`). Sie erscheinen nirgends – nicht im Protokoll,
-nicht in GitHub, nicht im Repository.
+Der Ablauf legt in beiden Kanälen einen Webhook „NØNE" an (oder nimmt den
+vorhandenen) und schreibt die Adressen direkt in den **Secret Manager**
+(`DISCORD_WEBHOOK_MELDUNGEN`, `DISCORD_WEBHOOK_SUPPORT`). Sie erscheinen
+nirgends – nicht im Protokoll, nicht in GitHub, nicht im Repository. An den
+Kanälen selbst ändert er nichts: kein Umbenennen, keine Rechte, keine
+Nachrichten.
 
 Danach startet **Firebase Functions** von selbst und rollt die
-Benachrichtigungen aus. Voraussetzung dafür: Firebase auf Blaze und die
-Rollen aus [tarife.md](tarife.md#wenn-das-ausrollen-an-rechten-scheitert).
-
-Der Ablauf ist beliebig oft startbar. Was besteht, bleibt stehen. Er findet
-die Kanäle über ihren Namen – wer einen umbenennt, bekommt beim nächsten
-Durchgang einen neuen dazu.
+Benachrichtigungen aus. Scheitert das an Rechten, nennt die Meldung die
+fehlende Rolle – siehe
+[tarife.md](tarife.md#wenn-das-ausrollen-an-rechten-scheitert).
 
 ### 6. Benachrichtigungen aufs Handy
 
@@ -108,7 +115,7 @@ Discord nicht eingerichtet ist oder die Nachricht abgelehnt hat.
   *Discord einrichten* erneut starten. Er legt einen neuen an und
   überschreibt das Geheimnis.
 - **Bot-Token geleakt**: im Developer Portal *Reset Token*, Secret ersetzen.
-  Der Bot wird nur beim Einrichten gebraucht; wer mag, setzt den Token
+  Der Bot wird nur für diesen Ablauf gebraucht; wer mag, setzt den Token
   danach zurück und hinterlegt ihn erst wieder, wenn neu eingerichtet wird.
 - **Benachrichtigungen abschalten**: im Secret Manager bei beiden
   Geheimnissen eine neue Version `nicht-eingerichtet` anlegen und *Firebase
