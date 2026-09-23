@@ -151,6 +151,8 @@ interface UserDoc {
   planChosen: boolean
   codexAccepted: boolean
   selfBlocked: string[]
+  /** Wer Tarif oder Geschlecht zuletzt geändert hat – für das Protokoll. */
+  geaendertVon?: string
 }
 
 const leererUser = (): UserDoc => ({
@@ -355,6 +357,9 @@ export async function setGeschlechtFuer(userId: string, geschlecht: Geschlecht):
       updateDoc(doc(getDb(), PFAD.users, userId), {
         geschlecht,
         pseudonym: generatePseudonym(geschlecht),
+        // Für das Protokoll: wer korrigiert hat. Die Regeln lassen nur die
+        // eigene Kennung zu.
+        geaendertVon: uid(),
       }),
     'Die Angabe konnte nicht geändert werden.',
   )
@@ -376,7 +381,7 @@ export async function setMembership(userId: string, plan: PlanId, laufzeitTage: 
       seit: new Date().toISOString(),
       bis: laufzeitTage === null ? null : new Date(Date.now() + laufzeitTage * 86_400_000).toISOString(),
     }
-    await updateDoc(doc(getDb(), PFAD.users, userId), { membership })
+    await updateDoc(doc(getDb(), PFAD.users, userId), { membership, geaendertVon: uid() })
     // Der Wunsch ist erfüllt und verschwindet aus der Liste der offenen.
     await updateDoc(doc(getDb(), PFAD.planRequests, userId), { erledigt: true }).catch(() => {})
   }, 'Tarif konnte nicht gesetzt werden.')
@@ -612,6 +617,9 @@ export async function resetIdentity(): Promise<void> {
       geschlecht,
       pseudonym: generatePseudonym(geschlecht),
       membership: alt?.membership ?? neu.membership,
+      // Gehört wie Tarif und Geschlecht nicht der Person; die Regeln lassen
+      // sie es weder ändern noch wegwerfen.
+      ...(alt?.geaendertVon ? { geaendertVon: alt.geaendertVon } : {}),
     })
   }, 'Zurücksetzen fehlgeschlagen.')
 }
@@ -763,7 +771,7 @@ export async function listReports(): Promise<Report[]> {
 
 export async function updateReportStatus(id: string, status: ReportStatus): Promise<Report[]> {
   return fuehreAus(async () => {
-    await updateDoc(doc(getDb(), PFAD.reports, id), { status })
+    await updateDoc(doc(getDb(), PFAD.reports, id), { status, bearbeitetVon: uid() })
     const alle = await listReports()
 
     // Sperrliste aus allen Meldungen neu berechnen: ein Konto bleibt gesperrt,
@@ -947,7 +955,7 @@ export async function updateSupportStatus(id: string, status: SupportStatus): Pr
         }
       }
     }
-    await updateDoc(doc(getDb(), PFAD.support, id), { status })
+    await updateDoc(doc(getDb(), PFAD.support, id), { status, bearbeitetVon: uid() })
     return listSupport()
   }, 'Der Stand konnte nicht gesetzt werden.')
 }
@@ -1025,7 +1033,7 @@ export async function oeffneSupportChat(id: string): Promise<SupportAnfrage[]> {
     const anfrage = snap.data() as SupportAnfrage | undefined
     await updateDoc(doc(getDb(), PFAD.support, id), {
       chatOffen: true,
-      ...(anfrage?.status === 'offen' ? { status: 'inArbeit' } : {}),
+      ...(anfrage?.status === 'offen' ? { status: 'inArbeit', bearbeitetVon: uid() } : {}),
     })
     return listSupport()
   }, 'Der Chat konnte nicht eröffnet werden.')

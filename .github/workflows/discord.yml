@@ -1,14 +1,16 @@
 name: Discord einrichten
 
-# Legt in den beiden Benachrichtigungskanälen je einen Webhook an und
-# hinterlegt die Adressen im Google Secret Manager. Danach startet "Firebase
-# Functions" von selbst und rollt die Benachrichtigungen aus.
+# Legt in den drei Discord-Kanälen (Meldungen, Support, Log) je einen
+# Webhook an und hinterlegt die Adressen im Google Secret Manager. Danach
+# startet "Firebase Functions" von selbst und rollt die Benachrichtigungen
+# aus.
 #
 # Nur von Hand gestartet (Actions → Discord einrichten → Run workflow).
 # Beliebig oft startbar. Die Kanäle selbst fasst er nicht an.
 #
 # Voraussetzungen, siehe docs/discord.md:
 #   - Secret DISCORD_BOT_TOKEN
+#   - Secret DISCORD_KANAL_LOG        (Kanal-ID des Log-Kanals)
 #   - Secret FIREBASE_SERVICE_ACCOUNT (wie beim Regel-Ablauf)
 #   - Google-Cloud-Dienst Secret Manager eingeschaltet
 #
@@ -35,6 +37,7 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_KANAL_MELDUNGEN: '1552305430670217327'
           DISCORD_KANAL_SUPPORT: '1552305324583551056'
+          DISCORD_KANAL_LOG: ${{ secrets.DISCORD_KANAL_LOG }}
         run: node scripts/discord-einrichten.mjs
 
       - name: Schlüssel bereitstellen
@@ -55,6 +58,8 @@ jobs:
             --data-file "$RUNNER_TEMP/discord-meldungen.url" --force --project anonym-chat-223af --non-interactive
           npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_SUPPORT \
             --data-file "$RUNNER_TEMP/discord-support.url" --force --project anonym-chat-223af --non-interactive
+          npx --yes firebase-tools@15 functions:secrets:set DISCORD_WEBHOOK_LOG \
+            --data-file "$RUNNER_TEMP/discord-log.url" --force --project anonym-chat-223af --non-interactive
 
       # Nur wenn wirklich der Secret Manager gescheitert ist.
       - name: Hinweis bei fehlenden Rechten im Secret Manager

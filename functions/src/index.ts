@@ -102,6 +102,8 @@ async function setzeTarif(uid: string, plan: PlanId, bis: string | null): Promis
     .set(
       {
         membership: { plan, seit: new Date().toISOString(), bis },
+        // Für das Protokoll: kein Mensch, sondern die Kasse.
+        geaendertVon: 'kasse',
       },
       { merge: true },
     )
@@ -121,7 +123,7 @@ async function zurueckAufGratis(uid: string): Promise<void> {
     .collection('users')
     .doc(uid)
     .set(
-      { membership: { plan: 'frei', seit: new Date().toISOString(), bis: null } },
+      { membership: { plan: 'frei', seit: new Date().toISOString(), bis: null }, geaendertVon: 'kasse' },
       { merge: true },
     )
   logger.info('Tarif beendet', { uid })
@@ -237,3 +239,4 @@ export const stripeWebhook = onRequest(
 /* ------------------------------------------------------------ Discord */
 
 export { meldungNachDiscord, supportNachDiscord, supportAntwortNachDiscord } from './discord.js'
+export { supportfallProtokoll, meldungProtokoll, kontoProtokoll } from './protokoll.js'

@@ -12,8 +12,10 @@ Manager. Alles geht auch vom Handy aus.
 | --- | --- | --- |
 | `#meldungen` | `1552305430670217327` | neue Meldungen aus dem Chat |
 | `#support` | `1552305324583551056` | neue Supportanfragen und Antworten im Supportchat |
+| Log-Kanal | GitHub-Secret `DISCORD_KANAL_LOG` | Protokoll: wer was entschieden hat |
 
-Die IDs stehen in `.github/workflows/discord.yml`. Wer die Kanäle neu anlegt,
+Die IDs von Meldungen und Support stehen in `.github/workflows/discord.yml`,
+die des Log-Kanals im Secret `DISCORD_KANAL_LOG`. Wer die Kanäle neu anlegt,
 trägt dort die neuen IDs ein (Entwicklermodus an, lange auf den Kanal drücken
 → *Kanal-ID kopieren*). Sie sind kein Geheimnis.
 
@@ -22,6 +24,23 @@ verlinkt in die Moderation. Kein Pseudonym, kein Text, kein Verlauf, kein
 Anhang: Discord ist ein Dienst ausserhalb der EU. Gelesen und entschieden
 wird wie bisher in der Moderation. Meldungen mit dem Grund „minderjährig"
 kommen mit 🔴 und „Vorrang".
+
+## Das Protokoll im Log-Kanal
+
+| Eintrag | wann |
+| --- | --- |
+| 🟡 Supportfall übernommen | Stand „offen" → „in Arbeit", auch durch „Chat eröffnen" |
+| ✅ Supportfall erledigt | Stand → „erledigt" |
+| ⛔ / ✅ Meldung | Stand → „gesperrt" bzw. „geprüft" (und ↩️ zurück auf „offen") |
+| 💳 Tarif | jede Vergabe, von Hand oder durch die Kasse („Kasse (Stripe)") |
+| ⚧ Geschlechtsangabe korrigiert | nur Korrekturen durch die Moderation, nicht die Erstangabe |
+
+Jeder Eintrag nennt die betroffene Person als **Kurzkennung** („Konto a1b2c3",
+die ersten sechs Zeichen der Kontokennung) und wer es war als **E-Mail des
+Mod-Kontos**. Wer es war, schreibt die App ins Dokument (`bearbeitetVon`,
+`geaendertVon`); die Security Rules lassen dort nur die eigene Kennung zu –
+eine Tat lässt sich niemand anderem unterschieben, und ohne Eintrag lässt sich
+der Stand gar nicht ändern.
 
 ## Einrichten
 
@@ -70,10 +89,10 @@ https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissi
 Rechte: **Kanäle ansehen** und **Webhooks verwalten**. Wer den Bot schon mit
 mehr Rechten eingeladen hat, muss nichts ändern.
 
-### 4. Bot in die beiden Kanäle lassen
+### 4. Bot in die drei Kanäle lassen
 
-Sind `#meldungen` und `#support` privat, sieht der Bot sie nicht – der
-Ablauf meldet dann „Missing Access". Für beide Kanäle:
+Sind die Kanäle privat, sieht der Bot sie nicht – der Ablauf meldet dann
+„Missing Access". Für `#meldungen`, `#support` und den Log-Kanal:
 *Kanal bearbeiten* → *Berechtigungen* → Rolle **NØNE** (die Rolle des Bots)
 hinzufügen → **Kanal ansehen** und **Webhooks verwalten** erlauben.
 
@@ -81,9 +100,10 @@ hinzufügen → **Kanal ansehen** und **Webhooks verwalten** erlauben.
 
 GitHub → Actions → **Discord einrichten** → *Run workflow*.
 
-Der Ablauf legt in beiden Kanälen einen Webhook „NØNE" an (oder nimmt den
+Der Ablauf legt in allen drei Kanälen einen Webhook „NØNE" an (oder nimmt den
 vorhandenen) und schreibt die Adressen direkt in den **Secret Manager**
-(`DISCORD_WEBHOOK_MELDUNGEN`, `DISCORD_WEBHOOK_SUPPORT`). Sie erscheinen
+(`DISCORD_WEBHOOK_MELDUNGEN`, `DISCORD_WEBHOOK_SUPPORT`,
+`DISCORD_WEBHOOK_LOG`). Sie erscheinen
 nirgends – nicht im Protokoll, nicht in GitHub, nicht im Repository. An den
 Kanälen selbst ändert er nichts: kein Umbenennen, keine Rechte, keine
 Nachrichten.

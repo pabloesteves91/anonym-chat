@@ -25,7 +25,7 @@ const DISCORD_WEBHOOK_SUPPORT = defineSecret('DISCORD_WEBHOOK_SUPPORT')
 
 // Die Datenbank liegt in eur3; Firestore-Auslöser laufen in einer Region
 // innerhalb dieses Verbunds.
-const REGION = 'europe-west1'
+export const REGION = 'europe-west1'
 
 const MODERATION_URL = `${BASIS_URL}/#/admin`
 
@@ -34,7 +34,7 @@ const FARBE_SUPPORT = 0x4ec4b0
 
 // Abgeschrieben aus src/services/types.ts und src/services/support.ts – die
 // Funktionen sind ein eigenes Paket und können die App nicht importieren.
-const GRUENDE: Record<string, string> = {
+export const GRUENDE: Record<string, string> = {
   belaestigung: 'Belästigung oder Beleidigung',
   sexuell: 'Sexuelle Inhalte',
   spam: 'Spam oder Werbung',
@@ -42,7 +42,7 @@ const GRUENDE: Record<string, string> = {
   sonstiges: 'Sonstiges',
 }
 
-const THEMEN: Record<string, string> = {
+export const THEMEN: Record<string, string> = {
   geschlecht: 'Geschlechtsangabe korrigieren',
   anzeigename: 'Anzeigename',
   'konto-loeschen': 'Konto löschen',
@@ -53,13 +53,14 @@ const THEMEN: Record<string, string> = {
 
 const WEBHOOK = /^https:\/\/(?:discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[\w-]+$/
 
-interface Einbettung {
+export interface Einbettung {
   title: string
-  description: string
+  description?: string
   color: number
+  fields?: { name: string; value: string; inline?: boolean }[]
 }
 
-async function senden(adresse: string, einbettung: Einbettung): Promise<void> {
+export async function senden(adresse: string, einbettung: Einbettung): Promise<void> {
   if (!WEBHOOK.test(adresse)) {
     logger.info('Discord nicht eingerichtet – keine Benachrichtigung gesendet.')
     return

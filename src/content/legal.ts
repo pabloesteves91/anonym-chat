@@ -130,6 +130,7 @@ export const DATENSCHUTZ: Rechtstext = {
         'Wir betreiben NØNE auf Google Firebase (Authentifizierung, Datenbank, Dateispeicher). Die Datenbank liegt in der Region "eur3" (Europa), der Dateispeicher in "europe-west3" (Frankfurt).',
         'Für den SMS-Versand wird Firebase Phone Authentication eingesetzt; dabei wird Ihre Mobilnummer an Google übermittelt.',
         'Die Auslieferung der Website erfolgt über GitHub Pages. Dabei fallen serverseitige Zugriffsprotokolle an, auf die wir keinen Einfluss haben.',
+        'Für die Abstimmung der Moderation nutzen wir einen privaten Server bei Discord (USA). Dorthin gehen Hinweise auf neue Meldungen und Supportanfragen – nur Art, Kategorie und Zeitpunkt – sowie ein Protokoll der Moderationsentscheide mit einer verkürzten Kontokennung, etwa dass ein Supportfall erledigt, ein Tarif vergeben oder eine Geschlechtsangabe korrigiert wurde. Pseudonyme, Nachrichten, Anhänge und Ausweisdaten gehen nicht an Discord.',
         'Es findet keine Bearbeitung zu Werbezwecken statt und es werden keine Daten verkauft.',
       ],
     },

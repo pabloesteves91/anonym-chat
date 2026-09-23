@@ -149,6 +149,7 @@ describe('Konten', () => {
     await assertSucceeds(
       updateDoc(doc(als(MODERATOR), 'users', ANNA), {
         membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+        geaendertVon: MODERATOR,
       }),
     )
   })
@@ -370,7 +371,9 @@ describe('Supportanfragen', () => {
     await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-1'), { status: 'erledigt' }))
     await assertFails(updateDoc(doc(als(ANNA), 'support', 'sup-1'), { text: 'Ganz was anderes' }))
     await assertFails(deleteDoc(doc(als(ANNA), 'support', 'sup-1')))
-    await assertSucceeds(updateDoc(doc(als(MODERATOR), 'support', 'sup-1'), { status: 'erledigt' }))
+    await assertSucceeds(
+      updateDoc(doc(als(MODERATOR), 'support', 'sup-1'), { status: 'erledigt', bearbeitetVon: MODERATOR }),
+    )
   })
 
   it('weist leere und übergrosse Anfragen ab', async () => {
@@ -623,6 +626,7 @@ describe('Geschlechtsangabe', () => {
       updateDoc(doc(als(NUR_MOD), 'users', ANNA), {
         geschlecht: 'maennlich',
         pseudonym: 'Blauer Falke 4417',
+        geaendertVon: NUR_MOD,
       }),
     )
   })
@@ -674,6 +678,7 @@ describe('Rollentrennung', () => {
     await assertSucceeds(
       updateDoc(doc(als(MODERATOR), 'users', ANNA), {
         membership: { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null },
+        geaendertVon: MODERATOR,
       }),
     )
   })
@@ -782,5 +787,74 @@ describe('Sperrliste', () => {
     await assertFails(setDoc(doc(als(ANNA), 'blocked', BEN), { at: '2026-01-01T00:00:00.000Z' }))
     await assertFails(getDocs(query(collection(als(ANNA), 'blocked'), where('at', '>', ''))))
     await assertSucceeds(setDoc(doc(als(MODERATOR), 'blocked', BEN), { at: '2026-01-01T00:00:00.000Z' }))
+  })
+})
+
+describe('Protokoll: wer es war', () => {
+  // Der Auslöser für das Discord-Protokoll liest die Kennung aus dem
+  // Dokument. Stimmt sie nicht, steht jemand Falsches im Protokoll – oder
+  // niemand. Beides muss die Regel verhindern.
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'support', 'sup-p'), {
+        id: 'sup-p',
+        userId: ANNA,
+        status: 'offen',
+        thema: 'tarif',
+        betreff: 'Frage',
+        text: 'Eine Frage zum Tarif, lang genug.',
+        anhaenge: [],
+      })
+      await setDoc(doc(db, 'reports', 'rep-p'), {
+        id: 'rep-p',
+        reporterId: ANNA,
+        reportedId: BEN,
+        reason: 'spam',
+        status: 'offen',
+      })
+      await setDoc(doc(db, 'users', ANNA), konto({ pseudonym: 'Anna', geschlecht: 'weiblich' }))
+    })
+  })
+
+  it('verlangt beim Supportstand die eigene Kennung', async () => {
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'support', 'sup-p'), { status: 'inArbeit' }))
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'support', 'sup-p'), { status: 'inArbeit', bearbeitetVon: MODERATOR }))
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'support', 'sup-p'), { status: 'inArbeit', bearbeitetVon: NUR_MOD }))
+    // Ohne Standwechsel (z. B. Markierung "gelesen") braucht es keine.
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'support', 'sup-p'), { ungelesenModeration: false }))
+  })
+
+  it('verlangt beim Meldungsstand die eigene Kennung', async () => {
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'reports', 'rep-p'), { status: 'gesperrt' }))
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'reports', 'rep-p'), { status: 'gesperrt', bearbeitetVon: MODERATOR }))
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'reports', 'rep-p'), { status: 'gesperrt', bearbeitetVon: NUR_MOD }))
+  })
+
+  it('verlangt bei Tarif und Geschlecht die eigene Kennung', async () => {
+    const lifetime = { plan: 'lifetime', seit: '2026-01-01T00:00:00.000Z', bis: null }
+    await assertFails(updateDoc(doc(als(MODERATOR), 'users', ANNA), { membership: lifetime }))
+    await assertFails(updateDoc(doc(als(MODERATOR), 'users', ANNA), { membership: lifetime, geaendertVon: NUR_MOD }))
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { geschlecht: 'maennlich' }))
+    await assertFails(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { geschlecht: 'maennlich', geaendertVon: MODERATOR }))
+    // Entscheidungen, die weder Tarif noch Geschlecht berühren, bleiben frei.
+    await assertSucceeds(updateDoc(doc(als(NUR_MOD), 'users', ANNA), { verificationStatus: 'verifiziert' }))
+  })
+
+  it('lässt das eigene Zurücksetzen zu, solange der Eintrag bleibt', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', ANNA), konto({ geschlecht: 'weiblich', geaendertVon: MODERATOR }))
+    })
+    // So schreibt resetIdentity(): alles neu, Tarif, Geschlecht und Eintrag bleiben.
+    await assertSucceeds(
+      setDoc(doc(als(ANNA), 'users', ANNA), konto({ pseudonym: 'Neu 1', geschlecht: 'weiblich', geaendertVon: MODERATOR })),
+    )
+    await assertFails(setDoc(doc(als(ANNA), 'users', ANNA), konto({ pseudonym: 'Neu 2', geschlecht: 'weiblich' })))
+  })
+
+  it('lässt die Person selbst niemanden eintragen', async () => {
+    await assertFails(updateDoc(doc(als(ANNA), 'users', ANNA), { geaendertVon: MODERATOR }))
+    await assertFails(updateDoc(doc(als(ANNA), 'users', ANNA), { geaendertVon: ANNA }))
+    await assertSucceeds(updateDoc(doc(als(ANNA), 'users', ANNA), { pseudonym: 'Stille Amsel 2098' }))
   })
 })

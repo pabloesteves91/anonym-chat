@@ -91,7 +91,7 @@ service cloud.firestore {
      */
     function nurModerationsfelder() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['verificationStatus', 'verifiedAt', 'geschlecht', 'pseudonym']);
+        .hasOnly(['verificationStatus', 'verifiedAt', 'geschlecht', 'pseudonym', 'geaendertVon']);
     }
 
     /**
@@ -101,6 +101,24 @@ service cloud.firestore {
      * was über das Gegenüber etwas aussagt. Liesse er sich jederzeit
      * umstellen, wäre die Angabe beliebig und damit wertlos.
      */
+    /**
+     * Wer es war – für das Protokoll auf Discord.
+     *
+     * Ein Auslöser in der Cloud sieht zwar, was sich geändert hat, aber
+     * nicht, wer es geändert hat. Deshalb schreibt die App die eigene
+     * Kennung mit, und hier wird sie geprüft: Wer einen Stand, einen Tarif
+     * oder eine Geschlechtsangabe ändert, muss sich selbst eintragen. Eine
+     * fremde Kennung – also eine Tat jemand anderem unterschieben – geht nicht.
+     */
+    function eingetragenAls(feld) {
+      return request.resource.data.get(feld, null) == request.auth.uid;
+    }
+
+    function tarifUndGeschlechtGleich() {
+      return request.resource.data.get('membership', null) == resource.data.get('membership', null)
+        && request.resource.data.get('geschlecht', null) == resource.data.get('geschlecht', null);
+    }
+
     function geschlechtGesetztOderGleich() {
       return request.resource.data.get('geschlecht', null) == resource.data.get('geschlecht', null)
         || (resource.data.get('geschlecht', null) == null
@@ -112,12 +130,17 @@ service cloud.firestore {
         && request.resource.data.verificationStatus == 'offen'
         && request.resource.data.membership.plan == 'frei';
       allow read: if istModeration() || isOwner(userId);
-      allow update: if istVerwaltung()
+      allow update: if (istVerwaltung()
+            && (tarifUndGeschlechtGleich() || eingetragenAls('geaendertVon')))
         // Moderation entscheidet über die Verifizierung – nicht über Tarife.
-        || (istModeration() && nurModerationsfelder())
+        || (istModeration() && nurModerationsfelder()
+            && (tarifUndGeschlechtGleich() || eingetragenAls('geaendertVon')))
         || (isOwner(userId)
             && request.resource.data.membership == resource.data.membership
             && geschlechtGesetztOderGleich()
+            // Die Person selbst trägt nie jemanden ein – sonst stünde eine
+            // Moderatorin als Urheberin ihrer eigenen Erstangabe im Protokoll.
+            && request.resource.data.get('geaendertVon', null) == resource.data.get('geaendertVon', null)
             && (request.resource.data.verificationStatus == resource.data.verificationStatus
                 || eigenerAntragsstand()));
       allow delete: if false;
@@ -154,7 +177,11 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if isOwner(request.resource.data.reporterId)
         && request.resource.data.status == 'offen';
-      allow read, update, delete: if istModeration();
+      allow read, delete: if istModeration();
+      // Wer den Stand ändert, trägt sich ein – siehe eingetragenAls().
+      allow update: if istModeration()
+        && (request.resource.data.get('status', null) == resource.data.get('status', null)
+            || eingetragenAls('bearbeitetVon'));
     }
 
     // Supportanfragen.
@@ -192,7 +219,9 @@ service cloud.firestore {
       // wegnehmen (sie hat gelesen) und die der Moderation setzen (sie hat
       // geschrieben). Wegnehmen kann sie die der Moderation nicht – sonst
       // liesse sich eine Antwort vor der Moderation verstecken.
-      allow update: if istModeration()
+      allow update: if (istModeration()
+            && (request.resource.data.get('status', null) == resource.data.get('status', null)
+                || eingetragenAls('bearbeitetVon')))
         || (isOwner(resource.data.userId)
             && resource.data.get('chatOffen', false) == true
             && request.resource.data.diff(resource.data).affectedKeys()
