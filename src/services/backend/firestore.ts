@@ -89,6 +89,17 @@ function uebersetze(error: unknown, fallback: string): ApiError {
       'speicher',
     )
   }
+  // Firestore weist Dokumente mit `undefined` ab; der Fehler trägt keinen
+  // Code, den sich übersetzen liesse. Die Meldung wenigstens benennen, statt
+  // sie unter dem Sammeltext verschwinden zu lassen.
+  const text = error instanceof Error ? error.message : ''
+  if (text.includes('Unsupported field value') || text.includes('invalid data')) {
+    return new ApiError('Das Konto ist unvollständig. Bitte melde dich beim Support.', 'ungueltig')
+  }
+
+  // Der ursprüngliche Fehler geht sonst verloren. Ohne ihn bleibt bei einer
+  // Meldung aus dem Betrieb nur Raten – das hat schon einmal Zeit gekostet.
+  console.error('[anonymchat] unübersetzter Fehler:', error)
   return new ApiError(fallback, 'speicher')
 }
 
@@ -145,10 +156,26 @@ const leererUser = (): UserDoc => ({
   selfBlocked: [],
 })
 
-function toUser(id: string, data: UserDoc): User {
+/**
+ * Ein Konto-Dokument in die Gestalt bringen, mit der die App arbeitet.
+ *
+ * Jedes Feld bekommt hier einen Standardwert, und das ist keine Kosmetik: Ein
+ * Dokument kann Felder vermissen – aus einer älteren Fassung, oder weil
+ * jemand es in der Firebase-Konsole von Hand bearbeitet hat. Für die Anzeige
+ * fällt das kaum auf, beim Schreiben schon. Firestore weist jedes Dokument
+ * ab, in dem irgendwo `undefined` steht, und meldet dabei keinen Code, den
+ * sich übersetzen liesse; die Oberfläche zeigt dann nur "hat nicht geklappt".
+ *
+ * Genau daran ist das Absenden einer Supportanfrage gescheitert. Wer Felder
+ * des Kontos weiterschreibt, nimmt deshalb diese Funktion und nicht das rohe
+ * Dokument. Exportiert ist sie, damit `firestore.test.ts` sie prüfen kann.
+ */
+export function toUser(id: string, data: Partial<UserDoc>): User {
   return {
     id,
-    pseudonym: data.pseudonym,
+    // Ein Name muss stehen, sonst weist Firestore das Schreiben ab. Die
+    // Kennung macht sichtbar, dass mit dem Konto etwas nicht stimmt.
+    pseudonym: data.pseudonym || `Konto ${id.slice(0, 6)}`,
     // Abgeleitet, nicht gespeichert: So kann die Anzeige dem Zugang nie
     // widersprechen.
     verified: data.verificationStatus === 'verifiziert',
@@ -167,6 +194,23 @@ function toUser(id: string, data: UserDoc): User {
 async function ladeUserDoc(id: string): Promise<UserDoc | null> {
   const snap = await getDoc(doc(getDb(), PFAD.users, id))
   return snap.exists() ? (snap.data() as UserDoc) : null
+}
+
+/**
+ * Das Konto mit allen Feldern – auch denen, die im Dokument fehlen.
+ *
+ * `toUser` füllt Lücken auf (`membership`, `verificationStatus`, `profile`).
+ * Wer stattdessen direkt aus dem rohen Dokument liest, bekommt `undefined` –
+ * und Firestore weist jedes Schreiben mit `undefined` rundweg ab, mit einem
+ * Fehler ohne brauchbaren Code. Genau daran ist das Absenden einer
+ * Supportanfrage gescheitert, weil ein von Hand in der Konsole bearbeitetes
+ * Konto kein `membership` mehr hatte.
+ *
+ * Deshalb: Wer Felder des Kontos weiterschreibt, nimmt diese Funktion.
+ */
+async function ladeKonto(id: string): Promise<User | null> {
+  const daten = await ladeUserDoc(id)
+  return daten ? toUser(id, daten) : null
 }
 
 export async function ensureIdentity(id: string): Promise<User> {
@@ -379,7 +423,7 @@ export async function registerChatStart(): Promise<{ erlaubt: boolean; verbleibe
     const data = await ladeUserDoc(id)
     if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
 
-    const grenze = grenzenFuer({ membership: data.membership, rolle: rolleFuer(id) }).chatsProTag
+    const grenze = grenzenFuer({ membership: toUser(id, data).membership, rolle: rolleFuer(id) }).chatsProTag
     const tag = heute()
     const bisher = data.usage?.tag === tag ? data.usage.chats : 0
 
@@ -425,7 +469,7 @@ export async function submitVerification(input: {
     const antrag: VerificationDoc = {
       id: requestId,
       userId: id,
-      pseudonym: data.pseudonym,
+      pseudonym: toUser(id, data).pseudonym,
       phoneMasked: maskPhone(input.phone),
       submittedAt: Timestamp.now(),
       status: 'wartet',
@@ -782,7 +826,7 @@ const anhangPfad = (userId: string, anfrageId: string, nummer: number) =>
 export async function submitSupport(input: SupportInput): Promise<SupportAnfrage> {
   return fuehreAus(async () => {
     const id = uid()
-    const konto = await ladeUserDoc(id)
+    const konto = await ladeKonto(id)
     if (!konto) throw new ApiError('Kein Konto gefunden.', 'nicht-verifiziert')
 
     const anfrageId = generateId('sup')
