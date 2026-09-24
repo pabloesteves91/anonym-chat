@@ -79,21 +79,3 @@ export async function starteZahlung(plan: BezahlbarerPlan, code: string | null =
     throw new ApiError(FEHLERTEXT[kurz] ?? 'Die Zahlung konnte nicht gestartet werden.', 'speicher')
   }
 }
-
-/**
- * TESTKAUF – vorübergehend, auf Zuruf entfernen (siehe functions/src/testkauf.ts).
- *
- * Nur die Verwaltung, nur im Livebetrieb: ein günstiges Testprodukt mit echtem
- * Geld. Setzt keinen Tarif.
- */
-export async function starteTestkauf(): Promise<void> {
-  try {
-    const aufruf = httpsCallable<Record<string, never>, { url: string }>(getServerFunctions(), 'createTestkauf')
-    const { data } = await aufruf({})
-    if (!data?.url) throw new ApiError('Die Kasse hat keine Adresse zurückgegeben.', 'speicher')
-    window.location.assign(data.url)
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(error instanceof Error && error.message ? error.message : 'Der Testkauf konnte nicht gestartet werden.', 'speicher')
-  }
-}

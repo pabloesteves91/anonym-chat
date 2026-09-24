@@ -52,14 +52,3 @@ export function aboEndeEintrag(z: { uid: string; test: boolean; lifetime?: boole
   }
 }
 
-/** TESTKAUF – vorübergehend: echtes Geld, aber kein Tarif. */
-export function testkaufEintrag(z: { uid: string; rappen: number | null | undefined; waehrung: string | null | undefined; test: boolean }): Einbettung {
-  return {
-    title: `${z.test ? '🧪 ' : '💳 '}Testkauf (kein Tarif)`,
-    color: FARBE_ZAHLUNG,
-    fields: [
-      { name: 'Konto', value: kurzkennung(z.uid), inline: true },
-      { name: 'Betrag', value: betragText(z.rappen, z.waehrung), inline: true },
-    ],
-  }
-}

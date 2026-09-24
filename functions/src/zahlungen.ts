@@ -2,7 +2,7 @@ import { defineSecret } from 'firebase-functions/params'
 import { logger } from 'firebase-functions'
 import { senden, type Einbettung } from './discord.js'
 
-export { aboEndeEintrag, betragText, testkaufEintrag, zahlungEintrag } from './zahlungsnachricht.js'
+export { aboEndeEintrag, betragText, zahlungEintrag } from './zahlungsnachricht.js'
 
 /**
  * Zahlungen im Discord-Kanal #payments.
