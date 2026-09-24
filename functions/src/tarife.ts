@@ -28,7 +28,7 @@ export interface Tarif {
 // es, STRIPE_SECRET_KEY auf den Live-Schlüssel zu setzen.
 export const TARIFE: Record<PlanId, Tarif> = {
   'plus-monat': {
-    preis: { test: 'price_1UJ4lLBMGYhSyiQEeuv9Ltxd', live: 'price_1UJ4vLBYL7YFNcX58NXL031B' },
+    preis: { test: 'price_1UJ5UdBSspLyvcVYQwzdCiC4', live: 'price_1UJ4vLBYL7YFNcX58NXL031B' },
     art: 'abo',
   },
   'plus-jahr': {
@@ -36,7 +36,7 @@ export const TARIFE: Record<PlanId, Tarif> = {
     art: 'abo',
   },
   lifetime: {
-    preis: { test: 'price_1UJ4m9BMGYhSyiQEdl4Afiv0', live: 'price_1UJ4vLBYL7YFNcX5uSfXajEE' },
+    preis: { test: 'price_1UJ5VyBSspLyvcVYQOGTR1lb', live: 'price_1UJ4vLBYL7YFNcX5uSfXajEE' },
     art: 'einmalig',
   },
 }
