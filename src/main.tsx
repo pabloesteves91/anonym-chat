@@ -19,6 +19,22 @@ useTheme.getState().init()
 // mit `--mode static` auf Hash-Routing umgestellt; lokal bleiben saubere Pfade.
 const Router = import.meta.env.VITE_ROUTER === 'hash' ? HashRouter : BrowserRouter
 
+// Nach einem Update fehlen Teile der alten Fassung, die ein offener Tab noch
+// nachladen will (etwa die Moderation). Dann einmal neu laden, um die neue
+// Fassung zu holen – aber nicht endlos, falls es an etwas anderem liegt.
+window.addEventListener('vite:preloadError', (ereignis) => {
+  try {
+    const zuletzt = Number(sessionStorage.getItem('none:neugeladen') ?? 0)
+    if (Date.now() - zuletzt < 30_000) return
+    sessionStorage.setItem('none:neugeladen', String(Date.now()))
+  } catch {
+    // Ohne Speicher lieber nicht automatisch neu laden – die Fehleranzeige hilft.
+    return
+  }
+  ereignis.preventDefault()
+  window.location.reload()
+})
+
 // Alte Links aus der Zeit mit Hash-Routing (…/#/chat) auf echte Pfade
 // umschreiben, bevor der Router startet – geteilte Links bleiben gültig.
 if (Router === BrowserRouter && window.location.hash.startsWith('#/')) {

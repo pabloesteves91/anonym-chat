@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Fehlergrenze } from './Fehlergrenze'
 import { darfModerieren } from '../services/roles'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
@@ -228,7 +229,13 @@ export function AppShell() {
       ) : null}
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {profilFehlt ? <Profilfehler meldung={profilFehler ?? ''} /> : <Outlet />}
+        {profilFehlt ? (
+          <Profilfehler meldung={profilFehler ?? ''} />
+        ) : (
+          <Fehlergrenze schluessel={pathname}>
+            <Outlet />
+          </Fehlergrenze>
+        )}
       </main>
 
       {/* Zwei einmalige Fenster nach der ersten Anmeldung, in dieser
