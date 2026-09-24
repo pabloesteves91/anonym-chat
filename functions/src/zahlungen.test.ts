@@ -24,5 +24,6 @@ describe('Zahlungen auf Discord', () => {
     expect(e.title).toBe('💳 Neue Zahlung: Lifetime')
     expect(e.fields?.[2].value).toBe('unbefristet')
     expect(aboEndeEintrag({ uid: 'abcdef99', test: false }).title).toBe('Abo beendet – zurück auf Gratis')
+    expect(aboEndeEintrag({ uid: 'abcdef99', test: true, lifetime: true }).title).toBe('🧪 Abo beendet – Lifetime bleibt')
   })
 })

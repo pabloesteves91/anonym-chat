@@ -44,9 +44,9 @@ export function zahlungEintrag(z: {
   }
 }
 
-export function aboEndeEintrag(z: { uid: string; test: boolean }): Einbettung {
+export function aboEndeEintrag(z: { uid: string; test: boolean; lifetime?: boolean }): Einbettung {
   return {
-    title: `${z.test ? '🧪 ' : ''}Abo beendet – zurück auf Gratis`,
+    title: `${z.test ? '🧪 ' : ''}Abo beendet – ${z.lifetime ? 'Lifetime bleibt' : 'zurück auf Gratis'}`,
     color: FARBE_ENDE,
     fields: [{ name: 'Konto', value: kurzkennung(z.uid), inline: true }],
   }

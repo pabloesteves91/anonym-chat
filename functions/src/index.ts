@@ -151,6 +151,18 @@ async function setzeTarif(uid: string, plan: PlanId, bis: string | null): Promis
   logger.info('Tarif gesetzt', { uid, plan, bis })
 }
 
+/**
+ * Hat das Konto Lifetime? Dann ändern Abo-Ereignisse nichts mehr daran.
+ *
+ * Wer erst ein Abo abschliesst und später Lifetime kauft, hat das Abo bei
+ * Stripe womöglich noch laufen. Dessen Verlängerung oder Kündigung darf den
+ * gekauften Lifetime-Zugang weder auf Plus zurückstufen noch auf Gratis.
+ */
+async function hatLifetime(uid: string): Promise<boolean> {
+  const konto = await db().collection('users').doc(uid).get()
+  return konto.get('membership.plan') === 'lifetime'
+}
+
 async function zurueckAufGratis(uid: string): Promise<void> {
   await db()
     .collection('users')
@@ -260,6 +272,7 @@ export const stripeWebhook = onRequest(
           const plan = planAus(abo)
           if (!uid || !plan) break
           if (!ereignis.livemode && !TESTZAHLER.includes(uid)) break
+          if (await hatLifetime(uid)) break
           const laeuft = abo.status === 'active' || abo.status === 'trialing'
           if (laeuft) await setzeTarif(uid, plan, bisAus(periodeEnde(abo)))
           else await zurueckAufGratis(uid)
@@ -269,8 +282,9 @@ export const stripeWebhook = onRequest(
         case 'customer.subscription.deleted': {
           const uid = uidAus(ereignis.data.object)
           if (uid) {
-            await zurueckAufGratis(uid)
-            await zahlungMelden(aboEndeEintrag({ uid, test: !ereignis.livemode }))
+            const lifetime = await hatLifetime(uid)
+            if (!lifetime) await zurueckAufGratis(uid)
+            await zahlungMelden(aboEndeEintrag({ uid, test: !ereignis.livemode, lifetime }))
           }
           break
         }
