@@ -82,6 +82,7 @@ jobs:
           platzhalter DISCORD_WEBHOOK_MELDUNGEN nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
           platzhalter DISCORD_WEBHOOK_SUPPORT nicht-eingerichtet "Keine Discord-Benachrichtigungen. Anleitung: docs/discord.md"
           platzhalter DISCORD_WEBHOOK_LOG nicht-eingerichtet "Kein Protokoll auf Discord. Anleitung: docs/discord.md"
+          platzhalter DISCORD_WEBHOOK_PAYMENTS nicht-eingerichtet "Keine Zahlungen auf Discord. Anleitung: docs/discord.md"
 
       # Nur wenn wirklich der Secret Manager gescheitert ist.
       - name: Hinweis bei fehlenden Rechten im Secret Manager

@@ -11,7 +11,7 @@
 // Manager und löscht die Dateien.
 //
 // Braucht: DISCORD_BOT_TOKEN, DISCORD_KANAL_MELDUNGEN, DISCORD_KANAL_SUPPORT,
-// DISCORD_KANAL_LOG, RUNNER_TEMP. Der Bot braucht in allen drei Kanälen
+// DISCORD_KANAL_LOG, DISCORD_KANAL_PAYMENTS, RUNNER_TEMP. Der Bot braucht in allen drei Kanälen
 // "Kanal ansehen" und "Webhooks verwalten".
 
 import { readFile, writeFile } from 'node:fs/promises'
@@ -26,6 +26,7 @@ const KANAELE = [
   { datei: 'meldungen', id: process.env.DISCORD_KANAL_MELDUNGEN?.trim() },
   { datei: 'support', id: process.env.DISCORD_KANAL_SUPPORT?.trim() },
   { datei: 'log', id: process.env.DISCORD_KANAL_LOG?.trim() },
+  { datei: 'payments', id: process.env.DISCORD_KANAL_PAYMENTS?.trim() },
 ]
 
 function abbrechen(text) {
@@ -35,7 +36,7 @@ function abbrechen(text) {
 
 if (!TOKEN) abbrechen('Secret DISCORD_BOT_TOKEN fehlt. Anleitung: docs/discord.md')
 for (const k of KANAELE) {
-  if (!k.id || !/^\d+$/.test(k.id)) abbrechen(`Kanal-ID für ${k.datei} fehlt oder ist keine Zahl – siehe .github/workflows/discord.yml (Log: Secret DISCORD_KANAL_LOG)`)
+  if (!k.id || !/^\d+$/.test(k.id)) abbrechen(`Kanal-ID für ${k.datei} fehlt oder ist keine Zahl – siehe .github/workflows/discord.yml (Log: Secret DISCORD_KANAL_LOG, Payments: Secret DISCORD_KANAL_PAYMENT)`)
 }
 if (!AUSGABE) abbrechen('RUNNER_TEMP fehlt – das Skript läuft nur im GitHub-Ablauf.')
 

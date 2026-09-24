@@ -7,6 +7,7 @@ import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
 import { ABBRUCH_URL, ERFOLG_URL, TARIFE, istEingerichtet, istPlanId, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
+import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
 
 /**
  * Die Kasse.
@@ -95,6 +96,21 @@ export const createCheckoutSession = onCall(
 /* ------------------------------------------------------ Quittung prüfen */
 
 /** Laufzeit eines Abos in Millisekunden, grosszügig gerechnet. */
+/**
+ * Wann die bezahlte Periode endet.
+ *
+ * Je nach API-Version steht das am Abo selbst (bis 2025-02) oder an seiner
+ * Position (neuere Versionen) – Stripe schickt Ereignisse in der Version,
+ * die beim Webhook eingestellt ist. Beide Orte werden gelesen.
+ */
+function periodeEnde(abo: Stripe.Subscription): number | null {
+  const a = abo as unknown as {
+    current_period_end?: number
+    items?: { data?: { current_period_end?: number }[] }
+  }
+  return a.current_period_end ?? a.items?.data?.[0]?.current_period_end ?? null
+}
+
 function bisAus(sekunden: number | null | undefined): string | null {
   if (!sekunden) return null
   return new Date(sekunden * 1000).toISOString()
@@ -166,7 +182,7 @@ function planAus(objekt: { metadata?: Stripe.Metadata | null }): PlanId | null {
  * die die Adresse kennt, sich selbst einen Lifetime-Zugang schicken.
  */
 export const stripeWebhook = onRequest(
-  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET] },
+  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, DISCORD_WEBHOOK_PAYMENTS] },
   async (request, response) => {
     const signatur = request.headers['stripe-signature']
     if (typeof signatur !== 'string') {
@@ -200,13 +216,23 @@ export const stripeWebhook = onRequest(
             logger.error('Sitzung ohne Kennung', { id: sitzung.id })
             break
           }
+          let bis: string | null = null
           if (sitzung.mode === 'subscription' && typeof sitzung.subscription === 'string') {
             const abo = await stripe().subscriptions.retrieve(sitzung.subscription)
-            await setzeTarif(uid, plan, bisAus(abo.current_period_end))
-          } else {
-            // Lifetime läuft nicht ab.
-            await setzeTarif(uid, plan, null)
+            bis = bisAus(periodeEnde(abo))
           }
+          // Lifetime läuft nicht ab (bis = null).
+          await setzeTarif(uid, plan, bis)
+          await zahlungMelden(
+            zahlungEintrag({
+              uid,
+              plan,
+              rappen: sitzung.amount_total,
+              waehrung: sitzung.currency,
+              bis,
+              test: !ereignis.livemode,
+            }),
+          )
           break
         }
 
@@ -216,14 +242,17 @@ export const stripeWebhook = onRequest(
           const plan = planAus(abo)
           if (!uid || !plan) break
           const laeuft = abo.status === 'active' || abo.status === 'trialing'
-          if (laeuft) await setzeTarif(uid, plan, bisAus(abo.current_period_end))
+          if (laeuft) await setzeTarif(uid, plan, bisAus(periodeEnde(abo)))
           else await zurueckAufGratis(uid)
           break
         }
 
         case 'customer.subscription.deleted': {
           const uid = uidAus(ereignis.data.object)
-          if (uid) await zurueckAufGratis(uid)
+          if (uid) {
+            await zurueckAufGratis(uid)
+            await zahlungMelden(aboEndeEintrag({ uid, test: !ereignis.livemode }))
+          }
           break
         }
 
