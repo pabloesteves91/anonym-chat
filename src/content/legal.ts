@@ -17,13 +17,13 @@ export const BETREIBER = {
   strasse: 'Im Grüntal 10',
   ort: '8405 Winterthur',
   land: 'Schweiz',
-  email: 'nonechatsupport@gmail.com',
+  email: 'support@none-chat.ch',
   /** Optional: CHE-Nummer, nur bei eingetragener Firma. */
   handelsregister: '',
   /** Optional: MWST-Nummer, nur wenn mehrwertsteuerpflichtig. */
   mwst: '',
   /** Für Meldungen zu Inhalten – darf dieselbe Adresse sein. */
-  meldeEmail: 'nonechatsupport@gmail.com',
+  meldeEmail: 'support@none-chat.ch',
 } as const
 
 /** Sind die Platzhalter noch drin? Dann zeigt die Seite einen Hinweis. */
