@@ -192,7 +192,10 @@ export function Landing() {
           )}
           . Dort gibt es ein Formular mit Bildanhang und, wenn nötig, einen Chat mit der Moderation. Hast du kein
           Konto oder kommst du nicht mehr hinein, schreib eine Mail an{' '}
-          <span className="font-mono text-ink">{BETREIBER.email}</span>.
+          <a href={`mailto:${BETREIBER.email}`} className="text-ink underline underline-offset-2 hover:text-accent-strong">
+            {BETREIBER.email}
+          </a>
+          .
         </p>
       </section>
 

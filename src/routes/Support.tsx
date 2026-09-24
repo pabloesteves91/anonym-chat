@@ -392,7 +392,7 @@ export function Support() {
           <Link to="/impressum" className="underline underline-offset-2 hover:text-ink">
             Impressum
           </Link>
-          : <span className="font-mono">{BETREIBER.email}</span>
+          : <a href={`mailto:${BETREIBER.email}`} className="underline underline-offset-2 hover:text-ink">{BETREIBER.email}</a>
         </p>
       </Note>
     </div>

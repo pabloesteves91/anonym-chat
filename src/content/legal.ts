@@ -45,7 +45,8 @@ export interface Rechtstext {
   abschnitte: Abschnitt[]
 }
 
-const adresse = `${BETREIBER.name}, ${BETREIBER.strasse}, ${BETREIBER.ort}, ${BETREIBER.land}`
+// Zeilenweise, wie auf einem Briefkopf – die Seite bricht an den Zeilenenden um.
+const adresse = `${BETREIBER.name}\n${BETREIBER.strasse}\n${BETREIBER.ort}\n${BETREIBER.land}`
 
 export const IMPRESSUM: Rechtstext = {
   slug: 'impressum',

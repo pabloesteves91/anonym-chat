@@ -1,6 +1,21 @@
 import { Link } from 'react-router-dom'
 import { Note, PageTitle, Panel } from '../components/ui'
-import { BETREIBER_UNVOLLSTAENDIG, RECHTSTEXTE, STAND, type Rechtstext } from '../content/legal'
+import { BETREIBER, BETREIBER_UNVOLLSTAENDIG, RECHTSTEXTE, STAND, type Rechtstext } from '../content/legal'
+
+/** Die Kontaktadresse im Text als anklickbaren Mail-Link zeigen. */
+function MitMailLink({ text }: { text: string }) {
+  const teile = text.split(BETREIBER.email)
+  return teile.map((teil, index) => (
+    <span key={index}>
+      {teil}
+      {index < teile.length - 1 ? (
+        <a href={`mailto:${BETREIBER.email}`} className="text-ink underline underline-offset-2 hover:text-accent-strong">
+          {BETREIBER.email}
+        </a>
+      ) : null}
+    </span>
+  ))
+}
 
 /**
  * Rechtstexte in einer Vorlage.
@@ -29,14 +44,16 @@ function Seite({ text }: { text: Rechtstext }) {
           <section key={abschnitt.titel}>
             <h2 className="font-display text-xl font-semibold">{abschnitt.titel}</h2>
             {abschnitt.absaetze?.map((absatz) => (
-              <p key={absatz} className="mt-2 text-muted">
-                {absatz}
+              <p key={absatz} className="mt-2 whitespace-pre-line text-muted">
+                <MitMailLink text={absatz} />
               </p>
             ))}
             {abschnitt.liste ? (
               <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-muted marker:text-accent-strong">
                 {abschnitt.liste.map((punkt) => (
-                  <li key={punkt}>{punkt}</li>
+                  <li key={punkt}>
+                    <MitMailLink text={punkt} />
+                  </li>
                 ))}
               </ul>
             ) : null}

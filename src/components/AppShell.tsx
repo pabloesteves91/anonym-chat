@@ -142,7 +142,10 @@ export function AppShell() {
           </NavLink>
 
           {konto ? (
-            <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
+            <nav
+              aria-label="Hauptnavigation"
+              className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto sm:order-none sm:mx-0 sm:w-auto sm:overflow-visible"
+            >
               <NavLink to="/chat" className={navClass}>
                 Chat
               </NavLink>
@@ -189,7 +192,10 @@ export function AppShell() {
               ) : null}
             </nav>
           ) : (
-            <nav aria-label="Hauptnavigation" className="flex items-center gap-1">
+            <nav
+              aria-label="Hauptnavigation"
+              className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto sm:order-none sm:mx-0 sm:w-auto sm:overflow-visible"
+            >
               <NavLink to="/preise" className={navClass}>
                 Tarife
               </NavLink>
@@ -245,7 +251,7 @@ export function AppShell() {
 
       <footer className="border-t border-line px-4 py-5">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-          <p>NØNE · Verifizierter Zufallschat ab 18</p>
+          <p>NØNE · Verifizierter Zufallschat ab 18 · Winterthur, Schweiz</p>
           <p className="font-mono" title={`Gebaut am ${new Date(__BUILD_ZEIT__).toLocaleString('de-CH')}`}>
             Version {__BUILD_ID__}
           </p>

@@ -315,7 +315,7 @@ export function Preise() {
           <Karte
             key={plan.id}
             plan={plan}
-            aktiv={plan.id === meiner}
+            aktiv={Boolean(user) && plan.id === meiner}
             gewaehlt={gewaehlt === plan.id}
             // Die Verwaltung braucht keinen Tarif – ausser zum Testen der Kasse.
             busy={busy || (imBetrieb && !kasseOffen) || zahlungLaeuft}
@@ -338,17 +338,17 @@ export function Preise() {
           Bei der Sicherheit gibt es keinen Unterschied zwischen Gratis und Plus.
         </p>
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[30rem] border-collapse text-sm">
+          <table className="w-full border-collapse text-sm">
             <caption className="sr-only">Vergleich von Gratistarif und Plus</caption>
             <thead>
               <tr className="border-b border-line-strong text-left">
-                <th scope="col" className="py-2 pr-4 font-medium">
+                <th scope="col" className="py-2 pr-3 font-medium">
                   Merkmal
                 </th>
-                <th scope="col" className="w-28 py-2 pr-4 font-medium">
+                <th scope="col" className="w-20 py-2 pr-3 font-medium sm:w-28">
                   Frei
                 </th>
-                <th scope="col" className="w-32 py-2 font-medium text-accent-strong">
+                <th scope="col" className="w-24 py-2 font-medium text-accent-strong sm:w-32">
                   Plus
                 </th>
               </tr>
@@ -356,10 +356,10 @@ export function Preise() {
             <tbody>
               {VERGLEICH.map((zeile) => (
                 <tr key={zeile.merkmal} className="border-b border-line">
-                  <th scope="row" className="py-2 pr-4 text-left font-normal">
+                  <th scope="row" className="py-2 pr-3 text-left font-normal">
                     {zeile.merkmal}
                   </th>
-                  <td className="py-2 pr-4 text-muted">{zeile.frei}</td>
+                  <td className="py-2 pr-3 text-muted">{zeile.frei}</td>
                   <td className="py-2">{zeile.plus}</td>
                 </tr>
               ))}
@@ -386,12 +386,12 @@ export function Preise() {
         {kasseOffen ? (
           <Note>
             Du bezahlst über Stripe mit Karte, TWINT, Apple Pay oder Google Pay. Deine Kartendaten sehen wir nicht, sie
-            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung stellst du über die Supportseite oder per Mail an <span className="font-mono">{BETREIBER.email}</span>.
+            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung stellst du über die Supportseite oder per Mail an <a href={`mailto:${BETREIBER.email}`} className="underline underline-offset-2 hover:text-ink">{BETREIBER.email}</a>.
           </Note>
         ) : (
-          <Note tone="warn">
-            <strong>Bezahlen ist noch nicht möglich.</strong> Wählst du oben einen bezahlten Tarif, notieren wir deinen
-            Wunsch und schalten ihn von Hand frei. Fragen dazu über die Supportseite oder per Mail an <span className="font-mono">{BETREIBER.email}</span>.
+          <Note>
+            <strong>Bezahlen ist noch nicht freigeschaltet.</strong> Wählst du oben einen bezahlten Tarif, notieren wir deinen
+            Wunsch und schalten ihn von Hand frei. Fragen dazu über die Supportseite oder per Mail an <a href={`mailto:${BETREIBER.email}`} className="underline underline-offset-2 hover:text-ink">{BETREIBER.email}</a>.
           </Note>
         )}
 
