@@ -17,13 +17,13 @@ export const BETREIBER = {
   strasse: '⚠︎ Strasse und Nummer',
   ort: '⚠︎ PLZ und Ort',
   land: 'Schweiz',
-  email: '⚠︎ kontakt@example.ch',
+  email: 'nonechatsupport@gmail.com',
   /** Optional: CHE-Nummer, nur bei eingetragener Firma. */
   handelsregister: '',
   /** Optional: MWST-Nummer, nur wenn mehrwertsteuerpflichtig. */
   mwst: '',
   /** Für Meldungen zu Inhalten – darf dieselbe Adresse sein. */
-  meldeEmail: '⚠︎ meldung@example.ch',
+  meldeEmail: 'nonechatsupport@gmail.com',
 } as const
 
 /** Sind die Platzhalter noch drin? Dann zeigt die Seite einen Hinweis. */
