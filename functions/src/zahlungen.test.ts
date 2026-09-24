@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aboEndeEintrag, betragText, zahlungEintrag } from './zahlungen'
+import { aboEndeEintrag, betragText, zahlungEintrag } from './zahlungsnachricht'
 
 describe('Zahlungen auf Discord', () => {
   it('schreibt Beträge in Franken', () => {

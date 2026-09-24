@@ -2,6 +2,9 @@ import { getAuth } from 'firebase-admin/auth'
 import { defineSecret } from 'firebase-functions/params'
 import { onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { GRUENDE, REGION, THEMEN, senden, type Einbettung } from './discord.js'
+import { kurzkennung } from './kennung.js'
+
+export { kurzkennung }
 
 /**
  * Das Protokoll der Moderation im Discord-Kanal für Logs.
@@ -40,7 +43,6 @@ const TARIFE: Record<string, string> = {
 
 const GESCHLECHT: Record<string, string> = { weiblich: 'weiblich', maennlich: 'männlich' }
 
-export const kurzkennung = (uid: unknown) => `Konto ${String(uid ?? '').slice(0, 6) || '?'}`
 
 /** Die Person hinter einer Kennung, so wie sie im Protokoll stehen soll. */
 export async function wer(kennung: unknown): Promise<string> {
