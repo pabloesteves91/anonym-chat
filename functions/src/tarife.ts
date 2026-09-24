@@ -28,6 +28,23 @@ export const TARIFE: Record<PlanId, Tarif> = {
   lifetime: { priceId: 'price_1UJ4vLBYL7YFNcX5uSfXajEE', art: 'einmalig' },
 }
 
+/**
+ * Wer im Testbetrieb bezahlen darf.
+ *
+ * Mit einem Testschlüssel (`sk_test_…`) ist jede Zahlung gespielt – die
+ * Testkarte 4242… „bezahlt" alles. Dürfte dann jede Person eine Sitzung
+ * eröffnen, bekäme jede Plus oder Lifetime geschenkt. Deshalb im Testbetrieb
+ * nur die Verwaltung (dieselbe Kennung wie in firestore.rules).
+ */
+export const TESTZAHLER: readonly string[] = ['RwwpyDrsJldCIx38BcBHVsgTXc32']
+
+export const istTestschluessel = (schluessel: string) => schluessel.startsWith('sk_test_')
+
+/** Darf diese Person unter diesem Schlüssel eine Zahlung starten? */
+export function darfBezahlen(schluessel: string, uid: string): boolean {
+  return !istTestschluessel(schluessel) || TESTZAHLER.includes(uid)
+}
+
 export function istPlanId(wert: unknown): wert is PlanId {
   return typeof wert === 'string' && wert in TARIFE
 }

@@ -5,7 +5,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2/options'
 import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
-import { ABBRUCH_URL, ERFOLG_URL, TARIFE, istEingerichtet, istPlanId, type PlanId } from './tarife.js'
+import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istPlanId, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
 import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
 
@@ -54,6 +54,10 @@ export const createCheckoutSession = onCall(
   async (request) => {
     const uid = request.auth?.uid
     if (!uid) throw new HttpsError('unauthenticated', 'Dafür musst du angemeldet sein.')
+    // Testbetrieb: nur die Verwaltung – sonst gäbe es Plus für eine Testkarte.
+    if (!darfBezahlen(STRIPE_SECRET_KEY.value(), uid)) {
+      throw new HttpsError('permission-denied', 'Die Kasse ist noch im Testbetrieb.')
+    }
 
     const plan = (request.data ?? {}).plan as unknown
     if (!istPlanId(plan)) throw new HttpsError('invalid-argument', 'Diesen Tarif gibt es nicht.')
@@ -216,6 +220,12 @@ export const stripeWebhook = onRequest(
             logger.error('Sitzung ohne Kennung', { id: sitzung.id })
             break
           }
+          // Doppelt gesichert: Aus dem Testmodus gibt es nur für die
+          // Verwaltung einen Tarif, egal wie die Sitzung zustande kam.
+          if (!ereignis.livemode && !TESTZAHLER.includes(uid)) {
+            logger.warn('Testzahlung eines anderen Kontos ignoriert', { id: sitzung.id })
+            break
+          }
           let bis: string | null = null
           if (sitzung.mode === 'subscription' && typeof sitzung.subscription === 'string') {
             const abo = await stripe().subscriptions.retrieve(sitzung.subscription)
@@ -241,6 +251,7 @@ export const stripeWebhook = onRequest(
           const uid = uidAus(abo)
           const plan = planAus(abo)
           if (!uid || !plan) break
+          if (!ereignis.livemode && !TESTZAHLER.includes(uid)) break
           const laeuft = abo.status === 'active' || abo.status === 'trialing'
           if (laeuft) await setzeTarif(uid, plan, bisAus(periodeEnde(abo)))
           else await zurueckAufGratis(uid)

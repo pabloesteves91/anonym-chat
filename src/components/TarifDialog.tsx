@@ -6,7 +6,7 @@ import { PLAENE, preisText, rappenText, type Plan, type PlanId } from '../servic
 import { dauerText, datumKurz, rabattiert } from '../services/aktion'
 import { gratisZeitBis, rabattFuer, useAktionen } from '../store/useAktionen'
 import { useSession } from '../store/useSession'
-import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
+import { istBezahlbar, kasseOffenFuer, starteZahlung } from '../services/kasse'
 import { ApiError } from '../services/api'
 
 const taktText: Record<Plan['takt'], string> = {
@@ -30,6 +30,7 @@ const taktText: Record<Plan['takt'], string> = {
  */
 export function TarifDialog() {
   const user = useSession((s) => s.user)
+  const kasseOffen = kasseOffenFuer(user)
   const aktionen = useAktionen((s) => s.aktionen)
   const gutschein = useAktionen((s) => s.gutschein)
   const gratisBis = gratisZeitBis({ aktionen })
@@ -80,7 +81,7 @@ export function TarifDialog() {
 
   const waehlen = async () => {
     setFehler(null)
-    if (KASSE_AKTIV && istBezahlbar(auswahl)) {
+    if (kasseOffen && istBezahlbar(auswahl)) {
       setZahlungLaeuft(true)
       try {
         // Ab hier verlässt die Seite den Browser Richtung Stripe.
@@ -172,7 +173,7 @@ export function TarifDialog() {
             ))}
           </fieldset>
 
-          {auswahl === 'frei' ? null : KASSE_AKTIV ? (
+          {auswahl === 'frei' ? null : kasseOffen ? (
             <p className="text-sm text-muted">
               Weiter geht es bei Stripe – Karte, TWINT, Apple Pay und Google Pay. Danach kommst du hierher zurück.
             </p>
@@ -191,7 +192,7 @@ export function TarifDialog() {
                 ? 'Weiter zur Kasse …'
                 : auswahl === 'frei'
                   ? 'Gratis starten'
-                  : KASSE_AKTIV
+                  : kasseOffen
                     ? 'Zur Bezahlung'
                     : 'Auswählen'}
             </Button>

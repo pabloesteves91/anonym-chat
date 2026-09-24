@@ -25,6 +25,17 @@ import type { PlanId } from './plans'
  */
 export const KASSE_AKTIV = false
 
+/**
+ * Sieht diese Person die Kasse?
+ *
+ * Alle, sobald `KASSE_AKTIV` an ist. Vorher nur die Verwaltung – zum Testen
+ * mit dem Stripe-Testmodus. Der Server lässt im Testmodus ohnehin nur sie
+ * bezahlen (`darfBezahlen` in functions/src/tarife.ts).
+ */
+export function kasseOffenFuer(person: { rolle?: string } | null | undefined): boolean {
+  return KASSE_AKTIV || person?.rolle === 'verwaltung'
+}
+
 /** Tarife, für die es überhaupt etwas zu bezahlen gibt. */
 export type BezahlbarerPlan = Exclude<PlanId, 'frei'>
 
@@ -36,6 +47,7 @@ const FEHLERTEXT: Record<string, string> = {
   unauthenticated: 'Dafür musst du angemeldet sein.',
   'invalid-argument': 'Diesen Tarif gibt es nicht.',
   'failed-precondition': 'Die Kasse ist noch nicht eingerichtet.',
+  'permission-denied': 'Die Kasse ist noch im Testbetrieb.',
   internal: 'Die Zahlung konnte nicht gestartet werden.',
 }
 

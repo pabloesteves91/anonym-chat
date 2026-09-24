@@ -9,7 +9,7 @@ import { rabattFuer, useAktionen } from '../store/useAktionen'
 import { BETREIBER } from '../content/legal'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
-import { KASSE_AKTIV, istBezahlbar, starteZahlung } from '../services/kasse'
+import { istBezahlbar, kasseOffenFuer, starteZahlung } from '../services/kasse'
 import { ApiError } from '../services/api'
 
 const taktText: Record<Plan['takt'], string> = {
@@ -91,6 +91,7 @@ function Karte({
   onWaehlen,
   busy,
   laeuft,
+  kasseOffen,
   angemeldet,
   rabatt,
 }: {
@@ -103,6 +104,8 @@ function Karte({
   busy: boolean
   /** Eine Bezahlung ist unterwegs – der Knopf sagt es. */
   laeuft: boolean
+  /** Führt „buchen" zur Kasse (sonst: Tarifwunsch)? */
+  kasseOffen: boolean
   angemeldet: boolean
 }) {
   return (
@@ -169,7 +172,7 @@ function Karte({
               ? 'Weiter zur Kasse …'
               : plan.id === 'frei'
                 ? 'Gratis nutzen'
-                : KASSE_AKTIV
+                : kasseOffen
                   ? `Für ${rappenText(rabatt ? rabattiert(plan.preisRappen, rabatt.prozent) : plan.preisRappen)} buchen`
                   : 'Diesen Tarif möchte ich'}
           </Button>
@@ -235,6 +238,7 @@ function GutscheinFeld() {
 export function Preise() {
   const konto = useAuth((s) => s.user)
   const user = useSession((s) => s.user)
+  const kasseOffen = kasseOffenFuer(user)
   const busy = useSession((s) => s.busy)
   const choosePlan = useSession((s) => s.choosePlan)
   const [gewaehlt, setGewaehlt] = useState<PlanId | null>(null)
@@ -263,7 +267,7 @@ export function Preise() {
 
   const waehlen = async (plan: PlanId) => {
     setFehler(null)
-    if (KASSE_AKTIV && istBezahlbar(plan)) {
+    if (kasseOffen && istBezahlbar(plan)) {
       setZahlungLaeuft(true)
       try {
         // Ab hier verlässt die Seite den Browser Richtung Stripe.
@@ -313,8 +317,10 @@ export function Preise() {
             plan={plan}
             aktiv={plan.id === meiner}
             gewaehlt={gewaehlt === plan.id}
-            busy={busy || imBetrieb || zahlungLaeuft}
+            // Die Verwaltung braucht keinen Tarif – ausser zum Testen der Kasse.
+            busy={busy || (imBetrieb && !kasseOffen) || zahlungLaeuft}
             laeuft={zahlungLaeuft}
+            kasseOffen={kasseOffen}
             angemeldet={Boolean(konto)}
             rabatt={rabattFuer({ aktionen, gutschein }, plan.id)}
             onWaehlen={() => void waehlen(plan.id)}
@@ -377,7 +383,7 @@ export function Preise() {
       </section>
 
       <div className="prose-column flex flex-col gap-4">
-        {KASSE_AKTIV ? (
+        {kasseOffen ? (
           <Note>
             Bezahlt wird über Stripe – Karte, TWINT, Apple Pay und Google Pay. Wir sehen deine Zahlungsdaten nie; sie
             liegen beim Zahlungsanbieter. Fragen zu einer Zahlung über die Supportseite oder an <span className="font-mono">{BETREIBER.email}</span>.
