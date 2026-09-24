@@ -7,7 +7,8 @@ import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
 import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, istPlanId, preisFuer, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
-import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
+import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, testkaufEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
+import { TESTKAUF_PLAN } from './testkauf.js'
 
 /**
  * Die Kasse.
@@ -235,6 +236,11 @@ export const stripeWebhook = onRequest(
           // Bei Rechnung oder Vorkasse ist erst später bezahlt.
           if (sitzung.payment_status !== 'paid' && sitzung.status !== 'complete') break
           const uid = uidAus(sitzung)
+          // TESTKAUF – vorübergehend: kein Tarif, nur die Meldung in #payments.
+          if (sitzung.metadata?.plan === TESTKAUF_PLAN && uid && TESTZAHLER.includes(uid)) {
+            await zahlungMelden(testkaufEintrag({ uid, rappen: sitzung.amount_total, waehrung: sitzung.currency, test: !ereignis.livemode }))
+            break
+          }
           const plan = planAus(sitzung)
           if (!uid || !plan) {
             logger.error('Sitzung ohne Kennung', { id: sitzung.id })
@@ -307,4 +313,6 @@ export const stripeWebhook = onRequest(
 
 export { meldungNachDiscord, supportNachDiscord, supportAntwortNachDiscord, supportErledigtAufraeumen } from './discord.js'
 export { feedbackAuswerten, gespraechGezaehlt, gespraechVerfallen } from './gespraeche.js'
+// TESTKAUF – vorübergehend, auf Zuruf entfernen (siehe testkauf.ts).
+export { createTestkauf } from './testkauf.js'
 export { supportfallProtokoll, meldungProtokoll, kontoProtokoll, aktionProtokoll, neuigkeitProtokoll } from './protokoll.js'

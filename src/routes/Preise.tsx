@@ -11,6 +11,8 @@ import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 import { istBezahlbar, kasseOffenFuer, starteZahlung } from '../services/kasse'
 import { ApiError } from '../services/api'
+// TESTKAUF – vorübergehend, auf Zuruf entfernen.
+import { Testkauf } from '../components/Testkauf'
 
 const taktText: Record<Plan['takt'], string> = {
   gratis: 'dauerhaft',
@@ -302,6 +304,9 @@ export function Preise() {
       {fehler ? <Note tone="warn">{fehler}</Note> : null}
 
       <AktionsHinweis />
+
+      {/* TESTKAUF – vorübergehend, nur Verwaltung. */}
+      {user?.rolle === 'verwaltung' ? <Testkauf /> : null}
 
       {imBetrieb ? (
         <Note>

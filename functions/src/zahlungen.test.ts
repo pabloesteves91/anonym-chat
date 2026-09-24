@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aboEndeEintrag, betragText, zahlungEintrag } from './zahlungsnachricht'
+import { aboEndeEintrag, betragText, testkaufEintrag, zahlungEintrag } from './zahlungsnachricht'
 
 describe('Zahlungen auf Discord', () => {
   it('schreibt Beträge in Franken', () => {
@@ -25,5 +25,13 @@ describe('Zahlungen auf Discord', () => {
     expect(e.fields?.[2].value).toBe('unbefristet')
     expect(aboEndeEintrag({ uid: 'abcdef99', test: false }).title).toBe('Abo beendet – zurück auf Gratis')
     expect(aboEndeEintrag({ uid: 'abcdef99', test: true, lifetime: true }).title).toBe('🧪 Abo beendet – Lifetime bleibt')
+  })
+})
+
+describe('Testkauf', () => {
+  it('meldet echtes Geld ohne Tarif', () => {
+    const e = testkaufEintrag({ uid: 'abcdef123', rappen: 50, waehrung: 'chf', test: false })
+    expect(e.title).toBe('💳 Testkauf (kein Tarif)')
+    expect(e.fields?.[1].value).toBe('CHF 0.50')
   })
 })
