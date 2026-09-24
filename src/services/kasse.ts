@@ -73,6 +73,9 @@ export async function starteZahlung(plan: BezahlbarerPlan, code: string | null =
     if (error instanceof ApiError) throw error
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
     const kurz = code.replace(/^functions\//, '')
+    // Im Testbetrieb sagt der Server, was Stripe geantwortet hat.
+    const nachricht = error instanceof Error ? error.message : ''
+    if (nachricht.startsWith('Stripe (Testmodus)')) throw new ApiError(nachricht, 'speicher')
     throw new ApiError(FEHLERTEXT[kurz] ?? 'Die Zahlung konnte nicht gestartet werden.', 'speicher')
   }
 }

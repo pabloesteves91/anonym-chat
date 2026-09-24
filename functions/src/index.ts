@@ -5,7 +5,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2/options'
 import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
-import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istPlanId, type PlanId } from './tarife.js'
+import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, istPlanId, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
 import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
 
@@ -92,7 +92,15 @@ export const createCheckoutSession = onCall(
     } catch (fehler) {
       if (fehler instanceof HttpsError) throw fehler
       logger.error('Checkout-Sitzung fehlgeschlagen', { uid, plan, fehler })
-      throw new HttpsError('internal', 'Die Zahlung konnte nicht gestartet werden.')
+      // Im Testbetrieb (nur die Verwaltung kommt bis hier) die Antwort von
+      // Stripe mitgeben – sonst sucht man den Grund in den Logs.
+      const grund = fehler instanceof Error ? fehler.message : String(fehler)
+      throw new HttpsError(
+        'internal',
+        istTestschluessel(STRIPE_SECRET_KEY.value())
+          ? `Stripe (Testmodus): ${grund}`
+          : 'Die Zahlung konnte nicht gestartet werden.',
+      )
     }
   },
 )
