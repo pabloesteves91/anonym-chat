@@ -13,9 +13,9 @@
 
 export const BETREIBER = {
   /** Firma oder vollständiger Name der verantwortlichen Person. */
-  name: '⚠︎ Name oder Firma eintragen',
-  strasse: '⚠︎ Strasse und Nummer',
-  ort: '⚠︎ PLZ und Ort',
+  name: 'NØNE, F. Berta',
+  strasse: 'Im Grüntal 10',
+  ort: '8405 Winterthur',
   land: 'Schweiz',
   email: 'nonechatsupport@gmail.com',
   /** Optional: CHE-Nummer, nur bei eingetragener Firma. */
