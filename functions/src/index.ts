@@ -5,7 +5,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2/options'
 import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
-import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, istPlanId, type PlanId } from './tarife.js'
+import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, istPlanId, preisFuer, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
 import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
 
@@ -61,7 +61,7 @@ export const createCheckoutSession = onCall(
 
     const plan = (request.data ?? {}).plan as unknown
     if (!istPlanId(plan)) throw new HttpsError('invalid-argument', 'Diesen Tarif gibt es nicht.')
-    if (!istEingerichtet(plan)) {
+    if (!istEingerichtet(plan, STRIPE_SECRET_KEY.value())) {
       // Lieber ein klarer Fehler als eine Zahlung, die nirgends ankommt.
       throw new HttpsError('failed-precondition', 'Die Kasse ist noch nicht eingerichtet.')
     }
@@ -75,7 +75,7 @@ export const createCheckoutSession = onCall(
       const rabatt = await rabattFuer(plan, (request.data ?? {}).code)
       const sitzung = await kasse.checkout.sessions.create({
         mode: abo ? 'subscription' : 'payment',
-        line_items: [{ price: tarif.priceId, quantity: 1 }],
+        line_items: [{ price: preisFuer(plan, STRIPE_SECRET_KEY.value()), quantity: 1 }],
         ...(rabatt ? { discounts: [{ coupon: await gutschein(kasse, rabatt) }] } : {}),
         // Beide Wege zurück: die Kennung als Referenz und in den Metadaten.
         client_reference_id: uid,

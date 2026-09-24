@@ -14,18 +14,31 @@
 export type PlanId = 'plus-monat' | 'plus-jahr' | 'lifetime'
 
 export interface Tarif {
-  /** Kennung des Preises in Stripe. */
-  priceId: string
+  /**
+   * Kennung des Preises in Stripe – je Umgebung eine eigene: Die Sandbox
+   * (Schlüssel `sk_test_…`) kennt die Live-Preise nicht und umgekehrt.
+   */
+  preis: { test: string; live: string }
   /** Abo oder einmalige Zahlung – bestimmt den Checkout-Modus. */
   art: 'abo' | 'einmalig'
 }
 
-// Stripe-Sandbox (Testmodus), angelegt am 24.09.2026. Für den Livebetrieb
-// die Kennungen der Live-Preise eintragen – sie sind andere.
+// Angelegt am 24.09.2026, alle in CHF. Welche gilt, entscheidet der
+// hinterlegte Schlüssel (preisFuer) – zum Umstellen auf echtes Geld genügt
+// es, STRIPE_SECRET_KEY auf den Live-Schlüssel zu setzen.
 export const TARIFE: Record<PlanId, Tarif> = {
-  'plus-monat': { priceId: 'price_1UJ4vLBYL7YFNcX58NXL031B', art: 'abo' },
-  'plus-jahr': { priceId: 'price_1UJ4vLBYL7YFNcX5h7blPs9z', art: 'abo' },
-  lifetime: { priceId: 'price_1UJ4vLBYL7YFNcX5uSfXajEE', art: 'einmalig' },
+  'plus-monat': {
+    preis: { test: 'price_1UJ4lLBMGYhSyiQEeuv9Ltxd', live: 'price_1UJ4vLBYL7YFNcX58NXL031B' },
+    art: 'abo',
+  },
+  'plus-jahr': {
+    preis: { test: 'price_1UJ4lpBMGYhSyiQEGhMh22KP', live: 'price_1UJ4vLBYL7YFNcX5h7blPs9z' },
+    art: 'abo',
+  },
+  lifetime: {
+    preis: { test: 'price_1UJ4m9BMGYhSyiQEdl4Afiv0', live: 'price_1UJ4vLBYL7YFNcX5uSfXajEE' },
+    art: 'einmalig',
+  },
 }
 
 /**
@@ -49,8 +62,13 @@ export function istPlanId(wert: unknown): wert is PlanId {
   return typeof wert === 'string' && wert in TARIFE
 }
 
-export function istEingerichtet(plan: PlanId): boolean {
-  return !TARIFE[plan].priceId.includes('HIER_EINTRAGEN')
+/** Der Preis dieses Tarifs in der Umgebung, zu der der Schlüssel gehört. */
+export function preisFuer(plan: PlanId, schluessel: string): string {
+  return istTestschluessel(schluessel) ? TARIFE[plan].preis.test : TARIFE[plan].preis.live
+}
+
+export function istEingerichtet(plan: PlanId, schluessel: string): boolean {
+  return /^price_\w+$/.test(preisFuer(plan, schluessel))
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TESTZAHLER, darfBezahlen, istTestschluessel } from './tarife'
+import { TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, preisFuer } from './tarife'
 
 describe('Testbetrieb der Kasse', () => {
   it('erkennt den Testschlüssel', () => {
@@ -14,5 +14,20 @@ describe('Testbetrieb der Kasse', () => {
 
   it('im Livebetrieb alle', () => {
     expect(darfBezahlen('sk_live_abc', 'irgendwer')).toBe(true)
+  })
+})
+
+describe('Preise je Umgebung', () => {
+  it('nimmt mit dem Testschlüssel die Sandbox-Preise, sonst die Live-Preise', () => {
+    expect(preisFuer('plus-monat', 'sk_test_x')).toBe(TARIFE['plus-monat'].preis.test)
+    expect(preisFuer('plus-monat', 'sk_live_x')).toBe(TARIFE['plus-monat'].preis.live)
+  })
+
+  it('hat für jeden Tarif in beiden Umgebungen einen eigenen Preis', () => {
+    for (const plan of ['plus-monat', 'plus-jahr', 'lifetime'] as const) {
+      expect(istEingerichtet(plan, 'sk_test_x')).toBe(true)
+      expect(istEingerichtet(plan, 'sk_live_x')).toBe(true)
+      expect(TARIFE[plan].preis.test).not.toBe(TARIFE[plan].preis.live)
+    }
   })
 })

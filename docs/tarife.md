@@ -113,7 +113,10 @@ Für ein Schweizer Publikum ist das wichtiger als Kreditkarten.
 
 ### 2. Kennungen eintragen
 
-Die drei Kennungen in `functions/src/tarife.ts` einsetzen. Sie sind kein
+Die Kennungen in `functions/src/tarife.ts` einsetzen – je Tarif eine aus der
+Sandbox (`test`) und eine aus dem Live-Konto (`live`). Welche gilt, entscheidet
+der hinterlegte Schlüssel: `sk_test_…` nimmt die Sandbox-Preise, `sk_live_…`
+die echten. Sie sind kein
 Geheimnis – sie stehen in jeder Checkout-Adresse – und gehören deshalb ins
 Repository, nicht in die Secrets.
 
