@@ -4,7 +4,9 @@ import { TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, p
 describe('Testbetrieb der Kasse', () => {
   it('erkennt den Testschlüssel', () => {
     expect(istTestschluessel('sk_test_abc')).toBe(true)
+    expect(istTestschluessel('rk_test_abc')).toBe(true)
     expect(istTestschluessel('sk_live_abc')).toBe(false)
+    expect(istTestschluessel('rk_live_abc')).toBe(false)
   })
 
   it('lässt im Testbetrieb nur die Verwaltung bezahlen', () => {

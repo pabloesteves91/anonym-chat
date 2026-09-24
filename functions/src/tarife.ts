@@ -51,7 +51,8 @@ export const TARIFE: Record<PlanId, Tarif> = {
  */
 export const TESTZAHLER: readonly string[] = ['RwwpyDrsJldCIx38BcBHVsgTXc32']
 
-export const istTestschluessel = (schluessel: string) => schluessel.startsWith('sk_test_')
+/** Test-Schlüssel, ob vollständig (`sk_test_`) oder eingeschränkt (`rk_test_`). */
+export const istTestschluessel = (schluessel: string) => /^(sk|rk)_test_/.test(schluessel)
 
 /** Darf diese Person unter diesem Schlüssel eine Zahlung starten? */
 export function darfBezahlen(schluessel: string, uid: string): boolean {
