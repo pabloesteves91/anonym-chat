@@ -32,7 +32,7 @@ export const TARIFE: Record<PlanId, Tarif> = {
     art: 'abo',
   },
   'plus-jahr': {
-    preis: { test: 'price_1UJ4lpBMGYhSyiQEGhMh22KP', live: 'price_1UJ4vLBYL7YFNcX5h7blPs9z' },
+    preis: { test: 'price_1UJ5V1BSspLyvcVYaDV0LJyb', live: 'price_1UJ4vLBYL7YFNcX5h7blPs9z' },
     art: 'abo',
   },
   lifetime: {
