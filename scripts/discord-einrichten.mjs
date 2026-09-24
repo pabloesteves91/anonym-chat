@@ -3,16 +3,16 @@
 //
 // Die Kanäle gibt es schon – angelegt und eingerichtet von Hand. Dieses
 // Skript fasst sie nicht an: kein Umbenennen, kein Verschieben, keine
-// Rechte. Es legt in jedem der drei Kanäle einen Webhook "NØNE" an (oder
+// Rechte. Es legt in jedem Kanal einen Webhook "NØNE" an (oder
 // nimmt den vorhandenen) und sonst nichts. Beliebig oft startbar.
 //
-// Die Webhook-Adressen werden nie ausgegeben. Sie landen in drei Dateien
+// Die Webhook-Adressen werden nie ausgegeben. Sie landen in je einer Datei
 // unter $RUNNER_TEMP; der Ablauf schreibt sie von dort in den Secret
 // Manager und löscht die Dateien.
 //
 // Braucht: DISCORD_BOT_TOKEN, DISCORD_KANAL_MELDUNGEN, DISCORD_KANAL_SUPPORT,
-// DISCORD_KANAL_LOG, DISCORD_KANAL_PAYMENTS, RUNNER_TEMP. Der Bot braucht in allen drei Kanälen
-// "Kanal ansehen" und "Webhooks verwalten".
+// DISCORD_KANAL_LOG, DISCORD_KANAL_PAYMENTS, DISCORD_KANAL_VERIFIZIERUNG, RUNNER_TEMP.
+// Der Bot braucht in allen Kanälen "Kanal ansehen" und "Webhooks verwalten".
 
 import { readFile, writeFile } from 'node:fs/promises'
 
@@ -27,6 +27,7 @@ const KANAELE = [
   { datei: 'support', id: process.env.DISCORD_KANAL_SUPPORT?.trim() },
   { datei: 'log', id: process.env.DISCORD_KANAL_LOG?.trim() },
   { datei: 'payments', id: process.env.DISCORD_KANAL_PAYMENTS?.trim() },
+  { datei: 'verifizierung', id: process.env.DISCORD_KANAL_VERIFIZIERUNG?.trim() },
 ]
 
 function abbrechen(text) {
@@ -36,7 +37,7 @@ function abbrechen(text) {
 
 if (!TOKEN) abbrechen('Secret DISCORD_BOT_TOKEN fehlt. Anleitung: docs/discord.md')
 for (const k of KANAELE) {
-  if (!k.id || !/^\d+$/.test(k.id)) abbrechen(`Kanal-ID für ${k.datei} fehlt oder ist keine Zahl – siehe .github/workflows/discord.yml (Log: Secret DISCORD_KANAL_LOG, Payments: Secret DISCORD_KANAL_PAYMENT)`)
+  if (!k.id || !/^\d+$/.test(k.id)) abbrechen(`Kanal-ID für ${k.datei} fehlt oder ist keine Zahl – siehe .github/workflows/discord.yml (Log: Secret DISCORD_KANAL_LOG, Payments: Secret DISCORD_KANAL_PAYMENT, Verifizierung: Secret DISCORD_KANAL_VERIFIZIERUNG)`)
 }
 if (!AUSGABE) abbrechen('RUNNER_TEMP fehlt – das Skript läuft nur im GitHub-Ablauf.')
 

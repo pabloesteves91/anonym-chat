@@ -1,9 +1,10 @@
 # Discord für die Moderation
 
-Ein privater Server, auf dem neue Meldungen und Supportanfragen als
+Ein privater Server, auf dem neue Meldungen, Supportanfragen, Zahlungen und
+Verifizierungsanfragen als
 Benachrichtigung ankommen und das Team sich abspricht. Server, Kanäle und
 Rollen richtest du selbst ein. Der Ablauf **Discord einrichten** legt nur in
-zwei Kanälen je einen Webhook an und hinterlegt die Adressen im Google Secret
+jedem Kanal je einen Webhook an und hinterlegt die Adressen im Google Secret
 Manager. Alles geht auch vom Handy aus.
 
 ## Was ankommt
@@ -13,9 +14,11 @@ Manager. Alles geht auch vom Handy aus.
 | `#meldungen` | `1552305430670217327` | neue Meldungen aus dem Chat |
 | `#support` | `1552305324583551056` | neue Supportanfragen und Antworten im Supportchat |
 | Log-Kanal | GitHub-Secret `DISCORD_KANAL_LOG` | Protokoll: wer was entschieden hat |
+| `#payments` | GitHub-Secret `DISCORD_KANAL_PAYMENT` | Zahlungen und beendete Abos |
+| `#verifizierung` | GitHub-Secret `DISCORD_KANAL_VERIFIZIERUNG` | neue Verifizierungsanfragen (ohne Bilder) |
 
 Die IDs von Meldungen und Support stehen in `.github/workflows/discord.yml`,
-die des Log-Kanals im Secret `DISCORD_KANAL_LOG`. Wer die Kanäle neu anlegt,
+die der übrigen Kanäle in den genannten Secrets. Wer die Kanäle neu anlegt,
 trägt dort die neuen IDs ein (Entwicklermodus an, lange auf den Kanal drücken
 → *Kanal-ID kopieren*). Sie sind kein Geheimnis.
 
@@ -24,6 +27,9 @@ Ist ein Supportfall **erledigt**, verschwinden seine Benachrichtigungen
 zeigt, was offen ist. Das Protokoll dazu steht weiter im Log-Kanal.
 Benachrichtigungen von vor dieser Einrichtung (23.09.2026) kennt der Server
 nicht und bleiben stehen; die löscht man einmal von Hand.
+
+Genauso `#verifizierung`: Ist ein Antrag entschieden, zurückgezogen oder
+durch einen neuen ersetzt, verschwindet seine Nachricht wieder.
 
 Jede Benachrichtigung nennt nur **Art, Kategorie und Zeitpunkt** und
 verlinkt in die Moderation. Kein Pseudonym, kein Text, kein Verlauf, kein
@@ -95,10 +101,11 @@ https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissi
 Rechte: **Kanäle ansehen** und **Webhooks verwalten**. Wer den Bot schon mit
 mehr Rechten eingeladen hat, muss nichts ändern.
 
-### 4. Bot in die drei Kanäle lassen
+### 4. Bot in die Kanäle lassen
 
 Sind die Kanäle privat, sieht der Bot sie nicht – der Ablauf meldet dann
-„Missing Access". Für `#meldungen`, `#support` und den Log-Kanal:
+„Missing Access". Für `#meldungen`, `#support`, den Log-Kanal, `#payments`
+und `#verifizierung`:
 *Kanal bearbeiten* → *Berechtigungen* → Rolle **NØNE** (die Rolle des Bots)
 hinzufügen → **Kanal ansehen** und **Webhooks verwalten** erlauben.
 

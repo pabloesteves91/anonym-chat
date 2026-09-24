@@ -1,6 +1,6 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { defineSecret } from 'firebase-functions/params'
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { logger } from 'firebase-functions'
 import { BASIS_URL } from './tarife.js'
 
@@ -25,10 +25,17 @@ import { BASIS_URL } from './tarife.js'
  * Nachrichten zu welchem Fall gehören, steht in `discordNachrichten/{fall}`
  * – eine Sammlung, an die nur der Server kommt (keine Regel erlaubt den
  * Zugriff aus der App).
+ *
+ * Genauso `#verifizierung`: Ein neuer Antrag meldet sich dort, und sobald er
+ * entschieden, zurückgezogen oder durch einen neuen ersetzt ist, verschwindet
+ * die Nachricht wieder. Sie liegt unter `discordNachrichten/verifizierung-{antrag}`,
+ * damit sie nie mit einem Supportfall gleicher Kennung zusammenfällt. Keine
+ * Bilder, kein Pseudonym, keine Telefonnummer – nur der Hinweis.
  */
 
 const DISCORD_WEBHOOK_MELDUNGEN = defineSecret('DISCORD_WEBHOOK_MELDUNGEN')
 const DISCORD_WEBHOOK_SUPPORT = defineSecret('DISCORD_WEBHOOK_SUPPORT')
+const DISCORD_WEBHOOK_VERIFIZIERUNG = defineSecret('DISCORD_WEBHOOK_VERIFIZIERUNG')
 
 // Die Datenbank liegt in eur3; Firestore-Auslöser laufen in einer Region
 // innerhalb dieses Verbunds.
@@ -38,6 +45,7 @@ const MODERATION_URL = `${BASIS_URL}/#/admin`
 
 const FARBE_MELDUNG = 0x9e4130
 const FARBE_SUPPORT = 0x4ec4b0
+const FARBE_VERIFIZIERUNG = 0xd9a441
 
 // Abgeschrieben aus src/services/types.ts und src/services/support.ts – die
 // Funktionen sind ein eigenes Paket und können die App nicht importieren.
@@ -105,14 +113,24 @@ async function loeschen(adresse: string, nachrichtId: string): Promise<void> {
 
 const NACHRICHTEN = 'discordNachrichten'
 
-/** Merkt sich, dass diese Discord-Nachricht zum Supportfall gehört. */
-async function merken(fallId: string, nachrichtId: string | null): Promise<void> {
+/** Merkt sich, dass diese Discord-Nachricht zum Fall (Support oder Antrag) gehört. */
+async function merken(schluessel: string, nachrichtId: string | null): Promise<void> {
   if (!nachrichtId) return
   await getFirestore()
     .collection(NACHRICHTEN)
-    .doc(fallId)
+    .doc(schluessel)
     .set({ ids: FieldValue.arrayUnion(nachrichtId) }, { merge: true })
 }
+
+/** Löscht alle gemerkten Nachrichten eines Falls aus seinem Kanal. */
+async function aufraeumen(adresse: string, schluessel: string): Promise<void> {
+  const eintrag = getFirestore().collection(NACHRICHTEN).doc(schluessel)
+  const ids = ((await eintrag.get()).get('ids') as string[] | undefined) ?? []
+  for (const id of ids) await loeschen(adresse, id)
+  await eintrag.delete()
+}
+
+const verifizierungSchluessel = (antrag: string) => `verifizierung-${antrag}`
 
 export const meldungNachDiscord = onDocumentCreated(
   { document: 'reports/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_MELDUNGEN] },
@@ -171,9 +189,31 @@ export const supportErledigtAufraeumen = onDocumentUpdated(
     const vor = event.data?.before.get('status')
     const nach = event.data?.after.get('status')
     if (nach !== 'erledigt' || vor === 'erledigt') return
-    const eintrag = getFirestore().collection(NACHRICHTEN).doc(event.params.id)
-    const ids = ((await eintrag.get()).get('ids') as string[] | undefined) ?? []
-    for (const id of ids) await loeschen(DISCORD_WEBHOOK_SUPPORT.value(), id)
-    await eintrag.delete()
+    await aufraeumen(DISCORD_WEBHOOK_SUPPORT.value(), event.params.id)
+  },
+)
+
+export const verifizierungNachDiscord = onDocumentCreated(
+  { document: 'verifications/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_VERIFIZIERUNG] },
+  async (event) => {
+    if (event.data?.get('status') !== 'wartet') return
+    const id = await senden(DISCORD_WEBHOOK_VERIFIZIERUNG.value(), {
+      title: '🪪 Neue Verifizierungsanfrage',
+      description: 'Ausweis und Selfie warten auf die Prüfung.\n→ Zur Moderation',
+      color: FARBE_VERIFIZIERUNG,
+    })
+    await merken(verifizierungSchluessel(event.params.id), id)
+  },
+)
+
+/** Entschieden, zurückgezogen oder ersetzt: die Nachricht aus #verifizierung entfernen. */
+export const verifizierungErledigtAufraeumen = onDocumentWritten(
+  { document: 'verifications/{id}', region: REGION, secrets: [DISCORD_WEBHOOK_VERIFIZIERUNG] },
+  async (event) => {
+    const vor = event.data?.before
+    const nach = event.data?.after
+    if (!vor?.exists || vor.get('status') !== 'wartet') return
+    if (nach?.exists && nach.get('status') === 'wartet') return
+    await aufraeumen(DISCORD_WEBHOOK_VERIFIZIERUNG.value(), verifizierungSchluessel(event.params.id))
   },
 )
