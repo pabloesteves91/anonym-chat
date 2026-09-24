@@ -7,6 +7,7 @@ import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
 import { ABBRUCH_URL, ERFOLG_URL, TARIFE, TESTZAHLER, darfBezahlen, istEingerichtet, istTestschluessel, istPlanId, preisFuer, type PlanId } from './tarife.js'
 import { gutschein, rabattFuer } from './aktion.js'
+import { sitzungErstellen } from './checkout.js'
 import { DISCORD_WEBHOOK_PAYMENTS, aboEndeEintrag, testkaufEintrag, zahlungEintrag, zahlungMelden } from './zahlungen.js'
 import { TESTKAUF_PLAN } from './testkauf.js'
 
@@ -74,7 +75,7 @@ export const createCheckoutSession = onCall(
       const kasse = stripe()
       // Aktionen: der beste laufende Rabatt für diesen Tarif, samt Gutschein.
       const rabatt = await rabattFuer(plan, (request.data ?? {}).code)
-      const sitzung = await kasse.checkout.sessions.create({
+      const sitzung = await sitzungErstellen(kasse, {
         mode: abo ? 'subscription' : 'payment',
         line_items: [{ price: preisFuer(plan, STRIPE_SECRET_KEY.value()), quantity: 1 }],
         ...(rabatt ? { discounts: [{ coupon: await gutschein(kasse, rabatt) }] } : {}),

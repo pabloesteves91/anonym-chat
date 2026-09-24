@@ -3,6 +3,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { logger } from 'firebase-functions'
 import Stripe from 'stripe'
 import { ABBRUCH_URL, ERFOLG_URL, TESTZAHLER, istTestschluessel } from './tarife.js'
+import { sitzungErstellen } from './checkout.js'
 
 /**
  * TESTKAUF – vorübergehend, auf Zuruf wieder entfernen.
@@ -38,7 +39,7 @@ export const createTestkauf = onCall(
       const kasse = new Stripe(schluessel, { apiVersion: '2025-02-24.acacia' })
       // Einmalig oder wiederkehrend – so, wie das Produkt in Stripe angelegt ist.
       const preis = await kasse.prices.retrieve(TESTKAUF_PREIS)
-      const sitzung = await kasse.checkout.sessions.create({
+      const sitzung = await sitzungErstellen(kasse, {
         mode: preis.type === 'recurring' ? 'subscription' : 'payment',
         line_items: [{ price: TESTKAUF_PREIS, quantity: 1 }],
         client_reference_id: uid,
