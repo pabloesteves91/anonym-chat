@@ -77,7 +77,7 @@ function BildFeld({
           />
           <figcaption className="text-sm text-muted">
             <span className="block text-ink">Bereit zum Einreichen</span>
-            {Math.round(preview.meta.size / 1024)} KB im Original, verkleinert übermittelt.
+            Original {Math.round(preview.meta.size / 1024)} KB, wird verkleinert hochgeladen.
           </figcaption>
         </figure>
       ) : null}
@@ -106,7 +106,7 @@ function Antragsformular() {
           <Field
             label="Mobilnummer"
             htmlFor="telefon"
-            hint="Pro Nummer ein Konto. Sie ist für andere nie sichtbar und dient nur der Zuordnung."
+            hint="Pro Nummer gibt es ein Konto. Andere sehen deine Nummer nie."
           >
             <input
               id="telefon"
@@ -120,9 +120,8 @@ function Antragsformular() {
             />
           </Field>
           <p className="text-sm text-muted">
-            Es geht eine echte SMS raus. Die Nummer wird dabei fest mit deinem Konto verbunden – dieselbe Nummer lässt
-            sich kein zweites Mal verwenden. Genau daran scheitert der Versuch, eine Sperre mit einem neuen Konto zu
-            umgehen.
+            Du bekommst eine SMS mit einem Code. Danach ist die Nummer fest mit deinem Konto verbunden und lässt sich
+            kein zweites Mal verwenden. So kann niemand eine Sperre einfach mit einem neuen Konto umgehen.
           </p>
           {v.error ? <Note tone="warn">{v.error}</Note> : null}
           <div className="flex flex-wrap items-center gap-3">
@@ -146,9 +145,9 @@ function Antragsformular() {
         >
           <Note>
             Wir haben eine SMS an <span className="font-mono text-ink">{v.phone ? maskPhone(v.phone) : 'deine Nummer'}</span>{' '}
-            geschickt. Sie kann einen Moment brauchen.
+            geschickt. Das kann einen Moment dauern.
           </Note>
-          <Field label="Sechsstelliger Code" htmlFor="code" hint="Steht in der SMS. Kommt nichts an, sende ihn neu.">
+          <Field label="Sechsstelliger Code" htmlFor="code" hint="Keine SMS bekommen? Dann lass dir einen neuen Code schicken.">
             <input
               id="code"
               inputMode="numeric"
@@ -179,14 +178,14 @@ function Antragsformular() {
           <div>
             <h2 className="font-display text-xl font-semibold">Foto des Ausweises</h2>
             <p className="mt-1 text-sm text-muted">
-              Pass, ID oder Führerausweis, gut ausgeleuchtet und vollständig im Bild. Die Prüfung schaut auf Name,
-              Geburtsdatum und Gültigkeit – nichts davon wird im Profil angezeigt.
+              Pass, ID oder Führerausweis, gut ausgeleuchtet und vollständig im Bild. Wir prüfen Name, Geburtsdatum
+              und Gültigkeit. Nichts davon erscheint in deinem Profil.
             </p>
           </div>
           <BildFeld
             id="ausweis"
             label="Ausweisfoto aufnehmen oder wählen"
-            hint="JPEG oder PNG, maximal 12 MB. Das Bild bleibt auf diesem Gerät."
+            hint="JPEG oder PNG, höchstens 12 MB. Bis du einreichst, bleibt das Bild auf diesem Gerät."
             preview={v.ausweis}
             busy={v.busy}
             onPick={(file) => void v.pickImage('ausweis', file)}
@@ -208,7 +207,7 @@ function Antragsformular() {
           <div>
             <h2 className="font-display text-xl font-semibold">Selfie mit Ausweis</h2>
             <p className="mt-1 text-sm text-muted">
-              Halte den Ausweis neben dein Gesicht, beides scharf und lesbar. So sieht die Prüfung, dass Dokument und
+              Halte den Ausweis neben dein Gesicht. Beides muss scharf und lesbar sein. So sehen wir, dass Ausweis und
               Person zusammengehören.
             </p>
           </div>
@@ -235,10 +234,10 @@ function Antragsformular() {
       {v.step === 'pruefen' ? (
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="font-display text-xl font-semibold">Absenden zur Prüfung</h2>
+            <h2 className="font-display text-xl font-semibold">Zur Prüfung absenden</h2>
             <p className="mt-1 text-sm text-muted">
-              Ein Mensch aus dem Moderationsteam sieht sich die beiden Bilder an und entscheidet. Bis dahin ist der Chat
-              gesperrt.
+              Jemand aus der Moderation sieht sich die beiden Bilder an und entscheidet. Bis dahin kannst du noch nicht
+              chatten.
             </p>
           </div>
 
@@ -286,7 +285,7 @@ function Antragsformular() {
               className="mt-1 accent-[var(--accent)]"
             />
             <span>
-              Ich bin mindestens 18 Jahre alt, die Bilder zeigen mich und mein eigenes Dokument. Falschangaben führen
+              Ich bin mindestens 18 Jahre alt. Die Bilder zeigen mich und meinen eigenen Ausweis. Falsche Angaben führen
               zur dauerhaften Sperre.
             </span>
           </label>
@@ -349,14 +348,14 @@ export function Verify() {
             Von der Moderation freigegeben am {datum(user.verifiedAt)}
           </p>
           <p className="mt-3 text-sm text-muted">
-            Dein Anzeigename gegenüber anderen ist <span className="font-mono text-ink">{user.pseudonym}</span>.
+            Andere sehen dich als <span className="font-mono text-ink">{user.pseudonym}</span>.
             {user.phone ? (
               <>
                 {' '}
                 Hinterlegte Nummer: <span className="font-mono text-ink">{maskPhone(user.phone)}</span>.
               </>
             ) : null}{' '}
-            Die eingereichten Bilder wurden nach dem Entscheid verworfen.
+            Die eingereichten Bilder wurden nach dem Entscheid gelöscht.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button variant="primary" onClick={() => navigate('/chat')}>
@@ -369,7 +368,7 @@ export function Verify() {
         </Panel>
 
         <div className="mt-6">
-          <Kontokennung id={user.id} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
+          <Kontokennung id={user.id} hinweis="Andere sehen sie nie. Du brauchst sie, wenn du dich beim Support meldest. Und sie zeigt dir, mit welchem Konto du gerade angemeldet bist." />
         </div>
       </div>
     )
@@ -381,8 +380,8 @@ export function Verify() {
         <div className="prose-column">
           <PageTitle kicker="Eingereicht">In Prüfung</PageTitle>
           <p className="text-muted">
-            Ein Mensch schaut sich Ausweis und Selfie an. Das dauert in der Praxis Minuten bis Stunden – automatisch
-            freigeschaltet wird hier nichts.
+            Ein Mensch sieht sich Ausweis und Selfie an. Das dauert meist zwischen ein paar Minuten und einigen Stunden.
+            Automatisch freigeschaltet wird niemand.
           </p>
         </div>
 
@@ -403,8 +402,8 @@ export function Verify() {
           </dl>
           <div className="mt-5">
             <Note>
-              Dein Antrag liegt bei der Moderation. Sobald jemand entschieden hat, ändert sich der Status hier von
-              selbst – die Seite fragt alle paar Sekunden nach.
+              Dein Antrag liegt bei der Moderation. Sobald entschieden ist, siehst du es hier. Die Seite aktualisiert
+              sich von selbst.
             </Note>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
@@ -415,7 +414,7 @@ export function Verify() {
           </div>
         </Panel>
 
-        <Kontokennung id={user?.id ?? ''} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
+        <Kontokennung id={user?.id ?? ''} hinweis="Andere sehen sie nie. Du brauchst sie, wenn du dich beim Support meldest. Und sie zeigt dir, mit welchem Konto du gerade angemeldet bist." />
       </div>
     )
   }
@@ -426,7 +425,7 @@ export function Verify() {
         <div className="prose-column">
           <PageTitle kicker="Entschieden">Antrag abgelehnt</PageTitle>
           <p className="text-muted">
-            Die Prüfung konnte deine Angaben nicht bestätigen. Du kannst es mit besseren Aufnahmen erneut versuchen.
+            Wir konnten deine Angaben nicht bestätigen. Versuch es mit besseren Fotos noch einmal.
           </p>
         </div>
         <Panel className="p-5">
@@ -440,7 +439,7 @@ export function Verify() {
           </div>
         </Panel>
 
-        <Kontokennung id={user?.id ?? ''} hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist." />
+        <Kontokennung id={user?.id ?? ''} hinweis="Andere sehen sie nie. Du brauchst sie, wenn du dich beim Support meldest. Und sie zeigt dir, mit welchem Konto du gerade angemeldet bist." />
       </div>
     )
   }
@@ -450,9 +449,9 @@ export function Verify() {
       <div className="prose-column">
         <PageTitle kicker="Einmalig, vor dem ersten Chat">Verifizierung</PageTitle>
         <p className="text-muted">
-          Drei Dinge: eine Mobilnummer per SMS bestätigen, ein Foto des Ausweises und ein Selfie damit. Anschliessend
-          prüft ein Mensch die Angaben. Danach bist du gegenüber anderen wieder anonym – sichtbar bleibt nur, dass die
-          Prüfung stattgefunden hat.
+          Du bestätigst deine Mobilnummer per SMS und lädst ein Foto deines Ausweises und ein Selfie mit dem Ausweis
+          hoch. Danach prüft ein Mensch die Angaben. Im Chat bleibst du anonym. Andere sehen nur, dass du verifiziert
+          bist.
         </p>
       </div>
 
@@ -460,13 +459,13 @@ export function Verify() {
 
       <Kontokennung
         id={user?.id ?? ''}
-        hinweis="Andere Nutzende sehen sie nie. Gebraucht wird sie nur bei Rückfragen – und um zu erkennen, mit welchem Konto du gerade angemeldet bist."
+        hinweis="Andere sehen sie nie. Du brauchst sie, wenn du dich beim Support meldest. Und sie zeigt dir, mit welchem Konto du gerade angemeldet bist."
       />
 
       <Note>
-        Die Fotos werden verkleinert und verschlüsselt an unseren Dateispeicher in Frankfurt übertragen. Lesen kann sie
-        dort nur die Moderation; unmittelbar nach dem Entscheid werden sie gelöscht. Dauerhaft in deinem Browser liegt
-        keines der beiden Bilder.
+        Die Fotos werden verkleinert und verschlüsselt in unseren Speicher in Frankfurt hochgeladen. Ansehen kann sie
+        dort nur die Moderation. Direkt nach dem Entscheid werden sie gelöscht. In deinem Browser wird keines der
+        Bilder dauerhaft gespeichert.
       </Note>
 
       {/* Anker der unsichtbaren Sicherheitsprüfung vor dem SMS-Versand. */}

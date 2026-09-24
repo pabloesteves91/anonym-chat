@@ -78,7 +78,7 @@ const DEFAULT_PROFILE: Profile = { language: 'de', ageGroup: '25–34', interest
 
 function uid(): string {
   const id = getFirebaseAuth().currentUser?.uid
-  if (!id) throw new ApiError('Nicht angemeldet.', 'nicht-verifiziert')
+  if (!id) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
   return id
 }
 
@@ -87,10 +87,10 @@ function uebersetze(error: unknown, fallback: string): ApiError {
   if (error instanceof ApiError) return error
   const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
   if (code.includes('permission-denied')) {
-    return new ApiError('Dafür fehlen die Rechte.', 'verweigert')
+    return new ApiError('Dafür hast du keine Berechtigung.', 'verweigert')
   }
   if (code.includes('unavailable') || code.includes('network')) {
-    return new ApiError('Keine Verbindung zur Datenbank.', 'speicher')
+    return new ApiError('Keine Verbindung zum Server. Prüf deine Internetverbindung.', 'speicher')
   }
   // Ein fehlender Index. Nach dem Ausrollen braucht Firebase einige Minuten,
   // um ihn aufzubauen – so lange erscheint diese Meldung, danach nicht mehr.
@@ -102,7 +102,7 @@ function uebersetze(error: unknown, fallback: string): ApiError {
   if (code.startsWith('storage/')) {
     return new ApiError(
       code.includes('unauthorized')
-        ? 'Der Dateispeicher hat den Upload abgelehnt.'
+        ? 'Der Upload wurde abgelehnt.'
         : 'Die Bilder konnten nicht hochgeladen werden.',
       'speicher',
     )
@@ -278,7 +278,7 @@ export async function blockPartner(partnerId: string): Promise<string[]> {
 }
 
 export async function listSelfBlocked(): Promise<string[]> {
-  return fuehreAus(async () => (await ladeUserDoc(uid()))?.selfBlocked ?? [], 'Liste nicht lesbar.')
+  return fuehreAus(async () => (await ladeUserDoc(uid()))?.selfBlocked ?? [], 'Die Liste konnte nicht geladen werden.')
 }
 
 export async function clearSelfBlocked(): Promise<void> {
@@ -293,7 +293,7 @@ export async function updateProfile(profile: Profile): Promise<User> {
     const id = uid()
     await updateDoc(doc(getDb(), PFAD.users, id), { profile })
     const data = await ladeUserDoc(id)
-    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+    if (!data) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
     return toUser(id, data)
   }, 'Profil konnte nicht gespeichert werden.')
 }
@@ -302,7 +302,7 @@ async function setzePseudonym(name: string): Promise<User> {
   const id = uid()
   await updateDoc(doc(getDb(), PFAD.users, id), { pseudonym: name })
   const data = await ladeUserDoc(id)
-  if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+  if (!data) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
   return toUser(id, data)
 }
 
@@ -313,7 +313,7 @@ export async function setPseudonym(name: string): Promise<User> {
     const id = uid()
     const data = await ladeUserDoc(id)
     if (!grenzenFuer({ membership: data?.membership, rolle: rolleFuer(id) }).eigenerName) {
-      throw new ApiError('Einen eigenen Namen gibt es mit Plus. Gratis wird gewürfelt.', 'verweigert')
+      throw new ApiError('Einen eigenen Namen wählen kannst du mit Plus. Gratis bekommst du einen zufälligen.', 'verweigert')
     }
     return await setzePseudonym(name.trim())
   }, 'Name konnte nicht gespeichert werden.')
@@ -323,7 +323,7 @@ export async function regeneratePseudonym(): Promise<User> {
   return fuehreAus(async () => {
     const data = await ladeUserDoc(uid())
     return await setzePseudonym(generatePseudonym(data?.geschlecht ?? null))
-  }, 'Name konnte nicht gewürfelt werden.')
+  }, 'Es konnte kein neuer Name erzeugt werden.')
 }
 
 /* ------------------------------------------------------------ Geschlecht */
@@ -340,7 +340,7 @@ export async function setGeschlecht(geschlecht: Geschlecht): Promise<User> {
   return fuehreAus(async () => {
     const id = uid()
     const data = await ladeUserDoc(id)
-    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+    if (!data) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
     if (data.geschlecht) {
       throw new ApiError('Das lässt sich nur noch über den Support ändern.', 'verweigert')
     }
@@ -432,7 +432,7 @@ export async function listPlanRequests(): Promise<PlanRequest[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(query(collection(getDb(), PFAD.planRequests), orderBy('at', 'desc')))
     return treffer.docs.map((eintrag) => eintrag.data() as PlanRequest)
-  }, 'Tarifwünsche nicht lesbar.')
+  }, 'Die Tarifwünsche konnten nicht geladen werden.')
 }
 
 /**
@@ -446,7 +446,7 @@ export async function registerChatStart(): Promise<{ erlaubt: boolean; verbleibe
   return fuehreAus(async () => {
     const id = uid()
     const data = await ladeUserDoc(id)
-    if (!data) throw new ApiError('Keine Identität vorhanden.', 'nicht-verifiziert')
+    if (!data) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
 
     const grenze = grenzenFuer({ membership: toUser(id, data).membership, rolle: rolleFuer(id) }).chatsProTag
     const tag = heute()
@@ -526,21 +526,21 @@ export async function getMyVerification(): Promise<VerificationRequest | null> {
     const treffer = await getDocs(query(collection(getDb(), PFAD.verifications), where('userId', '==', id)))
     const erster = treffer.docs[0]
     return erster ? toRequest(erster.id, erster.data() as VerificationDoc) : null
-  }, 'Antrag nicht lesbar.')
+  }, 'Der Antrag konnte nicht geladen werden.')
 }
 
 export async function listVerificationRequests(): Promise<VerificationRequest[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(query(collection(getDb(), PFAD.verifications), orderBy('submittedAt', 'desc')))
     return treffer.docs.map((eintrag) => toRequest(eintrag.id, eintrag.data() as VerificationDoc))
-  }, 'Anträge nicht lesbar.')
+  }, 'Die Anträge konnten nicht geladen werden.')
 }
 
 export async function getVerificationImages(requestId: string): Promise<VerificationImages> {
   const antrag = await fuehreAus(async () => {
     const snap = await getDoc(doc(getDb(), PFAD.verifications, requestId))
     return snap.exists() ? (snap.data() as VerificationDoc) : null
-  }, 'Antrag nicht lesbar.')
+  }, 'Der Antrag konnte nicht geladen werden.')
   if (!antrag) return { ausweis: null, selfie: null }
 
   const hole = async (art: 'ausweis' | 'selfie') => {
@@ -678,7 +678,7 @@ export async function listTranscripts(): Promise<ChatTranscript[]> {
       query(collection(getDb(), PFAD.chats), where('expiresAt', '>', Timestamp.now()), orderBy('expiresAt', 'desc')),
     )
     return treffer.docs.map((eintrag) => toTranscript(eintrag.id, eintrag.data() as ChatDoc))
-  }, 'Verläufe nicht lesbar.')
+  }, 'Die Verläufe konnten nicht geladen werden.')
 }
 
 async function protokolliere(transcriptId: string, action: AccessLogEntry['action']): Promise<void> {
@@ -710,7 +710,7 @@ export async function openTranscript(id: string): Promise<ChatTranscript | null>
       }
     })
     return toTranscript(id, snap.data() as ChatDoc, messages)
-  }, 'Verlauf nicht lesbar.')
+  }, 'Der Verlauf konnte nicht geladen werden.')
 }
 
 export async function deleteTranscript(id: string): Promise<ChatTranscript[]> {
@@ -734,7 +734,7 @@ export async function listAccessLog(): Promise<AccessLogEntry[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(query(collection(getDb(), PFAD.accessLog), orderBy('at', 'desc')))
     return treffer.docs.map((eintrag) => eintrag.data() as AccessLogEntry)
-  }, 'Protokoll nicht lesbar.')
+  }, 'Das Protokoll konnte nicht geladen werden.')
 }
 
 /* ------------------------------------------------------------- Meldungen */
@@ -775,7 +775,7 @@ export async function listReports(): Promise<Report[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(query(collection(getDb(), PFAD.reports), orderBy('createdAt', 'desc')))
     return treffer.docs.map((eintrag) => eintrag.data() as Report)
-  }, 'Meldungen nicht lesbar.')
+  }, 'Die Meldungen konnten nicht geladen werden.')
 }
 
 export async function updateReportStatus(id: string, status: ReportStatus): Promise<Report[]> {
@@ -805,7 +805,7 @@ export async function listBlocked(): Promise<string[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(collection(getDb(), PFAD.blocked))
     return treffer.docs.map((eintrag) => eintrag.id)
-  }, 'Sperrliste nicht lesbar.')
+  }, 'Die Sperrliste konnte nicht geladen werden.')
 }
 
 /**
@@ -922,7 +922,7 @@ export async function listSupport(): Promise<SupportAnfrage[]> {
   return fuehreAus(async () => {
     const treffer = await getDocs(query(collection(getDb(), PFAD.support), orderBy('createdAt', 'desc')))
     return treffer.docs.map((eintrag) => eintrag.data() as SupportAnfrage)
-  }, 'Supportanfragen nicht lesbar.')
+  }, 'Die Supportanfragen konnten nicht geladen werden.')
 }
 
 /**
@@ -1115,7 +1115,7 @@ export async function markiereSupportGelesen(anfrageId: string, seite: SupportNa
       doc(getDb(), PFAD.support, anfrageId),
       seite === 'moderation' ? { ungelesenModeration: false } : { ungelesenNutzer: false },
     )
-  }, 'Konnte nicht als gelesen markiert werden.')
+  }, 'Das konnte nicht als gelesen markiert werden.')
 }
 
 /* --------------------------------------------- Offene Vorgänge (laufend) */
@@ -1218,7 +1218,7 @@ export function watchAlleAktionen(onChange: (aktionen: Aktion[]) => void, onFehl
           .map((d) => zuAktion(d.id, d.data() as Partial<Aktion>))
           .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? '') || a.name.localeCompare(b.name)),
       ),
-    (error) => onFehler(uebersetze(error, 'Aktionen nicht lesbar.').message),
+    (error) => onFehler(uebersetze(error, 'Die Aktionen konnten nicht geladen werden.').message),
   )
 }
 
@@ -1279,7 +1279,7 @@ export function watchAlleNeuigkeiten(onChange: (liste: Neuigkeit[]) => void, onF
   return onSnapshot(
     collection(getDb(), PFAD.neuigkeiten),
     (schnappschuss) => onChange(sortiert(schnappschuss.docs.map((d) => zuNeuigkeit(d.id, d.data() as Partial<Neuigkeit>)))),
-    (error) => onFehler(uebersetze(error, 'Neuigkeiten nicht lesbar.').message),
+    (error) => onFehler(uebersetze(error, 'Die Neuigkeiten konnten nicht geladen werden.').message),
   )
 }
 
@@ -1333,5 +1333,5 @@ export async function ladeStatistik(): Promise<Statistik> {
   return fuehreAus(async () => {
     const snap = await getDoc(doc(getDb(), PFAD.statistik, uid()))
     return zuStatistik(snap.data())
-  }, 'Statistik nicht lesbar.')
+  }, 'Die Statistik konnte nicht geladen werden.')
 }

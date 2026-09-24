@@ -29,7 +29,7 @@ function Ended() {
       </p>
       <h2 className="mt-2 font-display text-2xl font-semibold">
         {gemeldet
-          ? 'Danke – die Moderation übernimmt'
+          ? 'Danke. Die Moderation kümmert sich darum.'
           : blockiert
             ? 'Ihr werdet nicht mehr verbunden'
             : vomPartner
@@ -44,20 +44,20 @@ function Ended() {
             {reasonLabel ? ` · ${reasonLabel}` : null}
           </p>
           <Note>
-            Vorgangsnummer <span className="font-mono">{report.id}</span>. Mitgeschickt wurden {report.excerpt.length}{' '}
-            Nachrichten. Die Moderation sieht sie sich an und entscheidet über eine Sperre.
+            Vorgangsnummer <span className="font-mono">{report.id}</span>. Mit der Meldung gingen {report.excerpt.length}{' '}
+            Nachrichten an die Moderation. Sie sieht sie sich an und entscheidet, ob das Konto gesperrt wird.
           </Note>
         </div>
       ) : blockiert ? (
         <p className="mt-2 max-w-prose text-muted">
-          Das Konto ist nur für dich blockiert – die Moderation erfährt davon nichts. Wenn etwas vorgefallen ist, das
-          Konsequenzen haben sollte, ist eine Meldung der richtige Weg. Aufheben lässt sich die Blockierung im Profil.
+          Das Konto ist nur für dich blockiert. Die Moderation erfährt davon nichts. Ist etwas vorgefallen, das
+          Folgen haben sollte, melde es. Die Blockierung kannst du im Profil wieder aufheben.
         </p>
       ) : (
         <p className="mt-2 max-w-prose text-muted">
-          Für dich ist der Verlauf weg – nachlesen kann ihn weder du noch dein Gegenüber. Die Moderation kann ihn bei
-          Verdacht auf Missbrauch noch 72 Stunden lang einsehen, danach wird er automatisch gelöscht. Jeder solche
-          Zugriff wird protokolliert.
+          Der Chat ist weg. Weder du noch dein Gegenüber kann ihn nochmals lesen. Bei Verdacht auf Missbrauch kann
+          die Moderation ihn noch 72 Stunden lang einsehen, danach wird er automatisch gelöscht. Jeder Zugriff wird
+          protokolliert.
         </p>
       )}
 
@@ -110,19 +110,18 @@ export function Chat() {
         <div className="prose-column">
           <PageTitle kicker="Beide Seiten verifiziert">Chat</PageTitle>
           <p className="text-muted">
-            Gesprächspartner sind zufällig. Sichtbar ist beidseitig nur der Anzeigename – und dass die Gegenseite die
-            Verifizierung durchlaufen hat.
+            Wen du triffst, ist Zufall. Ihr seht voneinander nur den Anzeigenamen und dass ihr beide verifiziert
+            seid.
           </p>
         </div>
       ) : null}
 
       {grenzeErreicht ? (
         <Panel className="p-5">
-          <p className="label-caps">Tagesgrenze erreicht</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold">Für heute ist das Gratiskontingent aufgebraucht</h2>
+          <p className="label-caps">Tageslimit erreicht</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold">Deine Gratis-Chats für heute sind aufgebraucht</h2>
           <p className="mt-2 max-w-prose text-muted">
-            Morgen geht es von selbst weiter. Wer nicht warten will, hebt die Grenze mit Plus auf – am Dienst selbst
-            ändert das nichts, nur an der Anzahl.
+            Morgen kannst du wieder chatten. Mit Plus fällt das Limit weg. Sonst ändert sich nichts.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link to="/preise" className={buttonClass('primary')}>

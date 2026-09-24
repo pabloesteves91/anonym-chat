@@ -30,7 +30,7 @@ export function GeschlechtDialog() {
     if (!auswahl) return
     setFehler(null)
     const ok = await setzeGeschlecht(auswahl)
-    if (!ok) setFehler('Die Angabe wurde nicht gespeichert. Bitte erneut versuchen.')
+    if (!ok) setFehler('Die Angabe wurde nicht gespeichert. Versuch es noch einmal.')
   }
 
   return (
@@ -64,13 +64,12 @@ export function GeschlechtDialog() {
       </fieldset>
 
       <Note tone="warn">
-        Diese Angabe lässt sich nur einmal machen. Ändern kann sie danach ausschliesslich der Support – dein
-        Anzeigename hängt daran, und ein Name, der sich beliebig umstellen lässt, sagt nichts mehr aus. Ist sie
-        verrutscht, schreib uns über „Support" unten auf jeder Seite.
+        Du kannst diese Angabe nur einmal machen. Danach kann sie nur noch der Support ändern, weil dein Anzeigename
+        davon abhängt. Hast du dich vertan, schreib uns über „Support" unten auf jeder Seite.
       </Note>
 
       <p className="text-sm text-muted">
-        Gefiltert oder sortiert wird danach nicht: Wer dir zugelost wird, entscheidet die Sprache – und mit Plus die
+        Die Suche filtert nicht danach. Wen du triffst, hängt von der Sprache ab und mit Plus von deinen
         Interessen.
       </p>
 

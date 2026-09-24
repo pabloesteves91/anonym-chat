@@ -83,13 +83,13 @@ export function ReportDialog({
             value={note}
             onChange={(event) => setNote(event.target.value)}
             className={`${inputClass} resize-y`}
-            placeholder="Kurze Beschreibung hilft der Moderation bei der Einordnung."
+            placeholder="Ein paar Worte helfen der Moderation, das einzuordnen."
           />
         </div>
 
         <Note>
-          An die Meldung werden die letzten {excerptCount} Nachrichten angehängt. Der vollständige Verlauf dieses Chats
-          liegt ohnehin 72 Stunden im Moderationsspeicher – die Meldung sorgt dafür, dass ihn jemand ansieht.
+          Die letzten {excerptCount} Nachrichten gehen mit der Meldung mit. Der ganze Chat wird ohnehin 72 Stunden
+          aufbewahrt. Mit deiner Meldung sieht ihn sich jemand an.
         </Note>
 
         {error ? <Note tone="warn">{error}</Note> : null}

@@ -54,10 +54,10 @@ export async function createPreview(
   const maxBytes = optionen.maxBytes ?? MAX_UPLOAD_BYTES
 
   if (!file.type.startsWith('image/')) {
-    throw new ImageError('Bitte ein Bild auswählen (JPEG, PNG oder HEIC als JPEG exportiert).')
+    throw new ImageError('Wähl bitte ein Bild aus: JPEG oder PNG. HEIC vorher als JPEG exportieren.')
   }
   if (file.size > maxBytes) {
-    throw new ImageError(`Das Bild ist zu gross. Bitte eines unter ${Math.round(maxBytes / 1024 / 1024)} MB wählen.`)
+    throw new ImageError(`Das Bild ist zu gross. Wähl eines unter ${Math.round(maxBytes / 1024 / 1024)} MB wählen.`)
   }
 
   const img = await ladeBild(file)

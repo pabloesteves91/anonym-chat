@@ -25,43 +25,43 @@ const VERGLEICH: { merkmal: string; frei: string; plus: string }[] = [
   { merkmal: 'Suche nach Sprache', frei: 'ja', plus: 'ja' },
   { merkmal: 'Suche nach Interessen', frei: '–', plus: 'ja' },
   { merkmal: 'Platz in der Warteschlange', frei: 'normal', plus: 'bevorzugt' },
-  { merkmal: 'Anzeigename', frei: 'gewürfelt', plus: 'frei wählbar' },
+  { merkmal: 'Anzeigename', frei: 'zufällig', plus: 'frei wählbar' },
   { merkmal: 'Verifizierung mit Ausweis', frei: 'ja', plus: 'ja' },
   { merkmal: 'Wortfilter und Warnungen', frei: 'ja', plus: 'ja' },
   { merkmal: 'Melden und Blockieren', frei: 'ja', plus: 'ja' },
   { merkmal: 'Moderation durch Menschen', frei: 'ja', plus: 'ja' },
-  { merkmal: 'Verläufe nach 72 Stunden gelöscht', frei: 'ja', plus: 'ja' },
+  { merkmal: 'Chats nach 72 Stunden gelöscht', frei: 'ja', plus: 'ja' },
 ]
 
 const FRAGEN: { frage: string; antwort: string }[] = [
   {
     frage: 'Ist der Gratistarif eine Testphase?',
     antwort:
-      'Nein. Er ist dauerhaft und vollständig: dieselbe Verifizierung, dieselbe Moderation, dieselben Meldewege. Begrenzt ist nur die Anzahl Gespräche pro Tag.',
+      'Nein, er ist dauerhaft. Verifizierung, Moderation und Meldewege sind dieselben wie bei Plus. Begrenzt ist vor allem die Anzahl Chats pro Tag.',
   },
   {
     frage: 'Warum kostet der eigene Anzeigename etwas?',
     antwort:
-      'Ein gewürfelter Name macht es schwerer, jemanden über mehrere Chats hinweg wiederzuerkennen – das nützt dem Gratistarif eher, als dass es ihm schadet. Wer den Namen selbst setzt, durchläuft weiterhin die Namensprüfung.',
+      'Ein zufälliger Anzeigename erschwert es, jemanden über verschiedene Gespräche hinweg wiederzuerkennen. Auch ein selbst gewählter Name muss die Namensprüfung bestehen.',
   },
   {
     frage: 'Was passiert, wenn mein Abo ausläuft?',
     antwort:
-      'Dein Konto bleibt, wie es ist – nur die Grenze von zehn Chats pro Tag gilt wieder. Verifizierung, Pseudonym und Profil bleiben unberührt.',
+      'Dein Konto bleibt, wie es ist. Nur das Limit von zehn Chats pro Tag gilt wieder. Verifizierung, Anzeigename und Profil bleiben unverändert.',
   },
   {
     frage: 'Wie lange gilt Lifetime?',
     antwort:
-      'Solange es diesen Dienst gibt. Wird er eingestellt, besteht kein Anspruch auf Rückerstattung – das steht so auch in den Nutzungsbedingungen, damit es niemanden überrascht.',
+      'Solange es diesen Dienst gibt. Wird er eingestellt, besteht kein Anspruch auf Rückerstattung. So steht es auch in den Nutzungsbedingungen.',
   },
   {
     frage: 'Bekomme ich mit Plus bevorzugte Behandlung bei einer Meldung?',
     antwort:
-      'Nein. Meldungen werden in der Reihenfolge ihres Eingangs geprüft, und eine Sperre trifft ein bezahltes Konto genauso wie ein gratis genutztes. Erstattet wird in dem Fall nichts.',
+      'Nein. Meldungen werden in der Reihenfolge geprüft, in der sie eingehen. Eine Sperre trifft ein bezahltes Konto genauso wie ein Gratis-Konto. Erstattet wird in diesem Fall nichts.',
   },
   {
     frage: 'Wie erreiche ich den Support?',
-    antwort: `Mit Konto über die Supportseite, sobald du angemeldet bist: Thema wählen, beschreiben, bei Bedarf Bilder anhängen. Die Moderation antwortet dort, falls nötig in einem Chat. Die Seite steht nur Mitgliedern offen – ohne Konto, oder wenn die Anmeldung nicht klappt, schreib an ${BETREIBER.email}.`,
+    antwort: `Wenn du angemeldet bist, über die Supportseite. Du wählst ein Thema, beschreibst dein Anliegen und hängst bei Bedarf Bilder an. Die Moderation antwortet dort, falls nötig in einem Chat. Hast du kein Konto oder klappt die Anmeldung nicht, schreib an ${BETREIBER.email}.`,
   },
 ]
 
@@ -71,7 +71,7 @@ function aktionsFragen(laufend: Aktion[]): { frage: string; antwort: string }[] 
   // Die Fakten, nicht der Werbetext: hier zählt, was genau gilt.
   const saetze = laufend.flatMap((aktion) => hinweis(aktion, Date.now(), false).punkte)
   const schluss =
-    'Danach gilt wieder der eigene Tarif – es verlängert sich nichts von selbst. Überschneiden sich Aktionen, gilt pro Tarif der höchste Rabatt; Rabatte werden nicht zusammengezählt.'
+    'Danach gilt wieder dein eigener Tarif. Es verlängert sich nichts automatisch. Überschneiden sich Aktionen, gilt pro Tarif der höchste Rabatt. Rabatte werden nicht zusammengezählt.'
   return [{ frage: 'Was gilt während der laufenden Aktion?', antwort: `${saetze.join(' ')} ${schluss}` }]
 }
 
@@ -165,7 +165,7 @@ function Karte({
         ) : aktiv ? (
           <p className="text-sm text-muted">Läuft bereits.</p>
         ) : gewaehlt ? (
-          <p className="text-sm text-accent-strong">Wunsch ist notiert.</p>
+          <p className="text-sm text-accent-strong">Dein Wunsch ist notiert.</p>
         ) : (
           <Button size="sm" variant={plan.empfohlen ? 'primary' : 'secondary'} disabled={busy} onClick={onWaehlen}>
             {laeuft
@@ -174,7 +174,7 @@ function Karte({
                 ? 'Gratis nutzen'
                 : kasseOffen
                   ? `Für ${rappenText(rabatt ? rabattiert(plan.preisRappen, rabatt.prozent) : plan.preisRappen)} buchen`
-                  : 'Diesen Tarif möchte ich'}
+                  : 'Diesen Tarif wählen'}
           </Button>
         )}
       </div>
@@ -197,7 +197,7 @@ function GutscheinFeld() {
       <div className="prose-column flex flex-wrap items-center gap-3 rounded-sm border border-accent/45 bg-accent-soft px-4 py-3 text-sm">
         <span>
           Code <strong className="font-mono">{gutschein.code}</strong> eingelöst: −{gutschein.rabattProzent} % auf{' '}
-          {tarifeText(gutschein.tarife)}. Gilt ein anderer Rabatt höher, zählt der höhere.
+          {tarifeText(gutschein.tarife)}. Ist ein anderer Rabatt höher, gilt der höhere.
         </span>
         <Button size="sm" variant="quiet" onClick={entfernen}>
           Entfernen
@@ -285,17 +285,17 @@ export function Preise() {
   return (
     <div className="flex flex-col gap-10">
       <div className="prose-column">
-        <PageTitle kicker="Tarife">Gratis nutzbar, bezahlt bequemer</PageTitle>
+        <PageTitle kicker="Tarife">Gratis chatten. Mit Plus flexibler.</PageTitle>
         <p className="text-muted">
-          Verifizierung, Moderation und Meldewege sind in jedem Tarif gleich – daran wird nicht gespart, das ist der
-          Dienst. Bezahlt wird für mehr Gespräche und gezielteres Suchen, nicht für mehr Sicherheit.
+          Verifizierung, Moderation und Meldewege sind in jedem Tarif gleich. Mit Plus bezahlst du für mehr Chats und
+          eine gezieltere Suche, nicht für mehr Sicherheit.
         </p>
       </div>
 
       {zahlung === 'erfolgreich' ? (
         <Note>
-          Danke – die Zahlung ist bei Stripe eingegangen. Der Zugang wird freigeschaltet, sobald die Bestätigung bei
-          uns ankommt; das dauert in der Regel Sekunden. Steht dein Tarif gleich noch nicht hier, lade die Seite neu.
+          Danke, deine Zahlung ist bei Stripe eingegangen. Sobald die Bestätigung bei uns ankommt, wird dein Tarif
+          freigeschaltet. Das dauert meist nur Sekunden. Steht er noch nicht hier, lade die Seite neu.
         </Note>
       ) : null}
       {zahlung === 'abgebrochen' ? <Note tone="warn">Die Zahlung wurde abgebrochen. Es wurde nichts belastet.</Note> : null}
@@ -305,8 +305,8 @@ export function Preise() {
 
       {imBetrieb ? (
         <Note>
-          Dein Konto betreibt den Dienst und hat keine Tarifgrenzen. Die Übersicht bleibt hier, damit du siehst, was
-          anderen angeboten wird.
+          Dein Konto gehört zum Betrieb und hat keine Tarifgrenzen. Die Übersicht siehst du trotzdem, damit du weisst,
+          was andere angeboten bekommen.
         </Note>
       ) : null}
 
@@ -332,10 +332,10 @@ export function Preise() {
 
       <section aria-labelledby="vergleich">
         <h2 id="vergleich" className="font-display text-2xl font-semibold">
-          Was sich unterscheidet – und was nicht
+          Was sich unterscheidet und was nicht
         </h2>
         <p className="mt-2 max-w-prose text-muted">
-          Die untere Hälfte dieser Tabelle ist der eigentliche Punkt: Sicherheit gibt es nicht gegen Aufpreis.
+          Bei der Sicherheit gibt es keinen Unterschied zwischen Gratis und Plus.
         </p>
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[30rem] border-collapse text-sm">
@@ -385,15 +385,13 @@ export function Preise() {
       <div className="prose-column flex flex-col gap-4">
         {kasseOffen ? (
           <Note>
-            Bezahlt wird über Stripe – Karte, TWINT, Apple Pay und Google Pay. Wir sehen deine Zahlungsdaten nie; sie
-            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung über die Supportseite oder an <span className="font-mono">{BETREIBER.email}</span>.
+            Du bezahlst über Stripe mit Karte, TWINT, Apple Pay oder Google Pay. Deine Kartendaten sehen wir nicht, sie
+            liegen beim Zahlungsanbieter. Fragen zu einer Zahlung stellst du über die Supportseite oder per Mail an <span className="font-mono">{BETREIBER.email}</span>.
           </Note>
         ) : (
           <Note tone="warn">
-            <strong>Die Kasse fehlt noch.</strong> Zahlen lässt sich hier im Moment nicht: Eine Bezahlung braucht
-            einen Server, der die Quittung des Zahlungsanbieters prüft – ein Browser darf über einen bezahlten Zugang
-            nicht selbst entscheiden. Wer oben einen bezahlten Tarif wählt, hinterlässt deshalb einen Wunsch;
-            freigeschaltet wird er von Hand. Fragen dazu über die Supportseite oder an <span className="font-mono">{BETREIBER.email}</span>.
+            <strong>Bezahlen ist noch nicht möglich.</strong> Wählst du oben einen bezahlten Tarif, notieren wir deinen
+            Wunsch und schalten ihn von Hand frei. Fragen dazu über die Supportseite oder per Mail an <span className="font-mono">{BETREIBER.email}</span>.
           </Note>
         )}
 

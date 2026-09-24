@@ -41,7 +41,7 @@ export const INTEREST_GRUPPEN = [
   { titel: 'Genuss und Alltag', interessen: ['Kochen', 'Backen', 'Kaffee', 'Mode', 'Wohnen', 'Tiere'] },
   { titel: 'Technik und Spiel', interessen: ['Technik', 'Games', 'Programmieren', 'Wissenschaft', 'Brettspiele', 'Anime'] },
   { titel: 'Welt und Gesellschaft', interessen: ['Reisen', 'Politik', 'Sprachen', 'Umwelt', 'Philosophie', 'Psychologie'] },
-  { titel: 'Kreativ und Persönlich', interessen: ['Schreiben', 'Handwerk', 'Achtsamkeit', 'Karriere'] },
+  { titel: 'Kreativ und persönlich', interessen: ['Schreiben', 'Handwerk', 'Achtsamkeit', 'Karriere'] },
 ] as const
 
 export const INTERESTS = INTEREST_GRUPPEN.flatMap((gruppe) => gruppe.interessen)
@@ -226,7 +226,7 @@ export const REPORT_REASONS: { value: ReportReason; label: string; hint: string 
     label: 'Person ist minderjährig',
     hint: 'Hinweise darauf, dass das Gegenüber unter 18 ist.',
   },
-  { value: 'sonstiges', label: 'Sonstiges', hint: 'Passt in keine der Kategorien.' },
+  { value: 'sonstiges', label: 'Sonstiges', hint: 'Passt zu keiner der anderen Kategorien.' },
 ]
 
 export type ReportStatus = 'offen' | 'geprueft' | 'gesperrt'

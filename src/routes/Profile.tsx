@@ -55,10 +55,10 @@ export function Profile() {
   return (
     <div className="flex flex-col gap-6">
       <div className="prose-column">
-        <PageTitle kicker="Sichtbar ist nur, was hier steht">Profil</PageTitle>
+        <PageTitle kicker="Dein Konto">Profil</PageTitle>
         <p className="text-muted">
-          Kein Klarname, kein Foto, keine Biografie. Die Angaben unten dienen ausschliesslich dem Matching und lassen
-          sich jederzeit ändern.
+          Kein Klarname, kein Foto, keine Biografie. Andere sehen von dir nur den Anzeigenamen. Die übrigen Angaben
+          siehst nur du, und du kannst sie jederzeit ändern.
         </p>
       </div>
 
@@ -66,8 +66,8 @@ export function Profile() {
         <div>
           <p className="label-caps">Anzeigename</p>
           <p className="mt-1 text-sm text-muted">
-            Das – und nur das – sieht dein Gegenüber im Chat. Nimm nicht deinen echten Namen, und schreib keine
-            Kontaktdaten hinein: Der Name steht über jedem Gespräch, das du führst.
+            Diesen Namen sieht dein Gegenüber im Chat. Nimm nicht deinen echten Namen und schreib keine Kontaktdaten
+            hinein. Der Name steht über jedem Gespräch.
           </p>
         </div>
 
@@ -124,8 +124,8 @@ export function Profile() {
 
         {user.geschlecht ? (
           <p className="text-sm text-muted">
-            Gebildet als {GESCHLECHTER.find((g) => g.value === user.geschlecht)?.label.toLowerCase()}er Name. Diese
-            Angabe hast du einmal gemacht; ändern lässt sie sich nur über den{' '}
+            Dein Name wird in der {GESCHLECHTER.find((g) => g.value === user.geschlecht)?.label.toLowerCase()}en Form
+            gebildet. Ändern kannst du das nur über den{' '}
             <Link to="/support" className="underline underline-offset-2 hover:text-ink">
               Support
             </Link>
@@ -135,8 +135,8 @@ export function Profile() {
 
         {darfUmbenennen ? null : (
           <p className="text-sm text-muted">
-            Im Gratistarif wird der Name gewürfelt – das hält den Namensraum sauber und macht Wiedererkennung
-            schwerer.{' '}
+            Gratis bekommst du einen zufälligen Namen. Das erschwert es, dich über verschiedene Gespräche hinweg
+            wiederzuerkennen.{' '}
             <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
               Mit Plus frei wählbar
             </Link>
@@ -159,10 +159,10 @@ export function Profile() {
         </div>
         <p className="text-sm text-muted">
           {imBetrieb
-            ? 'Konten, die den Dienst betreiben, haben keine Tarifgrenzen: unbegrenzt Chats, alle Filter, eigener Anzeigename. Bezahlen müsstest du an dich selbst.'
+            ? 'Konten des Betreibers haben keine Tarifgrenzen: unbegrenzt chatten, alle Filter und ein eigener Anzeigename. Ein Tarif ist für dieses Konto nicht nötig.'
             : uebrig === null
-              ? 'Unbegrenzt Chats, Filter nach Interessen, bevorzugt in der Warteschlange.'
-              : `Heute noch ${uebrig} ${uebrig === 1 ? 'Chat' : 'Chats'}. Die Grenze setzt sich um Mitternacht zurück.`}
+              ? 'Unbegrenzt chatten, Filter nach Interessen und Vorrang in der Warteschlange.'
+              : `Heute hast du noch ${uebrig} ${uebrig === 1 ? 'Chat' : 'Chats'}. Um Mitternacht beginnt das Limit von vorn.`}
           {!imBetrieb && user.membership.bis
             ? ` Läuft bis ${new Date(user.membership.bis).toLocaleDateString('de-CH', { dateStyle: 'long' })}.`
             : ''}
@@ -170,7 +170,7 @@ export function Profile() {
         {imBetrieb ? null : (
           <div>
             <Link to="/preise" className={buttonClass(uebrig === null ? 'secondary' : 'primary', 'sm')}>
-              {uebrig === null ? 'Tarife ansehen' : 'Grenze aufheben'}
+              {uebrig === null ? 'Tarife ansehen' : 'Limit aufheben'}
             </Link>
           </div>
         )}
@@ -178,7 +178,7 @@ export function Profile() {
 
       <Kontokennung
         id={user.id}
-        hinweis="Bleibt an deine Verifizierung gebunden und ist im Chat niemals sichtbar. Sie ist der Grund, weshalb eine Sperre nicht durch ein neues Konto umgangen werden kann."
+        hinweis="Sie ist an deine Verifizierung gebunden und im Chat nie sichtbar. Deshalb lässt sich eine Sperre nicht mit einem neuen Konto umgehen."
       />
 
       {user.verified ? <EigeneStatistik /> : null}
@@ -194,7 +194,7 @@ export function Profile() {
           }}
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Sprache" htmlFor="sprache" hint="Bestimmt, wer dir vorgeschlagen wird.">
+            <Field label="Sprache" htmlFor="sprache" hint="Wird für deine Suche voreingestellt.">
               <select
                 id="sprache"
                 className={inputClass}
@@ -243,8 +243,8 @@ export function Profile() {
         <h2 className="font-display text-xl font-semibold">Blockierte Konten</h2>
         <p className="text-sm text-muted">
           {selfBlocked.length === 0
-            ? 'Du hast niemanden blockiert. Im Chat geht das über „Nicht mehr verbinden" – ohne Meldung und ohne dass die Moderation davon erfährt.'
-            : `${selfBlocked.length} ${selfBlocked.length === 1 ? 'Konto wird' : 'Konten werden'} dir nicht mehr zugelost. Sperren durch die Moderation sind davon unabhängig und lassen sich hier nicht aufheben.`}
+            ? 'Du hast niemanden blockiert. Im Chat geht das über „Nicht mehr verbinden". Die Moderation erfährt davon nichts.'
+            : `${selfBlocked.length} ${selfBlocked.length === 1 ? 'Konto wird' : 'Konten werden'} dir nicht mehr zugeteilt. Sperren durch die Moderation haben damit nichts zu tun und lassen sich hier nicht aufheben.`}
         </p>
         {selfBlocked.length > 0 ? (
           <>
@@ -267,9 +267,9 @@ export function Profile() {
       <Panel className="flex flex-col gap-3 p-5">
         <h2 className="font-display text-xl font-semibold">Profil zurücksetzen</h2>
         <Note tone="warn">
-          Setzt Pseudonym, Profil und Verifizierung zurück – du müsstest den Ausweis erneut einreichen. Dein Konto
-          bleibt bestehen, und mit ihm alles, was daran hängt: eine Sperre lässt sich so nicht abschütteln. Ein
-          bezahlter Tarif bleibt ebenfalls erhalten.
+          Das setzt Anzeigename, Profil und Verifizierung zurück. Danach musst du deinen Ausweis neu einreichen. Dein
+          Konto bleibt bestehen, mit allem, was daran hängt. Eine Sperre wirst du so nicht los. Ein bezahlter Tarif
+          bleibt erhalten.
         </Note>
         <div>
           <Button

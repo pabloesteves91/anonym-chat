@@ -28,8 +28,8 @@ function Profilfehler({ meldung }: { meldung: string }) {
     <div className="prose-column">
       <h1 className="font-display text-3xl font-semibold">Dein Profil lässt sich nicht laden</h1>
       <p className="mt-3 text-muted">
-        Du bist angemeldet, aber die Daten zu deinem Konto kommen nicht an. Meistens liegt das an der Verbindung;
-        seltener daran, dass dieses Konto keinen Zugriff hat.
+        Du bist angemeldet, aber die Daten zu deinem Konto kommen nicht an. Meistens liegt das an der
+        Internetverbindung, seltener daran, dass dieses Konto keinen Zugriff hat.
       </p>
       <Panel className="mt-6 flex flex-col gap-4 p-5">
         <Note tone="warn">{meldung}</Note>
@@ -199,7 +199,7 @@ export function AppShell() {
 
           <div className="ml-auto flex items-center gap-2">
             {user ? (
-              <span className="hidden font-mono text-xs text-muted sm:inline" title="Dein Anzeigename gegenüber anderen">
+              <span className="hidden font-mono text-xs text-muted sm:inline" title="Dein Anzeigename im Chat">
                 {user.pseudonym}
               </span>
             ) : null}
@@ -224,7 +224,7 @@ export function AppShell() {
 
       {!storageAvailable ? (
         <p className="border-b border-line bg-signal-soft px-4 py-2 text-center text-sm">
-          Der lokale Speicher ist nicht verfügbar. Die App funktioniert, merkt sich aber nichts über einen Neuladen hinaus.
+          Dein Browser erlaubt keinen lokalen Speicher. NØNE funktioniert trotzdem, vergisst aber Einstellungen, wenn du die Seite neu lädst.
         </p>
       ) : null}
 

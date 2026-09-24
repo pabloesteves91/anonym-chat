@@ -94,7 +94,7 @@ export function TarifDialog() {
     }
     const ok = await choosePlan(auswahl, rabattVon(auswahl)?.aktion.code ?? null)
     if (ok) setBestaetigt(auswahl)
-    else setFehler('Die Auswahl konnte nicht gespeichert werden. Du kannst sie später unter „Tarife" treffen.')
+    else setFehler('Die Auswahl konnte nicht gespeichert werden. Du kannst später unter „Tarife" wählen.')
   }
 
   const bezahlt = bestaetigt !== null && bestaetigt !== 'frei'
@@ -103,12 +103,12 @@ export function TarifDialog() {
     bestaetigt === null
       ? 'Womit möchtest du starten?'
       : bezahlt
-        ? 'Notiert – und ehrlich gesagt'
+        ? 'Dein Wunsch ist notiert'
         : 'Gratis eingerichtet'
 
   const beschreibung =
     bestaetigt === null
-      ? 'Sicherheit, Verifizierung und Moderation sind überall gleich. Die Wahl betrifft nur, wie viel und wie gezielt du chattest.'
+      ? 'Sicherheit, Verifizierung und Moderation sind in jedem Tarif gleich. Du entscheidest nur, wie viel und wie gezielt du chattest.'
       : bezahlt
         ? 'Bezahlen lässt sich hier noch nicht.'
         : 'Du kannst sofort loslegen.'
@@ -119,8 +119,8 @@ export function TarifDialog() {
         <>
           {gratisBis ? (
             <Note>
-              <strong>Aktion:</strong> Bis und mit {datumKurz(gratisBis)} hast du alle Plus-Funktionen gratis – dafür
-              musst du nichts wählen.
+              <strong>Aktion:</strong> Bis und mit {datumKurz(gratisBis)} hast du alle Plus-Funktionen gratis. Du musst
+              dafür nichts auswählen.
             </Note>
           ) : null}
           <fieldset className="flex flex-col gap-2 border-0 p-0">
@@ -175,12 +175,12 @@ export function TarifDialog() {
 
           {auswahl === 'frei' ? null : kasseOffen ? (
             <p className="text-sm text-muted">
-              Weiter geht es bei Stripe – Karte, TWINT, Apple Pay und Google Pay. Danach kommst du hierher zurück.
+              Du bezahlst bei Stripe mit Karte, TWINT, Apple Pay oder Google Pay. Danach kommst du hierher zurück.
             </p>
           ) : (
             <p className="text-sm text-muted">
-              Bezahlen lässt sich hier noch nicht – das braucht einen Server, der die Quittung prüft. Deine Auswahl
-              geht als Wunsch an die Moderation, die den Zugang von Hand freischaltet.
+              Bezahlen ist hier noch nicht möglich. Deine Auswahl geht als Wunsch an die Moderation, die den Zugang von
+              Hand freischaltet.
             </p>
           )}
 
@@ -207,9 +207,9 @@ export function TarifDialog() {
       ) : bezahlt ? (
         <>
           <p className="text-muted">
-            Dein Wunsch liegt bei der Moderation. Freigeschaltet wird er von Hand, sobald die Zahlung eingerichtet ist
-            – wir melden uns dann bei dir. Bis dahin kannst du den Dienst im Gratistarif vollständig nutzen: zehn
-            Chats pro Tag, dieselbe Verifizierung, dieselbe Moderation.
+            Dein Wunsch liegt bei der Moderation. Sobald Bezahlen möglich ist, schalten wir ihn von Hand frei und
+            melden uns bei dir. Bis dahin chattest du gratis: zehn Chats pro Tag, mit derselben Verifizierung und
+            derselben Moderation.
           </p>
           <div>
             <Button type="button" variant="primary" onClick={schliessen}>

@@ -47,11 +47,11 @@ export function Login() {
 
   const passwortVergessen = async () => {
     if (!email.trim()) {
-      setHinweis('Bitte zuerst die E-Mail-Adresse eintragen.')
+      setHinweis('Trag zuerst deine E-Mail-Adresse ein.')
       return
     }
     const ok = await resetPassword(email)
-    if (ok) setHinweis('Wenn es zu dieser Adresse ein Konto gibt, ist die E-Mail unterwegs.')
+    if (ok) setHinweis('Falls es zu dieser Adresse ein Konto gibt, haben wir dir eine E-Mail geschickt.')
   }
 
   const registrieren = modus === 'registrieren'
@@ -61,8 +61,8 @@ export function Login() {
     <div className="prose-column">
       <PageTitle kicker="Konto">{registrieren ? 'Konto anlegen' : 'Anmelden'}</PageTitle>
       <p className="text-muted">
-        Dein Konto bleibt hinter den Kulissen – es verbindet dich mit deiner Verifizierung, damit eine Sperre hält. Im
-        Chat sehen andere davon nichts, weder deinen Namen noch deine Adresse.
+        Dein Konto verknüpft dich mit deiner Verifizierung. So bleibt eine Sperre wirksam. Im Chat sieht niemand
+        etwas davon, weder deinen Namen noch deine Adresse.
       </p>
 
       <Panel className="mt-6 flex flex-col gap-5 p-5">
@@ -108,7 +108,7 @@ export function Login() {
             hint={
               registrieren
                 ? `Mindestens ${MIN_PASSWORT_LAENGE} Zeichen.`
-                : 'Nur für Konten mit Passwort. Über Google oder Apple angelegte Konten haben keines.'
+                : 'Hast du dein Konto mit Google oder Apple angelegt, hast du kein Passwort. Melde dich dann unten an.'
             }
           >
             <input
@@ -172,8 +172,8 @@ export function Login() {
       <div className="mt-6 flex items-start gap-3 text-sm text-muted">
         <ShieldMark className="mt-0.5 h-5 w-5 shrink-0 text-accent-strong" />
         <p>
-          Nach der Anmeldung folgt die einmalige Verifizierung: Mobilnummer per SMS, Ausweisfoto und Selfie. Geprüft
-          wird von Hand, üblicherweise innerhalb weniger Stunden.
+          Nach der Anmeldung verifizierst du dich einmalig mit Mobilnummer, Ausweisfoto und Selfie. Ein Mensch prüft
+          die Angaben, meist innerhalb weniger Stunden.
         </p>
       </div>
     </div>

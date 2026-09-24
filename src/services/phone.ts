@@ -27,17 +27,17 @@ export const RECAPTCHA_CONTAINER_ID = 'recaptcha-anker'
 
 const FEHLERTEXT: Record<string, string> = {
   'auth/invalid-phone-number': 'Diese Nummer sieht nicht nach einer Mobilnummer aus.',
-  'auth/missing-phone-number': 'Bitte eine Mobilnummer eingeben.',
-  'auth/quota-exceeded': 'Im Moment können keine SMS verschickt werden. Bitte später erneut versuchen.',
-  'auth/too-many-requests': 'Zu viele Versuche von hier aus. Bitte später erneut versuchen.',
-  'auth/captcha-check-failed': 'Die Sicherheitsprüfung ist fehlgeschlagen. Seite neu laden und erneut versuchen.',
+  'auth/missing-phone-number': 'Gib bitte eine Mobilnummer ein.',
+  'auth/quota-exceeded': 'Im Moment können wir keine SMS verschicken. Versuch es später noch einmal.',
+  'auth/too-many-requests': 'Zu viele Versuche von diesem Gerät. Versuch es später noch einmal.',
+  'auth/captcha-check-failed': 'Die Sicherheitsprüfung hat nicht geklappt. Lade die Seite neu und versuch es noch einmal.',
   'auth/operation-not-allowed': 'SMS-Bestätigung ist in Firebase nicht aktiviert.',
   'auth/unauthorized-domain': 'Diese Domain ist in Firebase nicht für die Anmeldung freigegeben.',
   'auth/credential-already-in-use': 'Diese Nummer gehört bereits zu einem anderen Konto.',
   'auth/account-exists-with-different-credential': 'Diese Nummer gehört bereits zu einem anderen Konto.',
   'auth/invalid-verification-code': 'Der Code stimmt nicht.',
-  'auth/code-expired': 'Der Code ist abgelaufen. Bitte einen neuen anfordern.',
-  'auth/network-request-failed': 'Keine Verbindung zu Firebase.',
+  'auth/code-expired': 'Der Code ist abgelaufen. Lass dir einen neuen schicken.',
+  'auth/network-request-failed': 'Keine Verbindung zum Server. Prüf deine Internetverbindung.',
 }
 
 function fehler(error: unknown, fallback: string): ApiError {
@@ -86,7 +86,7 @@ export async function requestSmsCode(eingabe: string): Promise<SmsAnfrage> {
   const phone = normalizePhone(eingabe)
   if (!phone) throw new ApiError('Diese Nummer sieht nicht nach einer Mobilnummer aus.', 'ungueltig')
   const konto = getFirebaseAuth().currentUser
-  if (!konto) throw new ApiError('Nicht angemeldet.', 'nicht-verifiziert')
+  if (!konto) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
 
   if (konto.phoneNumber === phone) {
     laufend = null
@@ -97,7 +97,7 @@ export async function requestSmsCode(eingabe: string): Promise<SmsAnfrage> {
     try {
       await unlink(konto, 'phone')
     } catch (error) {
-      throw fehler(error, 'Die bisherige Nummer konnte nicht gelöst werden.')
+      throw fehler(error, 'Die bisherige Nummer konnte nicht entfernt werden.')
     }
   }
 
@@ -113,8 +113,8 @@ export async function requestSmsCode(eingabe: string): Promise<SmsAnfrage> {
 
 export async function confirmSmsCode(code: string): Promise<void> {
   const geputzt = code.replace(/\D/g, '')
-  if (geputzt.length !== 6) throw new ApiError('Der Code besteht aus sechs Ziffern.', 'ungueltig')
-  if (!laufend) throw new ApiError('Es läuft keine Bestätigung. Bitte einen neuen Code anfordern.', 'ungueltig')
+  if (geputzt.length !== 6) throw new ApiError('Der Code hat sechs Ziffern.', 'ungueltig')
+  if (!laufend) throw new ApiError('Es läuft gerade keine Bestätigung. Lass dir einen neuen Code schicken.', 'ungueltig')
 
   try {
     await laufend.confirm(geputzt)

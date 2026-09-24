@@ -40,11 +40,11 @@ const STATUS_STYLE: Record<SupportStatus, string> = {
  */
 const VORWARNUNG: Partial<Record<SupportThema, string>> = {
   'konto-loeschen':
-    'Mit der Löschung verschwinden Profil und Mitgliedschaft. Bestehende Meldungen und Sperren bleiben bestehen – sie wären sonst wirkungslos. Rückgängig machen lässt sich das nicht.',
+    'Wenn wir dein Konto löschen, verschwinden Profil und Mitgliedschaft. Bestehende Meldungen und Sperren bleiben bestehen, sonst wären sie wirkungslos. Die Löschung lässt sich nicht rückgängig machen.',
   geschlecht:
-    'Mit der Korrektur bekommst du einen neuen Anzeigenamen; der alte hängt an der bisherigen Angabe und lässt sich nicht behalten.',
+    'Mit der Korrektur bekommst du einen neuen Anzeigenamen. Den alten kannst du nicht behalten, weil er zur bisherigen Angabe gehört.',
   gesperrt:
-    'Schreib bitte dazu, worum es im Gespräch ging. Wir sehen den Verlauf nur 72 Stunden lang – danach lässt sich eine Sperre nicht mehr überprüfen.',
+    'Schreib bitte dazu, worum es im Gespräch ging. Wir können den Chat nur 72 Stunden lang einsehen. Danach lässt sich eine Sperre nicht mehr überprüfen.',
 }
 
 function Anfragezeile({ anfrage }: { anfrage: SupportAnfrage }) {
@@ -126,12 +126,12 @@ export function Support() {
       try {
         neue.push(await createPreview(datei, { kante: ANHANG_KANTE, maxBytes: ANHANG_MAX_BYTES }))
       } catch (error) {
-        setFehler(error instanceof ImageError ? error.message : 'Das Bild konnte nicht gelesen werden.')
+        setFehler(error instanceof ImageError ? error.message : 'Das Bild konnte nicht geladen werden.')
         return
       }
     }
     if (dateien.length > platz) {
-      setFehler(`Höchstens ${ANHANG_MAX} Bilder – die weiteren wurden nicht übernommen.`)
+      setFehler(`Höchstens ${ANHANG_MAX} Bilder. Die übrigen wurden nicht angehängt.`)
     }
     setAnhaenge((bisher) => [...bisher, ...neue].slice(0, ANHANG_MAX))
   }
@@ -147,7 +147,7 @@ export function Support() {
     }
     const adresse = validateAntwortadresse(antwortAn)
     if (!adresse.ok) {
-      setFehler(adresse.error ?? 'Die Adresse stimmt nicht.')
+      setFehler(adresse.error ?? 'Die E-Mail-Adresse stimmt nicht.')
       return
     }
 
@@ -171,11 +171,11 @@ export function Support() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageTitle kicker="Wir lesen mit">Support</PageTitle>
+      <PageTitle kicker="Wir helfen dir">Support</PageTitle>
 
       <p className="prose-column -mt-4 text-muted">
-        Manches lässt sich im Dienst nicht selbst erledigen – die Geschlechtsangabe zum Beispiel, oder die Löschung
-        deines Kontos. Schreib uns hier, und wir kümmern uns von Hand darum.
+        Manches kannst du nicht selbst erledigen, etwa die Geschlechtsangabe ändern oder dein Konto löschen. Schreib
+        uns hier, dann kümmern wir uns darum.
       </p>
 
       {chats.length > 0 ? (
@@ -205,7 +205,7 @@ export function Support() {
         <Panel className="border-accent/40 bg-accent-soft p-6">
           <h2 className="font-display text-xl font-semibold">Angekommen</h2>
           <p className="mt-2 text-sm">
-            Deine Anfrage „{gesendet.betreff}" liegt uns vor. Wir antworten an{' '}
+            Deine Anfrage „{gesendet.betreff}" ist bei uns angekommen. Wir antworten an{' '}
             <span className="font-mono">{gesendet.antwortAn}</span>. Den Stand siehst du unten.
           </p>
           <div className="mt-4">
@@ -219,7 +219,7 @@ export function Support() {
           <Field
             label="Worum geht es?"
             htmlFor="support-thema"
-            hint={gewaehlt?.hint ?? 'Wähle den Punkt, der am ehesten passt.'}
+            hint={gewaehlt?.hint ?? 'Wähl das Thema, das am besten passt.'}
           >
             <select
               id="support-thema"
@@ -245,7 +245,7 @@ export function Support() {
               maxLength={BETREFF_MAX}
               value={betreff}
               onChange={(event) => aendern(setBetreff)(event.target.value)}
-              placeholder="Kurz gesagt: worum geht es?"
+              placeholder="Worum geht es, kurz gesagt?"
             />
           </Field>
 
@@ -254,7 +254,7 @@ export function Support() {
             htmlFor="support-text"
             hint={
               text.trim().length < TEXT_MIN
-                ? `Mindestens ${TEXT_MIN} Zeichen – je genauer, desto schneller sind wir durch.`
+                ? `Mindestens ${TEXT_MIN} Zeichen. Je genauer du beschreibst, was passiert ist, desto schneller können wir helfen.`
                 : `Noch ${rest} Zeichen frei.`
             }
           >
@@ -265,14 +265,14 @@ export function Support() {
               className={`${inputClass} resize-y`}
               value={text}
               onChange={(event) => aendern(setText)(event.target.value)}
-              placeholder="Was ist passiert, was erwartest du von uns? Adressen, Nummern und Verweise darfst du hineinschreiben – dieses Feld wird nicht gefiltert."
+              placeholder="Was ist passiert, und was sollen wir tun? Adressen, Nummern und Links darfst du hier angeben. Dieses Feld wird nicht gefiltert."
             />
           </Field>
 
           <Field
             label="Anhang"
             htmlFor="support-anhang"
-            hint={`Bildschirmfotos oder abfotografierte Belege, höchstens ${ANHANG_MAX}. Nur Bilder – sie werden vor dem Hochladen verkleinert.`}
+            hint={`Screenshots oder Fotos von Belegen, höchstens ${ANHANG_MAX}. Nur Bilder, sie werden vor dem Hochladen verkleinert.`}
           >
             <div className="flex flex-col gap-3">
               {anhaenge.length > 0 ? (
@@ -311,7 +311,7 @@ export function Support() {
                   }}
                 />
               ) : (
-                <p className="text-sm text-muted">Mehr als {ANHANG_MAX} Bilder gehen nicht. Entferne eines, um ein anderes anzuhängen.</p>
+                <p className="text-sm text-muted">Mehr als {ANHANG_MAX} Bilder gehen nicht. Entfern eines, wenn du ein anderes anhängen willst.</p>
               )}
             </div>
           </Field>
@@ -319,7 +319,7 @@ export function Support() {
           <Field
             label="Antwort an"
             htmlFor="support-antwort"
-            hint="Vorbelegt mit der Adresse deines Kontos. Änderbar, falls du dort nicht mitliest."
+            hint="Die Adresse deines Kontos. Du kannst sie ändern, falls du dort keine Mails liest."
           >
             <input
               id="support-antwort"
@@ -334,7 +334,7 @@ export function Support() {
           <Note as="div">
             <p className="font-medium text-ink">Automatisch mitgeschickt wird:</p>
             <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-5">
-              <li>Deine Kontokennung – damit wir die Anfrage zuordnen können</li>
+              <li>Deine Kontokennung, damit wir die Anfrage zuordnen können</li>
               <li>Dein Anzeigename {user ? <span className="font-mono">({user.pseudonym})</span> : null}</li>
               <li>
                 Dein Verifizierungsstand und dein Tarif
@@ -342,8 +342,8 @@ export function Support() {
               </li>
             </ul>
             <p className="mt-2">
-              Nichts davon bekommen andere Nutzende zu sehen. Dein Ausweisfoto und deine Mobilnummer gehen nicht mit.
-              Angehängte Bilder sieht nur die Moderation; sie werden gelöscht, sobald die Anfrage erledigt ist.
+              Andere sehen nichts davon. Dein Ausweisfoto und deine Mobilnummer gehen nicht mit. Angehängte Bilder
+              sieht nur die Moderation. Sie werden gelöscht, sobald die Anfrage erledigt ist.
             </p>
           </Note>
 
@@ -365,7 +365,7 @@ export function Support() {
             Wird geladen …
           </p>
         ) : eigene.length === 0 ? (
-          <p className="text-sm text-muted">Noch keine. Was du hier schickst, erscheint samt Stand in dieser Liste.</p>
+          <p className="text-sm text-muted">Noch keine. Was du uns schickst, erscheint hier mit dem aktuellen Stand.</p>
         ) : (
           <ul className="flex flex-col gap-px overflow-hidden rounded-sm border border-line bg-line">
             {eigene.map((anfrage) => (
@@ -378,17 +378,17 @@ export function Support() {
       {konto ? (
         <Kontokennung
           id={konto.uid}
-          hinweis="Diese Kennung hängt an jeder Anfrage. Du musst sie nicht abtippen."
+          hinweis="Sie geht automatisch mit jeder Anfrage mit. Du musst sie nicht abtippen."
         />
       ) : null}
 
       <Note as="div">
         <p>
-          Missbrauch im Chat meldest du nicht hier, sondern direkt im Gespräch über „Melden" – dann geht der Auszug
-          mit, und die Moderation kann ihn einordnen.
+          Missbrauch im Chat meldest du nicht hier, sondern direkt im Gespräch über „Melden". Dann geht ein Auszug
+          aus dem Chat mit, und die Moderation kann ihn einordnen.
         </p>
         <p className="mt-2">
-          Kommst du nicht mehr in dein Konto und erreichst diese Seite gar nicht? Dann hilft die Adresse im{' '}
+          Kommst du nicht mehr in dein Konto und damit auch nicht auf diese Seite? Dann schreib an die Adresse im{' '}
           <Link to="/impressum" className="underline underline-offset-2 hover:text-ink">
             Impressum
           </Link>

@@ -27,7 +27,7 @@ export function GespraechsFeedback({ kompakt = false }: { kompakt?: boolean }) {
   return (
     <div className={`rounded-sm border border-line bg-raised p-4 ${kompakt ? 'text-left' : 'mt-5'}`}>
       <p className="font-medium">{kompakt ? 'Wie war dein letztes Gespräch?' : 'Wie war das Gespräch?'}</p>
-      <p className="mt-0.5 text-sm text-muted">Freiwillig. Dein Gegenüber erfährt nichts davon.</p>
+      <p className="mt-0.5 text-sm text-muted">Freiwillig. Dein Gegenüber sieht nicht, wer wie bewertet hat.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {FEEDBACK_WERTE.map((option) => (
           <button

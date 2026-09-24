@@ -92,7 +92,7 @@ export const useAuth = create<AuthState>((set) => ({
       set({ busy: false })
       return true
     } catch (error) {
-      set({ busy: false, error: error instanceof AuthError ? error.message : 'Die E-Mail konnte nicht raus.' })
+      set({ busy: false, error: error instanceof AuthError ? error.message : 'Die E-Mail konnte nicht verschickt werden.' })
       return false
     }
   },

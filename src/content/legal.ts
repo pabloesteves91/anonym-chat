@@ -70,7 +70,7 @@ export const IMPRESSUM: Rechtstext = {
     {
       titel: 'Inhalte melden',
       absaetze: [
-        `Missbrauch, rechtswidrige Inhalte oder Hinweise auf minderjährige Nutzende melden Sie direkt im Chat über "Melden" oder an ${BETREIBER.meldeEmail}. Meldungen werden von Hand geprüft.`,
+        `Missbrauch, rechtswidrige Inhalte oder Hinweise auf minderjährige Nutzende melden Sie direkt im Chat über „Melden“ oder an ${BETREIBER.meldeEmail}. Meldungen werden von Hand geprüft.`,
       ],
     },
     {
@@ -103,7 +103,7 @@ export const DATENSCHUTZ: Rechtstext = {
         'Profil: Pseudonym, Sprache, Altersgruppe. Diese Angaben machen Sie selbst.',
         'Suche: Sprache und die Interessen, nach denen Sie filtern, stehen nur während der Suche in der Warteschlange und werden danach gelöscht.',
         'Gesprächsfeedback: Ihre freiwillige Bewertung eines Gesprächs (gut, neutral, unangenehm). Die bewertete Person sieht sie nie; die Bewertung selbst wird nach sieben Tagen gelöscht. Drei Bewertungen „unangenehm" von drei verschiedenen Personen führen zu einem Hinweis an die Moderation, nie zu einer automatischen Sperre.',
-        'Statistik: Anzahl und Dauer Ihrer Gespräche sowie erhaltene „Gutes Gespräch". Nur Sie sehen sie.',
+        'Statistik: Anzahl und Dauer Ihrer Gespräche sowie die Anzahl erhaltener Bewertungen als „Gutes Gespräch“. Nur Sie sehen sie.',
         'Chatnachrichten: Inhalt, Zeitpunkt und beteiligte Konten.',
         'Meldungen: Grund, Freitext und ein Ausschnitt des gemeldeten Gesprächs.',
         'Supportanfragen: Thema, Betreff, Ihre Beschreibung, die Adresse für die Antwort sowie freiwillig angehängte Bilder. Mitgesendet werden ausserdem Ihre Konto-ID, Ihr Anzeigename, der Stand Ihrer Verifizierung und Ihr Tarif. Eröffnet die Moderation einen Supportchat, kommen die darin geschriebenen Nachrichten dazu; wer auf Seiten des Supports schreibt, wird Ihnen nicht angezeigt.',
@@ -210,7 +210,7 @@ export const AGB: Rechtstext = {
         'Der Gratiszugang ist dauerhaft kostenlos und in der Anzahl Chats pro Tag begrenzt. Bezahlte Zugänge heben diese Grenze auf und schalten zusätzliche Filter frei.',
         'Monats- und Jahresabos verlängern sich automatisch, solange sie nicht vor Ablauf der Laufzeit gekündigt werden. Gekündigt wird im Profil; der Zugang bleibt bis zum Ende der bezahlten Laufzeit bestehen.',
         'Der Lifetime-Zugang gilt für die Dauer des Bestehens dieses Dienstes. Wird der Dienst eingestellt, besteht kein Anspruch auf Rückerstattung über den nicht genutzten Teil eines laufenden Abos hinaus.',
-        'Ein gesetzliches Widerrufsrecht besteht bei digitalen Diensten in der Schweiz nicht. Bei einer Sperre wegen eines Verstosses wird nicht zurückerstattet.',
+        'Ein gesetzliches Widerrufsrecht besteht bei digitalen Diensten in der Schweiz nicht. Bei einer Sperre wegen eines Verstosses wird nichts zurückerstattet.',
       ],
     },
     {

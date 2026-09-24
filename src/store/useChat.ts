@@ -218,7 +218,7 @@ export const useChat = create<ChatState>((set, get) => {
 
       const partner: Partner = { id: treffer.partnerId, pseudonym: treffer.partnerPseudonym }
       const begruessung = systemMessage(
-        `Verbunden mit ${partner.pseudonym}. Beide Seiten sind verifiziert. Der Verlauf wird 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht.`,
+        `Du chattest jetzt mit ${partner.pseudonym}. Ihr seid beide verifiziert. Der Chat wird 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht.`,
       )
 
       set({ status: 'aktiv', roomId: treffer.roomId, partner, messages: [begruessung], letzterChat: null })
@@ -231,7 +231,7 @@ export const useChat = create<ChatState>((set, get) => {
         error:
           error instanceof api.ApiError && error.code === 'verweigert'
             ? error.message
-            : 'Die Suche ist fehlgeschlagen. Bitte erneut versuchen.',
+            : 'Die Suche hat nicht geklappt. Versuch es noch einmal.',
       })
     }
   }
@@ -302,7 +302,7 @@ export const useChat = create<ChatState>((set, get) => {
       try {
         await api.sendRoomMessage(roomId, text)
       } catch (error) {
-        set({ error: error instanceof api.ApiError ? error.message : 'Die Nachricht ging nicht raus.' })
+        set({ error: error instanceof api.ApiError ? error.message : 'Die Nachricht konnte nicht gesendet werden.' })
       }
     },
 

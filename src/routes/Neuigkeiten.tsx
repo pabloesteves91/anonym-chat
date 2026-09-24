@@ -53,8 +53,8 @@ export function Neuigkeiten() {
       <div className="prose-column">
         <PageTitle kicker="Neuigkeiten">Was sich geändert hat</PageTitle>
         <p className="text-muted">
-          Neue Funktionen, Verbesserungen und Behobenes – mit Datum und der Version, in der es dazugekommen ist. Welche
-          Version du gerade hast, steht ganz unten auf jeder Seite.
+          Neue Funktionen, Verbesserungen und behobene Fehler, jeweils mit Datum und Version. Welche Version du gerade
+          hast, steht ganz unten auf jeder Seite.
         </p>
       </div>
 

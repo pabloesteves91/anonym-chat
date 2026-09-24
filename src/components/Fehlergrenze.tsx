@@ -33,7 +33,7 @@ export class Fehlergrenze extends Component<{ children: ReactNode; schluessel?: 
         <p className="label-caps">Fehler</p>
         <h1 className="mt-2 font-display text-2xl font-semibold">Etwas ist schiefgelaufen</h1>
         <p className="mt-2 max-w-prose text-muted">
-          Diese Seite liess sich nicht anzeigen. Meist hilft Neuladen – etwa wenn NØNE gerade aktualisiert wurde.
+          Diese Seite konnte nicht angezeigt werden. Meist hilft es, sie neu zu laden, zum Beispiel wenn NØNE gerade aktualisiert wurde.
         </p>
         <div className="mt-5">
           <Button variant="primary" onClick={() => window.location.reload()}>

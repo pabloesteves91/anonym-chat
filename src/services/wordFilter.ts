@@ -152,7 +152,7 @@ export function validateDisplayName(name: string): { ok: boolean; error?: string
   if (!/^[\p{L}\p{N} .'\-_]+$/u.test(wert)) {
     return { ok: false, error: 'Erlaubt sind Buchstaben, Zahlen, Leerzeichen und . - _' }
   }
-  if (/(.)\1{3,}/u.test(wert)) return { ok: false, error: 'Bitte keine langen Zeichenwiederholungen.' }
+  if (/(.)\1{3,}/u.test(wert)) return { ok: false, error: 'Bitte nicht so viele gleiche Zeichen hintereinander.' }
 
   const verdict = scanText(wert)
   if (verdict) {

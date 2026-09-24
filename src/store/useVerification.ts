@@ -117,7 +117,7 @@ export const useVerification = create<VerificationState>((set, get) => ({
   async submit() {
     const { phone, ausweis, selfie } = get()
     if (!phone || !ausweis || !selfie) {
-      set({ error: 'Es fehlt noch etwas: Nummer, Ausweisfoto oder Selfie.' })
+      set({ error: 'Es fehlt noch die Nummer, das Ausweisfoto oder das Selfie.' })
       return false
     }
     set({ busy: true, error: null })

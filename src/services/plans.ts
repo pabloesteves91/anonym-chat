@@ -38,12 +38,12 @@ export const PLAENE: Plan[] = [
     name: 'Frei',
     preisRappen: 0,
     takt: 'gratis',
-    kurz: 'Alles, was den Dienst ausmacht – mit einer Obergrenze pro Tag.',
+    kurz: 'Alles Wichtige, mit einem Limit pro Tag.',
     vorteile: [
       `${GRATIS_CHATS_PRO_TAG} Chats pro Tag`,
       'Sprache wählbar',
-      'Verifizierung, Meldungen und Sperren wie überall',
-      'Anzeigename wird gewürfelt',
+      'Verifizierung, Meldungen und Sperren wie bei Plus',
+      'Zufälliger Anzeigename',
     ],
   },
   {
@@ -51,11 +51,11 @@ export const PLAENE: Plan[] = [
     name: 'Plus · monatlich',
     preisRappen: 790,
     takt: 'monatlich',
-    kurz: 'Unbegrenzt chatten, gezielter suchen, kürzer warten.',
+    kurz: 'Unbegrenzt chatten, gezielter suchen, schneller dran sein.',
     vorteile: [
       'Unbegrenzt Chats',
-      'Filter nach Interessen und Altersgruppe',
-      'Bevorzugt in der Warteschlange',
+      'Filter nach Interessen',
+      'Vorrang in der Warteschlange',
       'Anzeigename frei wählbar',
       'Monatlich kündbar',
     ],
@@ -65,7 +65,7 @@ export const PLAENE: Plan[] = [
     name: 'Plus · jährlich',
     preisRappen: 6900,
     takt: 'jährlich',
-    kurz: 'Dasselbe wie monatlich, gut ein Viertel günstiger.',
+    kurz: 'Wie monatlich, aber gut ein Viertel günstiger.',
     vorteile: [
       'Alles aus Plus',
       'Entspricht CHF 5.75 pro Monat',
@@ -78,11 +78,11 @@ export const PLAENE: Plan[] = [
     name: 'Lifetime',
     preisRappen: 17900,
     takt: 'einmalig',
-    kurz: 'Einmal zahlen, solange es den Dienst gibt.',
+    kurz: 'Einmal bezahlen und behalten, solange es NØNE gibt.',
     vorteile: [
       'Alles aus Plus, ohne Ablaufdatum',
       'Keine weitere Zahlung',
-      'Gilt auch für später dazukommende Plus-Funktionen',
+      'Auch alle künftigen Plus-Funktionen',
     ],
   },
 ]

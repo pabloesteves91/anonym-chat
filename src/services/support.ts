@@ -26,17 +26,17 @@ export const SUPPORT_THEMEN: { value: SupportThema; label: string; hint: string 
   {
     value: 'geschlecht',
     label: 'Geschlechtsangabe korrigieren',
-    hint: 'Einmal gesetzt, danach nur über uns – dein Anzeigename hängt daran.',
+    hint: 'Du legst sie einmal selbst fest. Danach ändern wir sie für dich, weil dein Anzeigename davon abhängt.',
   },
   {
     value: 'anzeigename',
     label: 'Anzeigename',
-    hint: 'Name gesperrt, unpassend gewürfelt oder Wunsch nach einem neuen.',
+    hint: 'Dein Name wurde gesperrt, passt nicht zu dir oder du willst einen neuen.',
   },
   {
     value: 'konto-loeschen',
     label: 'Konto löschen',
-    hint: 'Profil und Mitgliedschaft verschwinden. Wir führen es von Hand aus.',
+    hint: 'Wir löschen dein Profil und deine Mitgliedschaft von Hand.',
   },
   {
     value: 'tarif',
@@ -46,12 +46,12 @@ export const SUPPORT_THEMEN: { value: SupportThema; label: string; hint: string 
   {
     value: 'gesperrt',
     label: 'Mein Konto ist gesperrt',
-    hint: 'Du hältst die Sperre für einen Irrtum und möchtest sie prüfen lassen.',
+    hint: 'Du hältst die Sperre für einen Fehler und willst sie prüfen lassen.',
   },
   {
     value: 'sonstiges',
     label: 'Etwas anderes',
-    hint: 'Passt in keinen der Punkte darüber.',
+    hint: 'Passt zu keinem der Themen oben.',
   },
 ]
 
@@ -85,12 +85,12 @@ export function validateSupportAnfrage(entwurf: SupportEntwurf): { ok: boolean; 
   }
 
   const betreff = entwurf.betreff.trim()
-  if (!betreff) return { ok: false, error: 'Ein Betreff fehlt.' }
+  if (!betreff) return { ok: false, error: 'Gib einen Betreff ein.' }
   if (betreff.length > BETREFF_MAX) return { ok: false, error: `Betreff: höchstens ${BETREFF_MAX} Zeichen.` }
 
   const text = entwurf.text.trim()
   if (text.length < TEXT_MIN) {
-    return { ok: false, error: `Beschreib es bitte in mindestens ${TEXT_MIN} Zeichen – sonst müssen wir nachfragen.` }
+    return { ok: false, error: `Beschreib dein Anliegen bitte in mindestens ${TEXT_MIN} Zeichen, damit wir nicht nachfragen müssen.` }
   }
   if (text.length > TEXT_MAX) return { ok: false, error: `Beschreibung: höchstens ${TEXT_MAX} Zeichen.` }
 
@@ -106,7 +106,7 @@ export function validateSupportAnfrage(entwurf: SupportEntwurf): { ok: boolean; 
  */
 export function validateAntwortadresse(wert: string): { ok: boolean; error?: string } {
   const adresse = wert.trim()
-  if (!adresse) return { ok: false, error: 'Ohne Adresse können wir nicht antworten.' }
+  if (!adresse) return { ok: false, error: 'Ohne E-Mail-Adresse können wir dir nicht antworten.' }
   if (adresse.length > 120) return { ok: false, error: 'Diese Adresse ist zu lang.' }
   // Bewusst grob: Eine strenge Prüfung weist mehr gültige Adressen ab, als sie
   // ungültige fängt. Ob wirklich jemand antwortet, zeigt erst der Versand.

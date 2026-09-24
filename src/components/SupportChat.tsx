@@ -94,7 +94,7 @@ export function SupportChat({
         ) : nachrichten.length === 0 ? (
           <p className="text-sm text-muted">
             {seite === 'moderation'
-              ? 'Noch nichts geschrieben. Oben bei der Person steht jetzt „Support"; blinken tut es, sobald du schreibst.'
+              ? 'Noch keine Nachrichten. Bei der Person steht oben jetzt „Support". Sobald du schreibst, blinkt es.'
               : 'Der Support hat den Chat eröffnet. Die erste Nachricht kommt gleich.'}
           </p>
         ) : (
@@ -137,7 +137,7 @@ export function SupportChat({
                 void senden()
               }
             }}
-            placeholder={`Nachricht an ${gegenueber} – Enter sendet, Shift+Enter macht eine neue Zeile`}
+            placeholder={`Nachricht an ${gegenueber}. Enter sendet, Shift+Enter macht eine neue Zeile.`}
           />
           <Button variant="primary" disabled={sendet || !entwurf.trim()} onClick={() => void senden()}>
             {sendet ? 'Sendet …' : 'Senden'}

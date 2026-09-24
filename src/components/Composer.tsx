@@ -7,23 +7,23 @@ import type { FilterCategory } from '../services/types'
 const WARNUNG: Record<FilterCategory, { titel: string; text: string }> = {
   sexuell: {
     titel: 'Sexuelle Ansprache',
-    text: 'Ohne ausdrückliches Einverständnis ist das ein Sperrgrund – nicht eine Verwarnung. Viele empfinden solche Nachrichten als Übergriff, auch wenn sie nicht so gemeint sind.',
+    text: 'Sexuelle Nachrichten ohne klare Zustimmung sind hier nicht erlaubt. Das führt zur Sperre, nicht bloss zu einer Verwarnung.',
   },
   minderjaehrig: {
     titel: 'Hinweis auf eine minderjährige Person',
-    text: 'Dieser Dienst ist ab 18. Sexuelle Ansprache gegenüber Minderjährigen ist strafbar und wird zur Anzeige gebracht.',
+    text: 'NØNE ist erst ab 18. Sexuelle Ansprache von Minderjährigen ist strafbar. Wir erstatten Anzeige.',
   },
   drohung: {
     titel: 'Drohung',
-    text: 'Drohungen führen zur sofortigen dauerhaften Sperre und können strafbar sein.',
+    text: 'Drohungen führen sofort zur dauerhaften Sperre und können strafbar sein.',
   },
   beleidigung: {
     titel: 'Beleidigung',
-    text: 'Beschimpfungen sind ein häufiger Meldegrund und führen bei Wiederholung zur Sperre.',
+    text: 'Beschimpfungen werden oft gemeldet. Wer das wiederholt, wird gesperrt.',
   },
   spam: {
     titel: 'Kontaktdaten oder Weiterleitung',
-    text: 'Ausserhalb dieses Chats gilt keine Verifizierung mehr – und niemand kann dir dort helfen.',
+    text: 'Ausserhalb von NØNE gilt keine Verifizierung mehr, und wir können dir dort nicht helfen.',
   },
 }
 
@@ -85,13 +85,13 @@ export function Composer({
           </p>
           <p className="mt-1">{WARNUNG[verdict.category].text}</p>
           <p className="mt-1 text-muted">
-            Der Verlauf ist 72 Stunden für die Moderation einsehbar. Wenn du trotzdem sendest, geschieht das auf
-            deine eigene Verantwortung.
+            Die Moderation kann den Chat 72 Stunden lang einsehen. Wenn du trotzdem sendest, tust du das auf eigene
+            Verantwortung.
           </p>
         </div>
       ) : verdict ? (
         <p className="mb-2 font-mono text-[0.6875rem] tracking-wide text-signal uppercase" aria-live="polite">
-          Hinweis: {verdict.reason}. Diese Nachricht würde markiert.
+          Hinweis: {verdict.reason}. Sendest du sie, wird die Nachricht markiert.
         </p>
       ) : null}
       <div className="flex items-end gap-2">
@@ -110,7 +110,7 @@ export function Composer({
             if (event.target.value.trim()) onTyping?.()
           }}
           onKeyDown={onKeyDown}
-          placeholder="Nachricht schreiben – Enter sendet, Shift+Enter macht eine neue Zeile"
+          placeholder="Nachricht schreiben. Enter sendet, Shift+Enter macht eine neue Zeile."
           className="max-h-32 min-h-[2.75rem] flex-1 resize-y rounded-sm border border-line-strong bg-surface px-3 py-2.5 text-ink placeholder:text-muted"
         />
         <Button

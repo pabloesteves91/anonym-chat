@@ -75,10 +75,10 @@ export function kandidatenFiltern<T extends Wartend>(
 export type Suchstatus = 'neutral' | 'viele' | 'suche' | 'wenige' | 'filterEng'
 
 export const SUCHSTATUS_TEXT: Record<Suchstatus, string> = {
-  neutral: 'Suche nach einem passenden Gespräch …',
-  viele: 'Viele passende Personen verfügbar',
-  suche: 'Suche nach einem passenden Gespräch …',
-  wenige: 'Aktuell wenige passende Personen',
+  neutral: 'Wir suchen jemanden für dich …',
+  viele: 'Gerade suchen viele passende Leute',
+  suche: 'Wir suchen jemanden für dich …',
+  wenige: 'Gerade sind nur wenige passende Leute da',
   filterEng: 'Deine Filter schränken die Suche ein',
 }
 

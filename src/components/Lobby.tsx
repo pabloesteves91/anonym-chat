@@ -56,7 +56,7 @@ export function Lobby() {
       <Panel className="p-5">
       <h2 className="font-display text-2xl font-semibold">Neuer Chat</h2>
       <p className="mt-1 text-sm text-muted">
-        Der Filter ist optional. Je enger er gesetzt ist, desto länger kann die Suche dauern.
+        Der Filter ist freiwillig. Je enger er ist, desto länger kann die Suche dauern.
       </p>
 
       <div className="mt-5 flex flex-col gap-5">
@@ -78,7 +78,7 @@ export function Lobby() {
 
         <fieldset className="border-0 p-0" disabled={!darfFiltern}>
           <legend className="label-caps mb-2">
-            Interessen · mindestens eine Übereinstimmung
+            Interessen · mindestens eine gemeinsame
             {darfFiltern ? null : <span className="ml-2 text-accent-strong">mit Plus</span>}
           </legend>
           <div className={darfFiltern ? '' : 'opacity-50'}>
@@ -86,7 +86,7 @@ export function Lobby() {
           </div>
           {darfFiltern ? null : (
             <p className="mt-2 text-sm text-muted">
-              Im Gratistarif wird nach Sprache gesucht.{' '}
+              Gratis suchst du nach Sprache.{' '}
               <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
                 Tarife ansehen
               </Link>
@@ -131,7 +131,7 @@ export function Lobby() {
         {selfBlocked.length > 0 ? (
           <p className="text-sm text-muted">
             {selfBlocked.length} {selfBlocked.length === 1 ? 'Konto ist' : 'Konten sind'} für dich blockiert und
-            {selfBlocked.length === 1 ? ' wird' : ' werden'} nicht mehr zugelost. Aufheben lässt sich das im Profil.
+            {selfBlocked.length === 1 ? ' wird' : ' werden'} dir nicht mehr zugeteilt. Aufheben kannst du das im Profil.
           </p>
         ) : null}
       </div>

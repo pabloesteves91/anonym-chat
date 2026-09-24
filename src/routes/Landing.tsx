@@ -12,30 +12,30 @@ import { useSession } from '../store/useSession'
 const ABLAUF = [
   {
     titel: 'Konto und Ausweis',
-    text: 'Einmal anmelden, Mobilnummer bestätigen, Ausweisfoto und Selfie hochladen. Ein Mensch prüft die Angaben.',
+    text: 'Du meldest dich an, bestätigst deine Mobilnummer und lädst ein Ausweisfoto und ein Selfie hoch. Ein Mensch prüft die Angaben.',
   },
   {
-    titel: 'Anonym auftreten',
-    text: 'Im Chat siehst du nur einen zufälligen Anzeigenamen – und dass dein Gegenüber dieselbe Prüfung bestanden hat.',
+    titel: 'Anonym bleiben',
+    text: 'Im Chat siehst du nur einen zufälligen Anzeigenamen. Und dass dein Gegenüber ebenfalls verifiziert ist.',
   },
   {
-    titel: 'Reden, wechseln, melden',
-    text: 'Ein Klick verbindet dich mit jemandem. Passt es nicht, gehst du weiter. Wird jemand übergriffig, meldest du ihn.',
+    titel: 'Chatten, weiter, melden',
+    text: 'Ein Klick, und du chattest mit jemandem. Passt es nicht, gehst du weiter. Wird jemand übergriffig, meldest du die Person.',
   },
 ]
 
 const SICHERHEIT = [
   {
-    titel: 'Sperren, die halten',
-    text: 'Hinter jedem Konto steht eine geprüfte Person. Wer gesperrt wird, kommt nicht mit einem neuen Konto zurück.',
+    titel: 'Gesperrt heisst gesperrt',
+    text: 'Hinter jedem Konto steht eine verifizierte Person. Wer gesperrt wird, kann nicht einfach ein neues Konto anlegen.',
   },
   {
-    titel: 'Niemand liest mit',
-    text: 'Verläufe sind für beide Seiten nach dem Chat weg. Zur Missbrauchsprüfung bleiben sie 72 Stunden einsehbar, dann werden sie gelöscht – jeder Zugriff wird protokolliert.',
+    titel: 'Kein Chatverlauf',
+    text: 'Nach dem Gespräch ist der Chat für euch beide weg. Für die Missbrauchsprüfung bewahren wir ihn 72 Stunden auf, dann wird er gelöscht. Jeder Zugriff der Moderation wird protokolliert.',
   },
   {
     titel: 'Du bestimmst, mit wem',
-    text: 'Die Sprache steuert, wer dir zugelost wird, mit Plus zusätzlich die Interessen. Einzelne Konten kannst du dauerhaft ausschliessen, ohne jemanden zu melden.',
+    text: 'Du wählst die Sprache. Mit Plus kannst du zusätzlich nach Interessen suchen. Wen du nicht mehr treffen willst, blockierst du, auch ohne Meldung.',
   },
 ]
 
@@ -60,9 +60,8 @@ export function Landing() {
           Mit echten Menschen.
         </h1>
         <p className="prose-column mt-5 text-lg text-muted">
-          Jede Person hier hat sich ausgewiesen. Gesehen wird davon nichts ausser einem Siegel – das Gegenüber kennt
-          nur einen zufälligen Anzeigenamen. Genau deshalb bleibt es ruhig: Wer sich danebenbenimmt, ist weg und
-          kommt nicht wieder.
+          Alle hier haben sich mit einem Ausweis verifiziert. Im Chat sieht man davon nur ein Siegel und einen
+          zufälligen Anzeigenamen. Wer sich danebenbenimmt, fliegt raus und kommt nicht wieder.
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -162,10 +161,10 @@ export function Landing() {
           Was wir nicht versprechen
         </h2>
         <p className="mt-3 text-muted">
-          Die Verifizierung sagt, dass am anderen Ende eine volljährige, ausgewiesene Person sitzt. Sie sagt nichts
-          darüber, wie diese Person sich verhält. Trotz Wortfilter und Moderation können dir sexuelle, verstörende
-          oder beleidigende Nachrichten begegnen – die Teilnahme geschieht auf eigene Verantwortung. Melden dauert
-          zwei Klicks, und jede Meldung wird von einem Menschen angesehen.
+          Die Verifizierung bestätigt, dass am anderen Ende eine volljährige Person mit geprüftem Ausweis sitzt. Wie
+          sich diese Person verhält, kann sie nicht garantieren. Trotz Wortfilter und Moderation können dir sexuelle,
+          verstörende oder beleidigende Nachrichten begegnen. Du nimmst auf eigene Verantwortung teil. Melden dauert
+          zwei Klicks, und jede Meldung sieht sich ein Mensch an.
         </p>
       </section>
 
@@ -174,7 +173,7 @@ export function Landing() {
           Fragen und Hilfe
         </h2>
         <p className="mt-3 text-muted">
-          Wer ein Konto hat, erreicht uns{' '}
+          Mit Konto erreichst du uns{' '}
           {konto ? (
             <>
               über die{' '}
@@ -190,9 +189,9 @@ export function Landing() {
               </Link>{' '}
               über die Supportseite
             </>
-          )}{' '}
-          – mit Formular, Bildanhang und, wenn nötig, einem Chat mit der Moderation. Der Support ist den Mitgliedern
-          vorbehalten. Ohne Konto, oder wenn du nicht mehr hineinkommst: Schreib eine Mail an{' '}
+          )}
+          . Dort gibt es ein Formular mit Bildanhang und, wenn nötig, einen Chat mit der Moderation. Hast du kein
+          Konto oder kommst du nicht mehr hinein, schreib eine Mail an{' '}
           <span className="font-mono text-ink">{BETREIBER.email}</span>.
         </p>
       </section>
@@ -200,7 +199,7 @@ export function Landing() {
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-accent/40 bg-accent-soft p-6">
         <div>
           <h2 className="font-display text-2xl font-semibold">Bereit?</h2>
-          <p className="mt-1 text-sm text-muted">Die Verifizierung dauert wenige Minuten und ist einmalig.</p>
+          <p className="mt-1 text-sm text-muted">Die Verifizierung machst du nur einmal. Das Einreichen dauert ein paar Minuten.</p>
         </div>
         <Link
           to={ziel}

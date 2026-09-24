@@ -211,7 +211,7 @@ export function hinweis(aktion: Aktion, jetzt = Date.now(), eigenerText = true):
   const punkte: string[] = []
   if (stand.gratis && stand.gratisBis) {
     punkte.push(
-      `Bis und mit ${datumKurz(stand.gratisBis)} alle Plus-Funktionen für jedes Konto – unbegrenzt chatten, Filter, eigener Anzeigename, bevorzugt in der Warteschlange. Ohne Buchung, ohne Zahlungsdaten.`,
+      `Bis und mit ${datumKurz(stand.gratisBis)} hat jedes Konto alle Plus-Funktionen: unbegrenzt chatten, Filter, eigener Anzeigename und Vorrang in der Warteschlange. Du musst nichts buchen und keine Zahlungsdaten angeben.`,
     )
   }
   if (stand.rabatt && stand.rabattBis) {

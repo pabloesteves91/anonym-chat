@@ -64,7 +64,7 @@ function db() {
 
 function meineId(): string {
   const id = getFirebaseAuth().currentUser?.uid
-  if (!id) throw new ApiError('Nicht angemeldet.', 'nicht-verifiziert')
+  if (!id) throw new ApiError('Du bist nicht angemeldet.', 'nicht-verifiziert')
   return id
 }
 
@@ -449,10 +449,10 @@ function uebersetze(error: unknown, fallback: string): ApiError {
   if (error instanceof ApiError) return error
   const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
   if (code.includes('permission-denied')) {
-    return new ApiError('Dafür fehlen die Rechte – ist die Verifizierung freigegeben?', 'verweigert')
+    return new ApiError('Dafür hast du keine Berechtigung. Ist deine Verifizierung schon freigegeben?', 'verweigert')
   }
   if (code.includes('unavailable') || code.includes('network')) {
-    return new ApiError('Keine Verbindung zur Datenbank.', 'speicher')
+    return new ApiError('Keine Verbindung zum Server. Prüf deine Internetverbindung.', 'speicher')
   }
   return new ApiError(fallback, 'speicher')
 }

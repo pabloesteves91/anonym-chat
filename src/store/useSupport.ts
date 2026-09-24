@@ -64,7 +64,7 @@ export const useSupport = create<SupportState>((set, get) => ({
     const offen = get().eigene.filter((a) => a.status !== 'erledigt').length
     if (offen >= OFFEN_MAX) {
       set({
-        error: `Du hast ${offen} unerledigte Anfragen. Wir melden uns darauf – bitte warte die Antwort ab.`,
+        error: `Du hast noch ${offen} offene Anfragen. Warte bitte, bis wir dir geantwortet haben.`,
       })
       return null
     }

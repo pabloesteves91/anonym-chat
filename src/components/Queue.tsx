@@ -43,10 +43,10 @@ export function Queue() {
       <p className="label-caps">Suche läuft</p>
       <h2 className="mt-2 font-display text-2xl font-semibold">Wir verbinden dich mit jemandem</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-        Gesucht wird unter verifizierten Konten
+        Wir suchen unter verifizierten Konten
         {filter.language !== 'egal' ? `, Sprache ${filter.language.toUpperCase()}` : ''}
         {interessenAktiv ? `, Interessen: ${filter.interests.join(', ')}` : ''}
-        {erweitert ? ', ohne Interessenfilter (von dir erweitert)' : ''}.
+        {erweitert ? ', jetzt ohne Interessenfilter' : ''}.
       </p>
 
       <div className="sweep relative mx-auto mt-6 h-0.5 w-full max-w-sm overflow-hidden bg-line" aria-hidden="true" />
@@ -60,8 +60,8 @@ export function Queue() {
         <div className="mx-auto mt-5 max-w-md rounded-sm border border-accent/45 bg-accent-soft p-4 text-left">
           <p className="font-medium">Ohne Interessenfilter weitersuchen?</p>
           <p className="mt-1 text-sm text-muted">
-            Mit deinen Interessen ist gerade niemand passendes da. Die Sprache bleibt, wie du sie gewählt hast, und
-            ausgeschlossene Konten bleiben ausgeschlossen. Beim nächsten Chat gilt wieder dein Filter.
+            Mit deinen Interessen ist gerade niemand da. Die Sprache bleibt, und blockierte Konten bleiben blockiert.
+            Beim nächsten Chat gilt wieder dein Filter.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" variant="primary" onClick={() => void sucheErweitern()}>
@@ -75,8 +75,8 @@ export function Queue() {
       ) : null}
 
       <p className="mx-auto mt-4 max-w-md text-sm text-muted">
-        Hier wartet nichts Simuliertes auf dich: Am anderen Ende sitzt eine verifizierte Person, die ebenfalls gerade
-        sucht. Zu ruhigen Zeiten kann das dauern.
+        Am anderen Ende sitzt eine echte, verifizierte Person, die auch gerade sucht. Zu ruhigen Zeiten kann das
+        etwas dauern.
       </p>
 
       <div className="mx-auto mt-5 max-w-md">
