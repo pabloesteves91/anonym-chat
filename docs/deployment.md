@@ -88,6 +88,36 @@ der Wechsel von `beispiel.ch/#/chat` auf `beispiel.ch/chat`:
 
 Vorher nicht: unter `…github.io/anonym-chat/` würden die Pfade brechen.
 
+## Umzug auf die eigene Domain (Firebase Hosting)
+
+Der Ablauf **Firebase Hosting** (`.github/workflows/firebase-hosting.yml`)
+rollt die App bei jedem Push nach Firebase Hosting aus, mit echten Pfaden
+(`/chat` statt `/#/chat`). Alte `#/`-Links schreibt die App selbst um.
+Erreichbar ist sie sofort unter `https://anonym-chat-223af.web.app`.
+Voraussetzung ist die IAM-Rolle **Firebase Hosting Admin** beim Dienstkonto
+`firebase-adminsdk-…`.
+
+Für die eigene Domain (bei Hostpoint), in dieser Reihenfolge:
+
+1. **Firebase → Hosting → Benutzerdefinierte Domain hinzufügen**: die Domain
+   und `www.` davor (leitet weiter). Firebase zeigt die DNS-Einträge an.
+2. **Hostpoint → Domains → DNS-Editor**: genau diese Einträge setzen und
+   alte A- und AAAA-Einträge für `@` und `www` entfernen. Warten, bis Firebase
+   „Verbunden" und das Zertifikat meldet (Minuten bis 24 Stunden).
+3. **Authentication → Settings → Authorized domains**: die Domain und `www.`.
+4. **Google Cloud → APIs & Services → Credentials → Web client**: als
+   JavaScript origin `https://DOMAIN`, als Redirect URI
+   `https://DOMAIN/__/auth/handler`.
+5. **Apple Developer → Services ID → Sign in with Apple**: als Domain
+   `DOMAIN`, als Return URL `https://DOMAIN/__/auth/handler`.
+6. Falls der API-Schlüssel auf Websites eingeschränkt ist: `https://DOMAIN/*`
+   ergänzen.
+7. Erst dann im Code umstellen: `authDomain` in `src/services/firebase.ts`
+   und `BASIS_URL` in `functions/src/tarife.ts` auf die Domain. GitHub Pages
+   wird danach zur Weiterleitung auf die Domain.
+8. Bei Stripe unter Settings → Business die Website anpassen und im
+   Impressum (`src/content/legal.ts`) die ⚠︎-Platzhalter ersetzen.
+
 ## Alternative: Firebase Hosting
 
 Schneller als GitHub Pages, wenn die Anmeldung getestet werden soll: Die

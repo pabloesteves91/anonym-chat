@@ -19,6 +19,12 @@ useTheme.getState().init()
 // mit `--mode static` auf Hash-Routing umgestellt; lokal bleiben saubere Pfade.
 const Router = import.meta.env.VITE_ROUTER === 'hash' ? HashRouter : BrowserRouter
 
+// Alte Links aus der Zeit mit Hash-Routing (…/#/chat) auf echte Pfade
+// umschreiben, bevor der Router startet – geteilte Links bleiben gültig.
+if (Router === BrowserRouter && window.location.hash.startsWith('#/')) {
+  window.history.replaceState(null, '', window.location.hash.slice(1))
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Router>

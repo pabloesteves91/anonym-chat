@@ -1,0 +1,67 @@
+name: Firebase Hosting
+
+# Rollt die App auf Firebase Hosting aus – mit echten Pfaden (DOMAIN/chat
+# statt …/#/chat). Erreichbar unter anonym-chat-223af.web.app und, sobald in
+# der Firebase-Konsole verbunden, unter der eigenen Domain.
+#
+# Voraussetzung: das Secret FIREBASE_SERVICE_ACCOUNT (dasselbe wie für die
+# Regeln) und beim Dienstkonto die Rolle „Firebase Hosting Admin".
+on:
+  push:
+    branches:
+      - main
+      - claude/busy-galileo-ovdxll
+  workflow_dispatch:
+
+# Nie zwei Auslieferungen gleichzeitig; eine laufende wird abgebrochen.
+concurrency:
+  group: firebase-hosting
+  cancel-in-progress: true
+
+jobs:
+  hosting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Die letzten Fassungen stehen bei den Neuigkeiten zur Auswahl.
+          fetch-depth: 30
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Kaputtes kommt nicht live: Lint, Typprüfung und Tests vor dem Build.
+      - run: npm run lint
+      - run: npm test
+
+      # Normaler Build: echte Pfade, BrowserRouter. Firebase Hosting leitet
+      # jeden Pfad auf index.html (Rewrite in firebase.json).
+      - run: npm run build
+
+      - name: Schlüssel bereitstellen
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT fehlt. Anleitung: docs/deployment.md"
+            exit 1
+          fi
+          printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-key.json" >> "$GITHUB_ENV"
+
+      - id: ausrollen
+        name: Hosting ausrollen
+        run: npx --yes firebase-tools@15 deploy --only hosting --project anonym-chat-223af --non-interactive
+
+      - name: Hinweis bei fehlenden Rechten
+        if: failure() && steps.ausrollen.outcome == 'failure'
+        run: |
+          echo "::error::Ausrollen fehlgeschlagen. Meist fehlt dem Dienstkonto die Rolle „Firebase Hosting Admin“ (Google Cloud → IAM, Konto firebase-adminsdk-…). Siehe docs/deployment.md."
+
+      - name: Schlüssel entfernen
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-key.json"
