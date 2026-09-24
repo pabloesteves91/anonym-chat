@@ -29,7 +29,7 @@ export const BETREIBER = {
 /** Sind die Platzhalter noch drin? Dann zeigt die Seite einen Hinweis. */
 export const BETREIBER_UNVOLLSTAENDIG = Object.values(BETREIBER).some((wert) => wert.includes('⚠︎'))
 
-export const STAND = '21. September 2026'
+export const STAND = '24. September 2026'
 
 export interface Abschnitt {
   titel: string
@@ -97,13 +97,14 @@ export const DATENSCHUTZ: Rechtstext = {
     {
       titel: 'Welche Daten wir verarbeiten',
       liste: [
-        'Kontodaten: E-Mail-Adresse und die Kennung Ihres Anmeldedienstes (Google oder Apple). Grundlage ist die Erfüllung des Nutzungsvertrags.',
+        'Kontodaten: E-Mail-Adresse und, je nach Anmeldeart, Ihr Passwort (von Firebase nur als Hash gespeichert, nie im Klartext) oder die Kennung Ihres Anmeldedienstes (Google oder Apple). Grundlage ist die Erfüllung des Nutzungsvertrags.',
         'Mobilnummer: zur Bestätigung per SMS und damit eine Sperre nicht durch ein neues Konto umgangen werden kann.',
         'Ausweisfoto und Selfie: ausschliesslich zur einmaligen Alters- und Identitätsprüfung.',
         'Profil: Pseudonym, Sprache, Altersgruppe. Diese Angaben machen Sie selbst.',
         'Suche: Sprache und die Interessen, nach denen Sie filtern, stehen nur während der Suche in der Warteschlange und werden danach gelöscht.',
         'Gesprächsfeedback: Ihre freiwillige Bewertung eines Gesprächs (gut, neutral, unangenehm). Die bewertete Person sieht sie nie; die Bewertung selbst wird nach sieben Tagen gelöscht. Drei Bewertungen „unangenehm" von drei verschiedenen Personen führen zu einem Hinweis an die Moderation, nie zu einer automatischen Sperre.',
         'Statistik: Anzahl und Dauer Ihrer Gespräche sowie die Anzahl erhaltener Bewertungen als „Gutes Gespräch“. Nur Sie sehen sie.',
+        'Zahlungen: gewählter Tarif, Betrag und Laufzeit. Karten- und andere Zahlungsdaten geben Sie direkt bei Stripe ein; wir erhalten sie nicht.',
         'Chatnachrichten: Inhalt, Zeitpunkt und beteiligte Konten.',
         'Meldungen: Grund, Freitext und ein Ausschnitt des gemeldeten Gesprächs.',
         'Supportanfragen: Thema, Betreff, Ihre Beschreibung, die Adresse für die Antwort sowie freiwillig angehängte Bilder. Mitgesendet werden ausserdem Ihre Konto-ID, Ihr Anzeigename, der Stand Ihrer Verifizierung und Ihr Tarif. Eröffnet die Moderation einen Supportchat, kommen die darin geschriebenen Nachrichten dazu; wer auf Seiten des Supports schreibt, wird Ihnen nicht angezeigt.',
@@ -130,10 +131,11 @@ export const DATENSCHUTZ: Rechtstext = {
     {
       titel: 'Auftragsverarbeiter',
       absaetze: [
-        'Wir betreiben NØNE auf Google Firebase (Authentifizierung, Datenbank, Dateispeicher). Die Datenbank liegt in der Region "eur3" (Europa), der Dateispeicher in "europe-west3" (Frankfurt).',
+        'Wir betreiben NØNE auf Google Firebase (Authentifizierung, Datenbank, Dateispeicher, Serverfunktionen). Die Datenbank liegt in der Region "eur3" (Europa), der Dateispeicher in "europe-west3" (Frankfurt), die Serverfunktionen laufen in "europe-west1" (Belgien) und "europe-west6" (Zürich).',
         'Für den SMS-Versand wird Firebase Phone Authentication eingesetzt; dabei wird Ihre Mobilnummer an Google übermittelt.',
-        'Die Auslieferung der Website erfolgt über GitHub Pages. Dabei fallen serverseitige Zugriffsprotokolle an, auf die wir keinen Einfluss haben.',
-        'Für die Abstimmung der Moderation nutzen wir einen privaten Server bei Discord (USA). Dorthin gehen Hinweise auf neue Meldungen und Supportanfragen – nur Art, Kategorie und Zeitpunkt – sowie ein Protokoll der Moderationsentscheide mit einer verkürzten Kontokennung, etwa dass ein Supportfall erledigt, ein Tarif vergeben oder eine Geschlechtsangabe korrigiert wurde. Pseudonyme, Nachrichten, Anhänge und Ausweisdaten gehen nicht an Discord.',
+        'Die Website wird über Firebase Hosting (Google) ausgeliefert, die frühere Adresse zusätzlich über GitHub Pages. Bei beiden fallen serverseitige Zugriffsprotokolle an, auf die wir keinen Einfluss haben.',
+        'Zahlungen wickelt Stripe ab (Stripe Payments Europe, Ltd., Irland). Dafür übermitteln wir Stripe Ihre E-Mail-Adresse, Ihre Kontokennung und den gewählten Tarif. Stripe kann Daten auch in die USA übermitteln; dafür gelten die Datenschutzbestimmungen von Stripe.',
+        'Für die Abstimmung der Moderation nutzen wir einen privaten Server bei Discord (USA). Dorthin gehen Hinweise auf neue Meldungen, Supportanfragen und Verifizierungsanträge – nur Art, Kategorie und Zeitpunkt –, Benachrichtigungen über Zahlungen und beendete Abos mit Tarif, Betrag, Laufzeit und einer verkürzten Kontokennung sowie ein Protokoll der Moderationsentscheide mit einer verkürzten Kontokennung, etwa dass ein Supportfall erledigt, ein Tarif vergeben oder eine Geschlechtsangabe korrigiert wurde. Pseudonyme, Nachrichten, Anhänge, Ausweisdaten und Zahlungsdaten wie Kartennummern gehen nicht an Discord.',
         'Es findet keine Verarbeitung zu Werbezwecken statt und es werden keine Daten verkauft.',
       ],
     },
@@ -208,7 +210,7 @@ export const AGB: Rechtstext = {
       titel: '6. Tarife und Zahlung',
       absaetze: [
         'Der Gratiszugang ist dauerhaft kostenlos und in der Anzahl Chats pro Tag begrenzt. Bezahlte Zugänge heben diese Grenze auf und schalten zusätzliche Filter frei.',
-        'Monats- und Jahresabos verlängern sich automatisch, solange sie nicht vor Ablauf der Laufzeit gekündigt werden. Gekündigt wird im Profil; der Zugang bleibt bis zum Ende der bezahlten Laufzeit bestehen.',
+        `Monats- und Jahresabos verlängern sich automatisch, solange sie nicht vor Ablauf der Laufzeit gekündigt werden. Gekündigt wird über die Supportseite (Thema „Tarif und Zahlung“) oder per E-Mail an ${BETREIBER.email}; der Zugang bleibt bis zum Ende der bezahlten Laufzeit bestehen.`,
         'Der Lifetime-Zugang gilt für die Dauer des Bestehens dieses Dienstes. Wird der Dienst eingestellt, besteht kein Anspruch auf Rückerstattung über den nicht genutzten Teil eines laufenden Abos hinaus.',
         'Ein gesetzliches Widerrufsrecht besteht bei digitalen Diensten in der Schweiz nicht. Bei einer Sperre wegen eines Verstosses wird nichts zurückerstattet.',
       ],
