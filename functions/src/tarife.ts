@@ -20,10 +20,12 @@ export interface Tarif {
   art: 'abo' | 'einmalig'
 }
 
+// Stripe-Sandbox (Testmodus), angelegt am 24.09.2026. Für den Livebetrieb
+// die Kennungen der Live-Preise eintragen – sie sind andere.
 export const TARIFE: Record<PlanId, Tarif> = {
-  'plus-monat': { priceId: 'price_HIER_EINTRAGEN_MONAT', art: 'abo' },
-  'plus-jahr': { priceId: 'price_HIER_EINTRAGEN_JAHR', art: 'abo' },
-  lifetime: { priceId: 'price_HIER_EINTRAGEN_LIFETIME', art: 'einmalig' },
+  'plus-monat': { priceId: 'price_1UJ4vLBYL7YFNcX58NXL031B', art: 'abo' },
+  'plus-jahr': { priceId: 'price_1UJ4vLBYL7YFNcX5h7blPs9z', art: 'abo' },
+  lifetime: { priceId: 'price_1UJ4vLBYL7YFNcX5uSfXajEE', art: 'einmalig' },
 }
 
 export function istPlanId(wert: unknown): wert is PlanId {
