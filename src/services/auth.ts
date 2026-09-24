@@ -13,7 +13,7 @@ import {
   type AuthProvider,
   type User,
 } from 'firebase/auth'
-import { getFirebaseAuth } from './firebase'
+import { APP_DOMAIN, getFirebaseAuth } from './firebase'
 import { darfModerieren, rolleFuer, type Rolle } from './roles'
 
 /**
@@ -141,16 +141,24 @@ function providerFor(anbieter: OAuthAnbieter): AuthProvider {
   return apple
 }
 
+/** Wo es gar keine Fenster gibt (eingebettete Browser in anderen Apps). */
+const OHNE_FENSTER = 'auth/operation-not-supported-in-this-environment'
+/** Das Fenster wurde blockiert oder kam einem anderen in die Quere. */
+const FENSTER_BLOCKIERT = new Set(['auth/popup-blocked', 'auth/cancelled-popup-request'])
+
 /**
- * Nur wo es gar keine Fenster gibt (eingebettete Browser in anderen Apps),
- * geht es per Weiterleitung.
+ * Darf es per Weiterleitung weitergehen?
  *
- * Nicht bei einem blockierten Fenster: Die App läuft auf einer anderen
- * Domain als die Anmeldeseite von Firebase, und Safari – auf dem iPhone
- * jeder Browser – trennt deren Speicher. Das Ergebnis der Weiterleitung käme
- * nie an; übrig bliebe eine leere Seite. Dann lieber eine klare Meldung.
+ * Ohne Fenster immer. Bei einem blockierten Fenster nur, wenn die App auf
+ * derselben Domain läuft wie die Anmeldeseite (`APP_DOMAIN`): Sonst trennt
+ * Safari – auf dem iPhone jeder Browser – den Speicher der beiden Domains,
+ * das Ergebnis käme nie an, und übrig bliebe eine leere Seite. Dann lieber
+ * eine klare Meldung.
  */
-const BRAUCHT_WEITERLEITUNG = new Set(['auth/operation-not-supported-in-this-environment'])
+export function weiterleitenBei(code: string, hostname: string): boolean {
+  if (code === OHNE_FENSTER) return true
+  return FENSTER_BLOCKIERT.has(code) && hostname === APP_DOMAIN
+}
 
 /**
  * Anmeldung über Google oder Apple, im eigenen Fenster.
@@ -168,7 +176,7 @@ async function oauthSignIn(anbieter: OAuthAnbieter): Promise<User> {
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
 
-    if (BRAUCHT_WEITERLEITUNG.has(code)) {
+    if (weiterleitenBei(code, window.location.hostname)) {
       await signInWithRedirect(getFirebaseAuth(), provider)
       // Die Seite ist ab hier unterwegs; dieses Versprechen löst sich nie ein.
       return new Promise<User>(() => {})

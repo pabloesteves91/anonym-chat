@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>NØNE ist umgezogen</title>
+<link rel="canonical" href="https://none-chat.ch/">
+<script>
+  // Die alte Adresse (…github.io/anonym-chat/) leitet auf die eigene Domain um.
+  // Alte Links mit Hash-Routing (#/chat) werden zu echten Pfaden (/chat).
+  (function () {
+    var ziel = location.hash.indexOf('#/') === 0
+      ? location.hash.slice(1)
+      : location.pathname.replace(/^\/anonym-chat/, '') || '/'
+    location.replace('https://none-chat.ch' + ziel)
+  })()
+</script>
+<style>
+  body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+</style>
+</head>
+<body>
+<p>NØNE ist umgezogen: <a href="https://none-chat.ch/">none-chat.ch</a></p>
+</body>
+</html>

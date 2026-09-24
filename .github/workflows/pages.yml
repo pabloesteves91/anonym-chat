@@ -1,13 +1,17 @@
 name: Pages
 
-# Baut den statischen Prototyp und veröffentlicht ihn auf GitHub Pages.
-# Läuft auf dem Default-Branch; `main` ist mit aufgeführt, damit ein
-# späteres Umbenennen den Workflow nicht stillschweigend abschaltet.
+# Die App läuft auf Firebase Hosting unter https://none-chat.ch (siehe
+# firebase-hosting.yml). GitHub Pages leitet nur noch dorthin um, damit alte
+# Links auf …github.io/anonym-chat/ weiter funktionieren – auch solche mit
+# #/chat, die zu /chat werden.
 on:
   push:
     branches:
       - main
       - claude/busy-galileo-ovdxll
+    paths:
+      - weiterleitung/**
+      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
@@ -15,7 +19,6 @@ permissions:
   pages: write
   id-token: write
 
-# Nie zwei Deployments gleichzeitig; ein laufendes wird abgebrochen.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -25,31 +28,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Die letzten Fassungen stehen bei den Neuigkeiten zur Auswahl.
-          fetch-depth: 30
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      # Dieselbe Seite für jeden Pfad: 404.html fängt …/anonym-chat/chat ab.
+      - run: |
+          mkdir -p _site
+          cp weiterleitung/index.html _site/index.html
+          cp weiterleitung/index.html _site/404.html
 
-      - run: npm ci
-
-      # Kaputtes kommt nicht live: Lint, Typprüfung und Tests laufen vor dem Build.
-      - run: npm run lint
-      - run: npm test
-
-      - run: npm run build:static
-
-      # Setzt voraus, dass Pages einmalig aktiviert wurde:
-      # Settings → Pages → Build and deployment → Source: "GitHub Actions".
-      # Der Workflow-Token darf die Site nicht selbst anlegen.
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
 
   deploy:
     needs: build

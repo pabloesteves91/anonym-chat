@@ -22,9 +22,17 @@ import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase
  *
  * Nicht hierher gehört der Service-Account-Schlüssel: der umgeht jede Regel.
  */
+/**
+ * Die Domain der App – und zugleich die der Anmeldeseite (`/__/auth/…`,
+ * von Firebase Hosting bereitgestellt). Liegen beide auf derselben Domain,
+ * funktioniert die Anmeldung mit Google und Apple auch per Weiterleitung,
+ * selbst auf dem iPhone, wo Safari den Speicher fremder Domains trennt.
+ */
+export const APP_DOMAIN = 'none-chat.ch'
+
 const firebaseConfig = {
   apiKey: 'AIzaSyDv9L5BSW2HIJOocvqZHjyAu7KZmvTnmQc',
-  authDomain: 'anonym-chat-223af.firebaseapp.com',
+  authDomain: APP_DOMAIN,
   projectId: 'anonym-chat-223af',
   storageBucket: 'anonym-chat-223af.firebasestorage.app',
   messagingSenderId: '417196431125',

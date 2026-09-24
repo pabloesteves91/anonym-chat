@@ -11,6 +11,7 @@ import '@fontsource/ibm-plex-mono/latin-500.css'
 import './styles/index.css'
 
 import App from './App'
+import { APP_DOMAIN } from './services/firebase'
 import { useTheme } from './store/useTheme'
 
 useTheme.getState().init()
@@ -34,6 +35,15 @@ window.addEventListener('vite:preloadError', (ereignis) => {
   ereignis.preventDefault()
   window.location.reload()
 })
+
+// Eine Adresse für alle: Wer über die Firebase-Adressen kommt, landet auf der
+// eigenen Domain – dort liegt auch die Anmeldeseite, und nur dort klappt die
+// Anmeldung per Weiterleitung auf jedem Gerät.
+const FIREBASE_ADRESSEN = ['anonym-chat-223af.web.app', 'anonym-chat-223af.firebaseapp.com']
+if (FIREBASE_ADRESSEN.includes(window.location.hostname)) {
+  const { pathname, search, hash } = window.location
+  window.location.replace(`https://${APP_DOMAIN}${pathname}${search}${hash}`)
+}
 
 // Alte Links aus der Zeit mit Hash-Routing (…/#/chat) auf echte Pfade
 // umschreiben, bevor der Router startet – geteilte Links bleiben gültig.

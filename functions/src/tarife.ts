@@ -73,11 +73,11 @@ export function istEingerichtet(plan: PlanId, schluessel: string): boolean {
 }
 
 /**
- * Wohin Stripe nach der Zahlung zurückschickt.
+ * Wohin Stripe nach der Zahlung zurückschickt – und wohin Discord verlinkt.
  *
- * Die Seite läuft mit Hash-Routing, deshalb das Rautezeichen – ohne es
- * landet man auf der 404-Seite von GitHub statt in der App.
+ * Die App läuft auf Firebase Hosting mit echten Pfaden (`/preise`, nicht
+ * `/#/preise`); jeder Pfad landet dort in der App.
  */
-export const BASIS_URL = 'https://pabloesteves91.github.io/anonym-chat'
-export const ERFOLG_URL = `${BASIS_URL}/#/preise?zahlung=erfolgreich`
-export const ABBRUCH_URL = `${BASIS_URL}/#/preise?zahlung=abgebrochen`
+export const BASIS_URL = 'https://none-chat.ch'
+export const ERFOLG_URL = `${BASIS_URL}/preise?zahlung=erfolgreich`
+export const ABBRUCH_URL = `${BASIS_URL}/preise?zahlung=abgebrochen`

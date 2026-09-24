@@ -1,4 +1,15 @@
-# Hosting auf GitHub Pages und eigene Domain
+# Hosting auf Firebase Hosting unter none-chat.ch
+
+**Stand:** Die App läuft auf **Firebase Hosting** unter **https://none-chat.ch**
+(Ablauf `.github/workflows/firebase-hosting.yml`, bei jedem Push). Die
+Anmeldeseite liegt auf derselben Domain (`authDomain` in
+`src/services/firebase.ts`). `www.none-chat.ch` sowie die Firebase-Adressen
+`…web.app` und `…firebaseapp.com` leiten auf none-chat.ch. GitHub Pages
+(`…github.io/anonym-chat/`) ist nur noch eine Weiterleitung
+(`weiterleitung/index.html`), damit alte Links weiter funktionieren.
+
+Die Abschnitte zu GitHub Pages unten beschreiben den früheren Aufbau.
+
 
 Die App ist eine statische Seite ohne eigenen Server; die Daten liegen bei
 Firebase. Gebaut wird mit

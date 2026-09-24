@@ -26,10 +26,10 @@ vi.mock('firebase/auth', () => ({
   signOut: vi.fn(),
 }))
 
-vi.mock('./firebase', () => ({ getFirebaseAuth: () => ({ name: 'auth' }) }))
+vi.mock('./firebase', () => ({ APP_DOMAIN: 'none-chat.ch', getFirebaseAuth: () => ({ name: 'auth' }) }))
 
 const firebaseAuth = await import('firebase/auth')
-const { AuthError, signInUser } = await import('./auth')
+const { AuthError, signInUser, weiterleitenBei } = await import('./auth')
 
 const fehler = (code: string) => Object.assign(new Error(code), { code })
 
@@ -61,5 +61,21 @@ describe('Anmeldung mit Google und Apple', () => {
     )
     void signInUser('apple')
     await vi.waitFor(() => expect(firebaseAuth.signInWithRedirect).toHaveBeenCalledTimes(1))
+  })
+})
+
+describe('Weiterleitung nur, wo sie ankommt', () => {
+  it('auf der eigenen Domain darf ein blockiertes Fenster weiterleiten', () => {
+    expect(weiterleitenBei('auth/popup-blocked', 'none-chat.ch')).toBe(true)
+  })
+
+  it('auf fremden Adressen nicht – dort bliebe eine leere Seite', () => {
+    expect(weiterleitenBei('auth/popup-blocked', 'anonym-chat-223af.web.app')).toBe(false)
+    expect(weiterleitenBei('auth/popup-blocked', 'pabloesteves91.github.io')).toBe(false)
+  })
+
+  it('ohne Fenster immer, andere Fehler nie', () => {
+    expect(weiterleitenBei('auth/operation-not-supported-in-this-environment', 'irgendwo.ch')).toBe(true)
+    expect(weiterleitenBei('auth/popup-closed-by-user', 'none-chat.ch')).toBe(false)
   })
 })

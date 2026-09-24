@@ -41,7 +41,7 @@ const DISCORD_WEBHOOK_VERIFIZIERUNG = defineSecret('DISCORD_WEBHOOK_VERIFIZIERUN
 // innerhalb dieses Verbunds.
 export const REGION = 'europe-west1'
 
-const MODERATION_URL = `${BASIS_URL}/#/admin`
+const MODERATION_URL = `${BASIS_URL}/admin`
 
 const FARBE_MELDUNG = 0x9e4130
 const FARBE_SUPPORT = 0x4ec4b0
