@@ -1,0 +1,50 @@
+[
+  {
+    "id": "start-rund-ums-gespraech",
+    "titel": "Rund ums Gespräch",
+    "text": "Nach einem Gespräch kannst du es bewerten, freiwillig und ohne dass dein Gegenüber sieht, wie. Im Chat helfen dir Vorschläge beim Einstieg. Über das Schild oben im Chat erreichst du „Verlassen“, „Nicht mehr verbinden“ und „Melden“ an einem Ort. Mit „Nächste Person“ suchst du direkt weiter, und im Profil siehst du deine eigene Statistik.",
+    "art": "neu",
+    "datum": "2026-09-23",
+    "version": "ad99f52"
+  },
+  {
+    "id": "start-iphone-anmeldung",
+    "titel": "Anmeldung mit Google und Apple auf dem iPhone",
+    "text": "Auf dem iPhone hat Safari das Anmeldefenster von Google und Apple teilweise blockiert. Das ist behoben.",
+    "art": "behoben",
+    "datum": "2026-09-23",
+    "version": "ef000ee"
+  },
+  {
+    "id": "start-interessen-in-der-suche",
+    "titel": "Interessen wählst du jetzt bei der Suche",
+    "text": "Interessen stehen nicht mehr im Profil. Mit Plus wählst du sie direkt bei der Suche, jedes Mal so, wie es gerade passt. Findest du damit niemanden, kannst du die Suche erweitern.",
+    "art": "verbessert",
+    "datum": "2026-09-23",
+    "version": "bd79a41"
+  },
+  {
+    "id": "start-keine-weisse-seite",
+    "titel": "Keine weisse Seite mehr nach einem Update",
+    "text": "Direkt nach einem Update blieb eine Seite manchmal weiss. Jetzt lädt NØNE in diesem Fall von selbst neu.",
+    "art": "behoben",
+    "datum": "2026-09-24",
+    "version": "2524fff"
+  },
+  {
+    "id": "start-klarere-texte",
+    "titel": "Klarere Texte",
+    "text": "Wir haben die Texte auf der ganzen Seite überarbeitet. Sie sind kürzer und sagen genauer, was mit deinen Daten passiert. Zum Beispiel steht jetzt überall, dass Chats 72 Stunden für die Missbrauchsprüfung aufbewahrt und danach gelöscht werden.",
+    "art": "verbessert",
+    "datum": "2026-09-24",
+    "version": "39fbc03"
+  },
+  {
+    "id": "start-none-chat-ch",
+    "titel": "NØNE läuft jetzt unter none-chat.ch",
+    "text": "NØNE hat eine eigene Adresse: none-chat.ch. Alte Links leiten automatisch weiter. Auch die Anmeldung mit Google und Apple läuft jetzt über none-chat.ch.",
+    "art": "neu",
+    "datum": "2026-09-24",
+    "version": "ace4569"
+  }
+]
