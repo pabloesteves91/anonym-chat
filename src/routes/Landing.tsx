@@ -6,6 +6,8 @@ import { AktionsHinweis } from '../components/AktionsHinweis'
 import { artLabel, datumLang } from '../services/neuigkeiten'
 import { useNeuigkeiten } from '../store/useNeuigkeiten'
 import { BETREIBER } from '../content/legal'
+import { INSTAGRAM } from '../content/kanaele'
+import { InstagramMark } from '../components/ProviderMarks'
 import { useAuth } from '../store/useAuth'
 import { useSession } from '../store/useSession'
 
@@ -196,6 +198,18 @@ export function Landing() {
             {BETREIBER.email}
           </a>
           .
+        </p>
+        <p className="mt-3 text-muted">
+          Neuigkeiten und Einblicke gibt es auch auf Instagram:{' '}
+          <a
+            href={INSTAGRAM.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-ink underline underline-offset-2 hover:text-accent-strong"
+          >
+            <InstagramMark className="h-4 w-4 shrink-0" />
+            {INSTAGRAM.name}
+          </a>
         </p>
       </section>
 
