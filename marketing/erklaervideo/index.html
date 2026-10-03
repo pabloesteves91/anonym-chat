@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>NØNE Erklärvideo</title>
+<style>
+@font-face { font-family: M; src: url(montserrat-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; }
+:root {
+  --ground: #0b0f0e; --surface: #141a18; --raised: #1c2422; --ink: #e8edeb; --muted: #94a39e;
+  --accent: #4ec4b0; --accent-strong: #6fd6c3; --accent-soft: #12302a; --signal: #d2775f; --line: #232e2b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--ground); color: var(--ink); font-family: M, sans-serif; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden;
+  background: radial-gradient(1200px 900px at 50% 38%, #10201c 0%, var(--ground) 70%); }
+.glow { position: absolute; width: 900px; height: 900px; left: 90px; top: 420px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(78,196,176,.16), transparent 65%); animation: breathe 15s linear both; }
+@keyframes breathe { 0%{transform:scale(.8) translateY(0)} 50%{transform:scale(1.1) translateY(80px)} 100%{transform:scale(.9) translateY(0)} }
+
+.scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+@keyframes sIn { from { opacity: 0; transform: translateY(40px) } to { opacity: 1; transform: none } }
+@keyframes sOut { from { opacity: 1; transform: none } to { opacity: 0; transform: translateY(-40px) scale(.98) } }
+@keyframes up { from { opacity: 0; transform: translateY(50px) } to { opacity: 1; transform: none } }
+@keyframes pop { 0% { opacity: 0; transform: scale(.4) } 70% { opacity: 1; transform: scale(1.08) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fadeOut { from { opacity: 1 } to { opacity: 0 } }
+
+/* Top step indicator */
+#steps { position: absolute; top: 150px; left: 0; right: 0; display: flex; justify-content: center; gap: 22px; opacity: 0;
+  animation: fade .4s 2.5s both, fadeOut .4s 13.0s forwards; }
+#steps i { width: 70px; height: 10px; border-radius: 5px; background: var(--line); position: relative; overflow: hidden; }
+#steps i b { position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+@keyframes fill { to { transform: scaleX(1) } }
+
+.kicker { font-size: 34px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: 104px; font-weight: 800; line-height: 1.02; letter-spacing: -.02em; text-align: center; }
+h2 { font-size: 88px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; text-align: center; }
+.sub { font-size: 42px; font-weight: 500; color: var(--muted); text-align: center; line-height: 1.35; max-width: 860px; }
+.sub em { color: var(--ink); font-style: normal; font-weight: 700; }
+.acc { color: var(--accent); }
+
+/* Scene 0 */
+#s0 { animation: sIn .01s 0s both, sOut .45s 2.3s forwards; }
+#s0 .mark { width: 230px; animation: pop .8s .15s both; }
+#s0 .word { width: 640px; margin-top: 70px; animation: up .7s .55s both; }
+#s0 .sub { margin-top: 50px; animation: up .7s .9s both; }
+#s0 .slash { position: absolute; left: 50%; top: 50%; width: 1400px; height: 14px; background: var(--accent); opacity: 0;
+  transform: translate(-50%,-50%) rotate(-55deg) scaleX(0); animation: slash .7s 0s both; }
+@keyframes slash { 0% { opacity: .9; transform: translate(-50%,-50%) rotate(-55deg) scaleX(0) } 60% { opacity: .9; transform: translate(-50%,-50%) rotate(-55deg) scaleX(1) } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(-55deg) scaleX(1) } }
+
+/* Scene 1 – verify */
+#s1 { animation: sIn .45s 2.55s both, sOut .45s 5.35s forwards; }
+#s1 .kicker { animation: up .5s 2.6s both; }
+#s1 h2 { margin-top: 24px; animation: up .5s 2.7s both; }
+.cards { display: flex; gap: 34px; margin-top: 90px; }
+.card { width: 270px; height: 300px; border-radius: 36px; background: var(--surface); border: 3px solid var(--line);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; font-size: 36px; font-weight: 700; position: relative; }
+.card svg { width: 120px; height: 120px; }
+.card .ok { position: absolute; top: -26px; right: -26px; width: 72px; height: 72px; border-radius: 50%; background: var(--accent);
+  display: grid; place-items: center; }
+.card .ok svg { width: 42px; height: 42px; }
+#c1 { animation: up .5s 2.95s both; } #c2 { animation: up .5s 3.1s both; } #c3 { animation: up .5s 3.25s both; }
+#c1 .ok { animation: pop .4s 3.75s both; } #c2 .ok { animation: pop .4s 3.9s both; } #c3 .ok { animation: pop .4s 4.05s both; }
+#s1 .badge { margin-top: 90px; display: flex; align-items: center; gap: 22px; padding: 26px 46px; border-radius: 999px;
+  background: var(--accent-soft); border: 3px solid var(--accent); font-size: 40px; font-weight: 700; color: var(--accent-strong); animation: pop .5s 4.3s both; }
+#s1 .sub { margin-top: 40px; animation: up .5s 4.6s both; }
+
+/* Scene 2 – match */
+#s2 { animation: sIn .45s 5.6s both, sOut .45s 8.35s forwards; }
+#s2 .kicker { animation: up .5s 5.65s both; }
+#s2 h2 { margin-top: 24px; animation: up .5s 5.75s both; }
+.arena { position: relative; width: 1000px; height: 560px; margin-top: 40px; }
+.user { position: absolute; top: 120px; width: 300px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+.avatar { width: 200px; height: 200px; border-radius: 50%; background: var(--raised); border: 4px solid var(--accent);
+  display: grid; place-items: center; font-size: 96px; font-weight: 800; color: var(--accent); }
+.avatar.avB { border-color: var(--signal); color: var(--signal); }
+.name { font-size: 32px; font-weight: 700; text-align: center; line-height: 1.25; }
+#uA { left: 0; animation: up .5s 6.0s both, toR .9s 6.7s cubic-bezier(.6,0,.2,1) forwards; }
+#uB { right: 0; animation: up .5s 6.15s both, toL .9s 6.7s cubic-bezier(.6,0,.2,1) forwards; }
+@keyframes toR { to { transform: translateX(170px) } }
+@keyframes toL { to { transform: translateX(-170px) } }
+.searching { position: absolute; left: 50%; top: 210px; transform: translateX(-50%); display: flex; gap: 18px; animation: fade .3s 6.2s both, fadeOut .2s 6.7s forwards; }
+.searching span { width: 22px; height: 22px; border-radius: 50%; background: var(--muted); animation: blink .6s infinite alternate; }
+.searching span:nth-child(2) { animation-delay: .2s } .searching span:nth-child(3) { animation-delay: .4s }
+@keyframes blink { from { opacity: .25 } to { opacity: 1 } }
+.ring { position: absolute; left: 50%; top: 220px; width: 640px; height: 640px; margin: -320px 0 0 -320px; border-radius: 50%;
+  border: 5px solid var(--accent); opacity: 0; animation: ring .9s 7.55s both; }
+@keyframes ring { 0% { opacity: .9; transform: scale(.5) } 100% { opacity: 0; transform: scale(1.3) } }
+.room { position: absolute; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: 0; white-space: nowrap; padding: 22px 44px; border-radius: 999px;
+  background: var(--accent); color: #08201c; font-size: 38px; font-weight: 800; animation: pop .5s 7.6s both; }
+#s2 .sub { margin-top: 50px; animation: up .5s 7.8s both; }
+
+/* Scene 3 – chat + delete */
+#s3 { animation: sIn .45s 8.6s both, sOut .45s 13.0s forwards; }
+.hd { position: relative; height: 260px; width: 1000px; }
+.hd > div { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+#h3a { animation: up .5s 8.65s both, sOut .35s 11.55s forwards; }
+#h3b { opacity: 0; animation: up .5s 11.85s both; }
+#h3b .kicker { color: var(--signal); }
+.hd h2 { margin-top: 24px; }
+.phone { margin-top: 60px; width: 820px; height: 860px; border-radius: 56px; background: var(--surface); border: 3px solid var(--line);
+  overflow: hidden; display: flex; flex-direction: column; animation: up .55s 8.8s both; }
+.ph-top { display: flex; align-items: center; gap: 22px; padding: 34px 40px; border-bottom: 3px solid var(--line); }
+.ph-top .av { width: 76px; height: 76px; border-radius: 50%; border: 3px solid var(--signal); color: var(--signal); display: grid; place-items: center; font-weight: 800; font-size: 38px; }
+.ph-top .nm { font-size: 34px; font-weight: 700; }
+.ph-top .st { font-size: 26px; color: var(--accent); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 10px; }
+.ph-top .st::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
+.msgs { flex: 1; padding: 40px; display: flex; flex-direction: column; gap: 26px; position: relative; }
+.b { max-width: 78%; padding: 26px 34px; border-radius: 36px; font-size: 36px; font-weight: 500; line-height: 1.3; }
+.b.them { align-self: flex-start; background: var(--raised); border-bottom-left-radius: 10px; }
+.b.me { align-self: flex-end; background: var(--accent); color: #08201c; font-weight: 600; border-bottom-right-radius: 10px; }
+#m1 { animation: up .4s 9.3s both, dissolve .6s 11.6s forwards; }
+#m2 { animation: up .4s 9.9s both, dissolve .6s 11.7s forwards; }
+#m3 { animation: up .4s 10.5s both, dissolve .6s 11.8s forwards; }
+#m4 { animation: up .4s 11.15s both, dissolve .6s 11.9s forwards; }
+@keyframes dissolve { to { opacity: 0; filter: blur(18px); transform: scale(.9) translateY(-20px) } }
+.typing { align-self: flex-start; display: flex; gap: 12px; padding: 30px 34px; border-radius: 36px; background: var(--raised);
+  opacity: 0; animation: fade .2s 10.75s both, fadeOut .1s 11.1s forwards; }
+.typing span { width: 16px; height: 16px; border-radius: 50%; background: var(--muted); animation: blink .4s infinite alternate; }
+.typing span:nth-child(2){animation-delay:.13s}.typing span:nth-child(3){animation-delay:.26s}
+.gone { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
+  font-size: 40px; font-weight: 700; color: var(--muted); opacity: 0; animation: pop .5s 12.25s both; }
+.gone svg { width: 130px; height: 130px; }
+.ph-top .st2 { color: var(--muted) !important; }
+#online { animation: fadeOut .2s 11.6s forwards; }
+#ended { position: absolute; opacity: 0; animation: fade .2s 11.6s both; color: var(--signal); }
+#ended::before { background: var(--signal); }
+.stwrap { position: relative; height: 34px; }
+#s3 .sub { margin-top: 50px; height: 60px; position: relative; width: 1000px; }
+#s3 .sub span { position: absolute; left: 0; right: 0; }
+#sub3a { animation: up .5s 9.4s both, fadeOut .3s 11.55s forwards; }
+#sub3b { opacity: 0; animation: up .5s 12.0s both; }
+
+/* Outro */
+#s4 { animation: sIn .5s 13.25s both; }
+#s4 .word { width: 600px; animation: pop .7s 13.3s both; }
+#s4 .tag { margin-top: 60px; font-size: 54px; font-weight: 800; text-align: center; line-height: 1.25; animation: up .5s 13.6s both; }
+#s4 .url { margin-top: 80px; padding: 34px 70px; border-radius: 999px; background: var(--accent); color: #08201c; font-size: 64px; font-weight: 800;
+  letter-spacing: -.01em; animation: pop .6s 13.9s both; }
+#s4 .sub { margin-top: 50px; font-size: 36px; animation: up .5s 14.2s both; }
+
+#bar { position: absolute; left: 0; bottom: 0; height: 12px; width: 1080px; background: var(--accent); transform-origin: left; animation: grow 15s linear both; opacity: .9; }
+@keyframes grow { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="glow"></div>
+
+  <div id="steps">
+    <i><b style="animation: fill .4s 2.6s both"></b></i>
+    <i><b style="animation: fill .4s 5.65s both"></b></i>
+    <i><b style="animation: fill .4s 8.65s both"></b></i>
+    <i><b style="animation: fill .4s 11.6s both"></b></i>
+  </div>
+
+  <!-- 0 · Intro -->
+  <section class="scene" id="s0">
+    <div class="slash"></div>
+    <img class="mark" src="logo.png" alt="">
+    <img class="word" src="logo-text.png" alt="NØNE">
+    <p class="sub">Der <em>verifizierte</em> Zufallschat ab&nbsp;18.<br>So funktioniert’s.</p>
+  </section>
+
+  <!-- 1 · Verifizieren -->
+  <section class="scene" id="s1">
+    <div class="kicker">Schritt 1</div>
+    <h2>Einmal<br><span class="acc">verifizieren</span></h2>
+    <div class="cards">
+      <div class="card" id="c1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4ec4b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9 8.5h6M9 11.5h4"/></svg>
+        SMS
+        <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="#08201c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      </div>
+      <div class="card" id="c2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4ec4b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><circle cx="8" cy="11" r="2.2"/><path d="M4.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4"/><path d="M14 10h5M14 13h4"/></svg>
+        Ausweis
+        <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="#08201c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      </div>
+      <div class="card" id="c3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4ec4b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><circle cx="9" cy="10" r=".9" fill="#4ec4b0"/><circle cx="15" cy="10" r=".9" fill="#4ec4b0"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/></svg>
+        Selfie
+        <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="#08201c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      </div>
+    </div>
+    <div class="badge">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#6fd6c3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l8 3v6c0 4.8-3.4 8.6-8 10-4.6-1.4-8-5.2-8-10v-6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+      Von Menschen geprüft
+    </div>
+    <p class="sub">Danach werden die Bilder <em>gelöscht</em>.</p>
+  </section>
+
+  <!-- 2 · Matching -->
+  <section class="scene" id="s2">
+    <div class="kicker">Schritt 2</div>
+    <h2>Zufällig<br><span class="acc">verbunden</span></h2>
+    <div class="arena">
+      <div class="ring"></div>
+      <div class="user" id="uA"><div class="avatar">G</div><div class="name">Goldene<br>Drossel 4160</div></div>
+      <div class="searching"><span></span><span></span><span></span></div>
+      <div class="user" id="uB"><div class="avatar avB">W</div><div class="name">Weiter<br>Salamander 1466</div></div>
+      <div class="room">Gemeinsamer Raum</div>
+    </div>
+    <p class="sub">Kein Name, kein Foto –<br>nur ein <em>Pseudonym</em>.</p>
+  </section>
+
+  <!-- 3 · Chat + Ende -->
+  <section class="scene" id="s3">
+    <div class="hd">
+      <div id="h3a"><div class="kicker">Schritt 3</div><h2>Anonym<br><span class="acc">chatten</span></h2></div>
+      <div id="h3b"><div class="kicker">Schritt 4</div><h2>Chat zu –<br><span style="color:var(--signal)">Verlauf weg</span></h2></div>
+    </div>
+    <div class="phone">
+      <div class="ph-top">
+        <div class="av">W</div>
+        <div>
+          <div class="nm">Weiter Salamander 1466</div>
+          <div class="stwrap"><div class="st" id="online">online</div><div class="st" id="ended">Chat beendet</div></div>
+        </div>
+      </div>
+      <div class="msgs">
+        <div class="b them" id="m1">Hey! Wie läuft dein Abend?</div>
+        <div class="b me" id="m2">Gerade Feierabend. Und bei dir?</div>
+        <div class="b them" id="m3">Kaffee, Musik, alles gut.</div>
+        <div class="typing"><span></span><span></span><span></span></div>
+        <div class="b me" id="m4">Klingt perfekt!</div>
+        <div class="gone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#94a39e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg>
+          Für beide gelöscht
+        </div>
+      </div>
+    </div>
+    <p class="sub"><span id="sub3a">Sicht­bar: nur <em>online</em> &amp; <em>tippt…</em></span><span id="sub3b">Keine Spuren. Sperren aber <em>halten</em>.</span></p>
+  </section>
+
+  <!-- Outro -->
+  <section class="scene" id="s4">
+    <img class="word" src="logo-text.png" alt="NØNE">
+    <p class="tag">Verifiziert. <span class="acc">Anonym.</span><br>Echte Menschen.</p>
+    <div class="url">none-chat.ch</div>
+    <p class="sub">Ab 18 · Made in Switzerland</p>
+  </section>
+
+  <div id="bar"></div>
+</div>
+<script>
+  // Every animation is paused and driven by seek(t) so frames render deterministically.
+  window.seek = (t) => {
+    for (const a of document.getAnimations()) {
+      a.pause();
+      const iter = a.effect.getTiming();
+      a.currentTime = t * 1000;
+    }
+  };
+  window.seek(0);
+</script>
+</body>
+</html>
