@@ -66,7 +66,7 @@ export function Login() {
       </p>
 
       <Panel className="mt-6 flex flex-col gap-5 p-5">
-        <div className="flex gap-1 rounded-sm border border-line bg-raised p-1" role="tablist">
+        <div className="flex gap-1 rounded-full border border-line bg-raised/70 p-1" role="tablist">
           {(['anmelden', 'registrieren'] as const).map((wert) => (
             <button
               key={wert}
@@ -74,8 +74,8 @@ export function Login() {
               role="tab"
               aria-selected={modus === wert}
               onClick={() => wechsle(wert)}
-              className={`flex-1 rounded-sm px-3 py-2 text-sm transition-colors ${
-                modus === wert ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+              className={`flex-1 rounded-full px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                modus === wert ? 'bg-surface text-ink shadow-karte' : 'text-muted hover:text-ink'
               }`}
             >
               {wert === 'anmelden' ? 'Ich habe ein Konto' : 'Neu hier'}

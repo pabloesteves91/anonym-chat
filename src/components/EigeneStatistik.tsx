@@ -49,7 +49,7 @@ export function EigeneStatistik() {
           Wird geladen …
         </p>
       ) : (
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
           {werte.map(([label, wert]) => (
             <div key={label} className="flex flex-col gap-0.5 bg-surface p-3">
               <dt className="text-xs text-muted">{label}</dt>

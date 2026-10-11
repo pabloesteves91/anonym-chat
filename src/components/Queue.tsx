@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Panel } from './ui'
+import { Ripple } from './magic/Ripple'
 import { GespraechsFeedback } from './GespraechsFeedback'
 import {
   ERWEITERUNG_ANGEBOT_NACH_MS,
@@ -39,9 +40,19 @@ export function Queue() {
   const anbieten = erweiterbar(filter) && !erweitert && seconds >= angebotAb
 
   return (
-    <Panel className="p-6 text-center">
-      <p className="label-caps">Suche läuft</p>
-      <h2 className="mt-2 font-display text-2xl font-semibold">Wir verbinden dich mit jemandem</h2>
+    <Panel hervorgehoben className="overflow-hidden p-6 text-center sm:p-8">
+      {/* Ruhiger Puls statt Spinner (Magic UI ripple). */}
+      <div className="relative mx-auto mb-4 h-44 w-full max-w-sm" aria-hidden="true">
+        <Ripple groesse={64} anzahl={4} />
+        <div className="absolute top-1/2 left-1/2 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-accent/40 bg-accent-soft text-accent-strong shadow-glow">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M12 3l7 2.6v5.2c0 4.2-2.8 7.4-7 9.2-4.2-1.8-7-5-7-9.2V5.6L12 3z" strokeLinejoin="round" />
+            <path d="M8.8 12.2l2.3 2.3 4.1-4.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+      <p className="label-caps text-accent-strong">Suche läuft</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">Wir verbinden dich mit jemandem</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">
         Wir suchen unter verifizierten Konten
         {filter.language !== 'egal' ? `, Sprache ${filter.language.toUpperCase()}` : ''}
@@ -49,15 +60,13 @@ export function Queue() {
         {erweitert ? ', jetzt ohne Interessenfilter' : ''}.
       </p>
 
-      <div className="sweep relative mx-auto mt-6 h-0.5 w-full max-w-sm overflow-hidden bg-line" aria-hidden="true" />
-
-      <p aria-live="polite" className="mt-3 text-sm font-medium">
+      <p aria-live="polite" className="mt-5 text-sm font-medium">
         {SUCHSTATUS_TEXT[stufe]}
       </p>
       <p className="mt-1 font-mono text-xs text-muted">{String(seconds).padStart(2, '0')} s</p>
 
       {anbieten ? (
-        <div className="mx-auto mt-5 max-w-md rounded-sm border border-accent/45 bg-accent-soft p-4 text-left">
+        <div className="mx-auto mt-5 max-w-md rounded-2xl border border-accent/45 bg-accent-soft p-4 text-left">
           <p className="font-medium">Ohne Interessenfilter weitersuchen?</p>
           <p className="mt-1 text-sm text-muted">
             Mit deinen Interessen ist gerade niemand da. Die Sprache bleibt, und blockierte Konten bleiben blockiert.

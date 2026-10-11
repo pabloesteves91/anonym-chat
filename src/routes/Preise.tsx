@@ -111,14 +111,15 @@ function Karte({
   return (
     <Panel
       as="article"
-      className={`flex flex-col gap-4 p-5 ${plan.empfohlen ? 'border-accent/60 ring-1 ring-accent/25' : ''}`}
+      hervorgehoben={plan.empfohlen}
+      className="flex flex-col gap-4 p-6"
     >
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-xl font-semibold">{plan.name}</h2>
           {plan.empfohlen ? <span className="label-caps text-accent-strong">Beliebt</span> : null}
           {aktiv ? (
-            <span className="rounded-sm border border-accent/45 bg-accent-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent-strong uppercase">
+            <span className="rounded-full border border-accent/45 bg-accent-soft px-2.5 py-0.5 font-mono text-[0.6875rem] tracking-wide text-accent-strong uppercase">
               Dein Tarif
             </span>
           ) : null}
@@ -194,7 +195,7 @@ function GutscheinFeld() {
 
   if (gutschein) {
     return (
-      <div className="prose-column flex flex-wrap items-center gap-3 rounded-sm border border-accent/45 bg-accent-soft px-4 py-3 text-sm">
+      <div className="prose-column flex flex-wrap items-center gap-3 rounded-2xl border border-accent/45 bg-accent-soft px-4 py-3 text-sm">
         <span>
           Code <strong className="font-mono">{gutschein.code}</strong> eingelöst: −{gutschein.rabattProzent} % auf{' '}
           {tarifeText(gutschein.tarife)}. Ist ein anderer Rabatt höher, gilt der höhere.

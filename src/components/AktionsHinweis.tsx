@@ -7,7 +7,7 @@ function Hinweis({ aktion, mitLink }: { aktion: Aktion; mitLink: boolean }) {
   return (
     <section
       aria-label={`Aktion: ${titel}`}
-      className="rounded-sm border border-accent/45 bg-accent-soft p-5 sm:p-6"
+      className="rounded-2xl border border-accent/40 bg-linear-to-br from-accent-soft to-surface p-6 shadow-glow sm:p-7"
     >
       <p className="label-caps text-accent-strong">{aktion.code ? `Gutschein ${aktion.code}` : 'Aktion'}</p>
       <h2 className="mt-1 font-display text-2xl font-semibold">{titel}</h2>

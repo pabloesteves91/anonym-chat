@@ -64,16 +64,20 @@ export function ChatRoom({ partner, user }: { partner: Partner; user: User }) {
 
   return (
     <>
-      <Panel className="flex h-[calc(100dvh-14rem)] max-h-[42rem] min-h-[26rem] flex-col overflow-hidden">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-3">
+      <Panel hervorgehoben className="flex h-[calc(100dvh-14rem)] max-h-[44rem] min-h-[26rem] flex-col overflow-hidden">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface/80 px-4 py-3 backdrop-blur">
           <div>
             <p className="font-mono text-ink">{partner.pseudonym}</p>
-            <p className="text-xs text-muted">
+            <p className="flex items-center gap-1.5 text-xs text-muted">
+              <span
+                aria-hidden="true"
+                className={`h-1.5 w-1.5 rounded-full ${partnerOnline ? 'bg-accent shadow-[0_0_8px_var(--accent)]' : 'bg-line-strong'}`}
+              />
               {partnerOnline ? 'anwesend' : 'gerade nicht am Gerät'}
             </p>
           </div>
           {testModus ? (
-            <span className="rounded-sm border border-signal/50 bg-signal-soft px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
+            <span className="rounded-full border border-signal/50 bg-signal-soft px-2.5 py-0.5 font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
               Test · kein Mensch
             </span>
           ) : (

@@ -15,17 +15,26 @@ const datum = (iso: string | null) =>
 function StepNav({ current }: { current: VerifyStep }) {
   const index = VERIFY_STEPS.findIndex((s) => s.key === current)
   return (
-    <ol className="flex flex-wrap gap-x-4 gap-y-1">
+    <ol className="grid grid-cols-5 gap-2">
       {VERIFY_STEPS.map((step, i) => (
         <li
           key={step.key}
           aria-current={i === index ? 'step' : undefined}
-          className={`font-mono text-[0.6875rem] tracking-wide uppercase ${
+          className={`flex flex-col gap-2 font-mono text-[0.625rem] tracking-wide uppercase sm:text-[0.6875rem] ${
             i === index ? 'text-accent-strong' : i < index ? 'text-ink' : 'text-muted'
           }`}
         >
-          {String(i + 1).padStart(2, '0')} {step.label}
-          {i < index ? ' ✓' : ''}
+          <span
+            aria-hidden="true"
+            className={`h-1 rounded-full transition-colors ${
+              i < index ? 'bg-accent' : i === index ? 'bg-linear-to-r from-accent to-accent-bright shadow-[0_0_10px_var(--accent)]' : 'bg-line'
+            }`}
+          />
+          <span className="truncate">
+            {String(i + 1).padStart(2, '0')} <span className="hidden sm:inline">{step.label}</span>
+            <span className="sr-only sm:hidden">{step.label}</span>
+            {i < index ? ' ✓' : ''}
+          </span>
         </li>
       ))}
     </ol>
@@ -52,7 +61,7 @@ function BildFeld({
     <div className="flex flex-col gap-3">
       <label
         htmlFor={id}
-        className="flex cursor-pointer flex-col items-start gap-1 rounded-sm border border-dashed border-line-strong bg-raised px-4 py-6 transition-colors hover:border-accent"
+        className="flex cursor-pointer flex-col items-start gap-1 rounded-2xl border border-dashed border-line-strong bg-raised/60 px-5 py-7 transition-colors hover:border-accent hover:bg-accent-soft/40"
       >
         <span className="font-medium">{preview ? 'Anderes Foto wählen' : label}</span>
         <span className="text-sm text-muted">{hint}</span>
@@ -241,7 +250,7 @@ function Antragsformular() {
             </p>
           </div>
 
-          <dl className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">
+          <dl className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
             <div className="bg-surface p-4">
               <dt className="label-caps">Mobilnummer</dt>
               <dd className="mt-1 font-mono text-sm">{v.phone ? maskPhone(v.phone) : '–'}</dd>

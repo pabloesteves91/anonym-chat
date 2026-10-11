@@ -16,7 +16,7 @@ export function Eintrag({ eintrag, neueste }: { eintrag: Neuigkeit; neueste: boo
         <time dateTime={eintrag.datum} className="text-muted">
           {datumLang(eintrag.datum)}
         </time>
-        <span className={`rounded-sm border px-2 py-0.5 text-xs font-medium ${ART_KLASSE[eintrag.art]}`}>
+        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${ART_KLASSE[eintrag.art]}`}>
           {artLabel(eintrag.art)}
         </span>
         {eintrag.version ? (

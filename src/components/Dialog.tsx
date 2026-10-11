@@ -35,11 +35,11 @@ export function Dialog({
       }}
       onClose={onClose}
       aria-labelledby="dialog-title"
-      className="m-auto w-[min(34rem,calc(100vw-2rem))] rounded-sm border border-line bg-surface p-0 text-ink shadow-[0_24px_60px_-24px_rgb(0_0_0/0.45)] backdrop:bg-ink/40"
+      className="m-auto w-[min(34rem,calc(100vw-2rem))] rounded-3xl border border-line bg-surface p-0 text-ink shadow-[0_32px_80px_-24px_rgb(0_0_0/0.6)] backdrop:bg-black/55 backdrop:backdrop-blur-sm open:animate-[blur-fade_0.3s_ease-out]"
     >
-      <div className="flex flex-col gap-4 p-5 sm:p-6">
+      <div className="flex flex-col gap-4 p-6 sm:p-7">
         <div>
-          <h2 id="dialog-title" className="font-display text-2xl font-semibold">
+          <h2 id="dialog-title" className="font-display text-2xl font-semibold tracking-[-0.02em]">
             {title}
           </h2>
           {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}

@@ -25,7 +25,7 @@ export function GespraechsFeedback({ kompakt = false }: { kompakt?: boolean }) {
   if (letzter.feedback !== 'offen') return null
 
   return (
-    <div className={`rounded-sm border border-line bg-raised p-4 ${kompakt ? 'text-left' : 'mt-5'}`}>
+    <div className={`rounded-2xl border border-line bg-raised/70 p-4 ${kompakt ? 'text-left' : 'mt-5'}`}>
       <p className="font-medium">{kompakt ? 'Wie war dein letztes Gespräch?' : 'Wie war das Gespräch?'}</p>
       <p className="mt-0.5 text-sm text-muted">Freiwillig. Dein Gegenüber sieht nicht, wer wie bewertet hat.</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -37,7 +37,7 @@ export function GespraechsFeedback({ kompakt = false }: { kompakt?: boolean }) {
               setFehler(false)
               void gibFeedback(option.wert).then((ok) => setFehler(!ok))
             }}
-            className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm font-medium transition-colors hover:border-accent"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent"
           >
             <span aria-hidden="true">{option.zeichen}</span>
             {option.label}

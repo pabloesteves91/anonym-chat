@@ -46,5 +46,13 @@
     "art": "neu",
     "datum": "2026-09-24",
     "version": "ace4569"
+  },
+  {
+    "id": "design-premium",
+    "titel": "Neues Design",
+    "text": "NØNE sieht neu aus: ruhiger und mit mehr Tiefe. Die Kopfzeile schwebt über der Seite, wichtige Knöpfe haben einen feinen Lichtsaum, und während der Suche zeigt ein ruhiger Puls, dass gesucht wird. Wer in den Systemeinstellungen weniger Bewegung gewählt hat, sieht keine Animationen.",
+    "art": "verbessert",
+    "datum": "2026-10-11",
+    "version": null
   }
 ]

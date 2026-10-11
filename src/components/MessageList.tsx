@@ -27,8 +27,10 @@ function Bubble({ message, onReport }: { message: Message; onReport?: (message: 
   return (
     <li className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
       <div
-        className={`max-w-[85%] rounded-sm border px-3 py-2 sm:max-w-[70%] ${
-          mine ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-raised'
+        className={`max-w-[85%] rounded-[18px] border px-3.5 py-2.5 sm:max-w-[70%] ${
+          mine
+            ? 'rounded-br-md border-white/20 bg-linear-to-br from-accent-bright to-accent text-accent-ink shadow-[0_6px_20px_-10px_var(--accent)]'
+            : 'rounded-bl-md border-line bg-raised'
         } ${message.flag ? 'border-signal/50' : ''}`}
       >
         <p className="text-[0.9375rem] whitespace-pre-wrap">{message.text}</p>
@@ -38,7 +40,7 @@ function Bubble({ message, onReport }: { message: Message; onReport?: (message: 
         <button
           type="button"
           onClick={() => onReport(message)}
-          className="mt-1 rounded-sm border border-signal/50 px-2 py-0.5 text-xs text-signal transition-colors hover:bg-signal-soft"
+          className="mt-1 rounded-full border border-signal/50 px-2.5 py-0.5 text-xs text-signal transition-colors hover:bg-signal-soft"
         >
           Diese Nachricht melden
         </button>

@@ -14,6 +14,8 @@ import { ShieldMark, VerifiedBadge } from './VerifiedBadge'
 import { Wortmarke } from './Logo'
 import { Button, Note, Panel } from './ui'
 import { ThemeToggle } from './ThemeToggle'
+import { InstagramMark } from './ProviderMarks'
+import { INSTAGRAM } from '../content/kanaele'
 import { TarifDialog } from './TarifDialog'
 import { GeschlechtDialog } from './GeschlechtDialog'
 
@@ -47,13 +49,13 @@ function Profilfehler({ meldung }: { meldung: string }) {
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-sm px-2.5 py-1.5 text-sm transition-colors ${
-    isActive ? 'bg-accent-soft text-ink' : 'text-muted hover:text-ink'
+  `shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors ${
+    isActive ? 'bg-accent-soft text-ink' : 'text-muted hover:bg-raised/70 hover:text-ink'
   }`
 
 /** Abgesetzt vom Rest: Die Moderation ist Werkzeug, nicht Angebot. */
 const modClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
+  `flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
     isActive
       ? 'border-accent bg-accent-soft text-ink'
       : 'border-line-strong text-muted hover:border-accent hover:text-ink'
@@ -135,8 +137,10 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+      {/* Schwebende Glasleiste: hält Abstand zum Rand und lässt die Seite
+          darunter durchscheinen. */}
+      <header className="sticky top-0 z-20 px-3 pt-3">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1.5 rounded-3xl border border-line bg-surface/70 px-3 py-2 shadow-karte backdrop-blur-xl backdrop-saturate-150 sm:rounded-full sm:px-4">
           <NavLink to="/" className="flex items-center text-ink" aria-label="NØNE, zur Startseite">
             <Wortmarke className="h-5" />
           </NavLink>
@@ -160,7 +164,7 @@ export function AppShell() {
                 <NavLink
                   to="/support"
                   className={({ isActive }) =>
-                    `flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
+                    `flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                       isActive || support.ungelesen
                         ? 'border-accent bg-accent-soft text-ink'
                         : 'border-line-strong text-muted hover:border-accent hover:text-ink'
@@ -209,12 +213,18 @@ export function AppShell() {
                 {user.pseudonym}
               </span>
             ) : null}
-            {konto ? <VerifiedBadge status={user?.verificationStatus ?? 'offen'} size="sm" /> : null}
+            {/* Auf dem Handy ist der Platz knapp: Das Siegel steht dort nur,
+                solange es etwas zu sagen hat – verifiziert zeigt es der Chat. */}
+            {konto ? (
+              <span className={user?.verified ? 'hidden sm:inline-flex' : 'inline-flex'}>
+                <VerifiedBadge status={user?.verificationStatus ?? 'offen'} size="sm" />
+              </span>
+            ) : null}
             {konto ? (
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="rounded-sm px-2 py-1 text-sm text-muted transition-colors hover:text-ink"
+                className="rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:bg-raised/70 hover:text-ink"
               >
                 Abmelden
               </button>
@@ -249,34 +259,48 @@ export function AppShell() {
       {konto && !ohneEinblendungen ? <GeschlechtDialog /> : null}
       {konto && !ohneEinblendungen ? <TarifDialog /> : null}
 
-      <footer className="border-t border-line px-4 py-5">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-          <p>NØNE · Verifizierter Zufallschat ab 18 · Winterthur, Schweiz</p>
-          <p className="font-mono" title={`Gebaut am ${new Date(__BUILD_ZEIT__).toLocaleString('de-CH')}`}>
-            Version {__BUILD_ID__}
-          </p>
-          <nav aria-label="Weitere Seiten" className="ml-auto flex flex-wrap gap-x-4 gap-y-1">
+      <footer className="mt-10 border-t border-line px-4 py-8">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5 text-sm text-muted">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            <Wortmarke className="h-4" />
+            <p>Verifizierter Zufallschat ab 18 · Winterthur, Schweiz</p>
+            <a
+              href={INSTAGRAM.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-line-strong px-3 py-1.5 transition-colors hover:border-accent/50 hover:text-ink sm:ml-auto"
+            >
+              <InstagramMark className="h-3.5 w-3.5" />
+              {INSTAGRAM.name}
+            </a>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <nav aria-label="Weitere Seiten" className="flex flex-wrap gap-x-5 gap-y-2">
             {konto ? (
-              <Link to="/support" className="underline underline-offset-2 hover:text-ink">
+              <Link to="/support" className="transition-colors hover:text-ink">
                 Support
               </Link>
             ) : null}
-            <Link to="/preise" className="underline underline-offset-2 hover:text-ink">
+            <Link to="/preise" className="transition-colors hover:text-ink">
               Tarife
             </Link>
-            <Link to="/neuigkeiten" className="underline underline-offset-2 hover:text-ink">
+            <Link to="/neuigkeiten" className="transition-colors hover:text-ink">
               Neuigkeiten
             </Link>
-            <Link to="/impressum" className="underline underline-offset-2 hover:text-ink">
+            <Link to="/impressum" className="transition-colors hover:text-ink">
               Impressum
             </Link>
-            <Link to="/datenschutz" className="underline underline-offset-2 hover:text-ink">
+            <Link to="/datenschutz" className="transition-colors hover:text-ink">
               Datenschutz
             </Link>
-            <Link to="/agb" className="underline underline-offset-2 hover:text-ink">
+            <Link to="/agb" className="transition-colors hover:text-ink">
               Nutzungsbedingungen
             </Link>
           </nav>
+          <p className="font-mono text-xs sm:ml-auto" title={`Gebaut am ${new Date(__BUILD_ZEIT__).toLocaleString('de-CH')}`}>
+            Version {__BUILD_ID__}
+          </p>
+          </div>
         </div>
       </footer>
     </div>

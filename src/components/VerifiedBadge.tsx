@@ -34,10 +34,10 @@ export function VerifiedBadge({
   status: VerificationStatus
   size?: 'sm' | 'md'
 }) {
-  const sizing = size === 'sm' ? 'px-2 py-0.5 text-[0.6875rem]' : 'px-2.5 py-1 text-xs'
+  const sizing = size === 'sm' ? 'px-2.5 py-0.5 text-[0.6875rem]' : 'px-3 py-1 text-xs'
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm border font-mono tracking-wide uppercase ${sizing} ${STIL[status]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border font-mono tracking-wide uppercase ${sizing} ${STIL[status]}`}
     >
       <ShieldMark className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
       {TEXT[status]}

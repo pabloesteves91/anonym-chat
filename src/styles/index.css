@@ -12,53 +12,70 @@
    ------------------------------------------------------------------------- */
 
 :root {
-  --ground: #f4f7f6;
+  --ground: #f6f8f7;
   --surface: #ffffff;
-  --surface-raised: #edf3f1;
-  --ink: #0f1a17;
-  --muted: #596a65;
+  --surface-raised: #eef3f1;
+  --ink: #0b1412;
+  --muted: #53625e;
   --accent: #4ec4b0;
-  --accent-ink: #08201c;
-  --accent-strong: #0e7e6b;
-  --accent-soft: #e9faf5;
-  --signal: #9e4130;
-  --signal-soft: #f3e1db;
-  --line: #dee6e3;
-  --line-strong: #c4d0cc;
+  --accent-bright: #7ee0cd;
+  --accent-ink: #04130f;
+  --accent-strong: #0b7a67;
+  --accent-soft: #e6f8f3;
+  --signal: #a3412f;
+  --signal-soft: #f6e3dd;
+  --line: #e1e8e5;
+  --line-strong: #c9d4d0;
+  /* Tiefe: Schatten im Hellen, Leuchten im Dunkeln. */
+  --shadow-card: 0 1px 2px rgb(11 20 18 / 0.04), 0 12px 32px -16px rgb(11 20 18 / 0.18);
+  --glow: 0 8px 32px -8px rgb(78 196 176 / 0.55);
+  /* Verlaufsschrift: im Hellen dunkel genug für grosse Titel (≥ 3:1). */
+  --verlauf-a: #0b7a67;
+  --verlauf-b: #0f9580;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ground: #0b0f0e;
-    --surface: #141a18;
-    --surface-raised: #1c2422;
-    --ink: #e8edeb;
-    --muted: #94a39e;
+    --ground: #070a09;
+    --surface: #0e1312;
+    --surface-raised: #151c1a;
+    --ink: #eef3f1;
+    --muted: #93a39e;
     --accent: #4ec4b0;
-    --accent-ink: #08201c;
-    --accent-strong: #6fd6c3;
-    --accent-soft: #12302a;
-    --signal: #d2775f;
-    --signal-soft: #32211c;
-    --line: #232e2b;
-    --line-strong: #384541;
+    --accent-bright: #8bebd9;
+    --accent-ink: #04130f;
+    --accent-strong: #7fe0ce;
+    --accent-soft: #0f2a25;
+    --signal: #e0806a;
+    --signal-soft: #2e1a15;
+    --line: #1d2624;
+    --line-strong: #2b3633;
+    --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 16px 40px -20px rgb(0 0 0 / 0.8);
+    --glow: 0 8px 36px -6px rgb(78 196 176 / 0.45);
+    --verlauf-a: #a6f2e3;
+    --verlauf-b: #4ec4b0;
   }
 }
 
 :root[data-theme='dark'] {
-  --ground: #0b0f0e;
-  --surface: #141a18;
-  --surface-raised: #1c2422;
-  --ink: #e8edeb;
-  --muted: #94a39e;
+  --ground: #070a09;
+  --surface: #0e1312;
+  --surface-raised: #151c1a;
+  --ink: #eef3f1;
+  --muted: #93a39e;
   --accent: #4ec4b0;
-  --accent-ink: #08201c;
-  --accent-strong: #6fd6c3;
-  --accent-soft: #12302a;
-  --signal: #d2775f;
-  --signal-soft: #32211c;
-  --line: #232e2b;
-  --line-strong: #384541;
+  --accent-bright: #8bebd9;
+  --accent-ink: #04130f;
+  --accent-strong: #7fe0ce;
+  --accent-soft: #0f2a25;
+  --signal: #e0806a;
+  --signal-soft: #2e1a15;
+  --line: #1d2624;
+  --line-strong: #2b3633;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 16px 40px -20px rgb(0 0 0 / 0.8);
+  --glow: 0 8px 36px -6px rgb(78 196 176 / 0.45);
+  --verlauf-a: #a6f2e3;
+  --verlauf-b: #4ec4b0;
 }
 
 @theme inline {
@@ -68,6 +85,7 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-accent-strong: var(--accent-strong);
@@ -83,10 +101,71 @@
   --font-sans: 'Montserrat Variable', Montserrat, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  /* Eine Zeile, die 37 Stellen weicher macht: `rounded-sm` steckt in Karten,
-     Knöpfen, Eingabefeldern und Dialog. Statt überall zu greifen, wird die
-     Skala hier überschrieben. */
-  --radius-sm: 0.5rem;
+  /* Eine Zeile, die viele Stellen weicher macht: `rounded-sm` steckt in
+     Karten, Eingabefeldern und Dialogen. Statt überall zu greifen, wird die
+     Skala hier überschrieben. Knöpfe sind rund (`rounded-full`), Karten
+     setzen `rounded-2xl`. */
+  --radius-sm: 0.75rem;
+
+  --shadow-karte: var(--shadow-card);
+  --shadow-glow: var(--glow);
+}
+
+/* Animationen nach Magic UI (magicui.design, MIT) – als reines CSS, ohne
+   Laufzeitbibliothek. `prefers-reduced-motion` hält sie unten an. */
+@theme {
+  --animate-shimmer-slide: shimmer-slide var(--speed, 3s) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed, 3s) * 2) infinite linear;
+  --animate-shiny-text: shiny-text 8s infinite;
+  --animate-ripple: ripple var(--duration, 2.4s) ease calc(var(--i, 0) * 0.2s) infinite;
+  --animate-border-beam: border-beam var(--beam-duration, 8s) infinite linear;
+
+  @keyframes shimmer-slide {
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+    0% {
+      transform: translateZ(0) rotate(0);
+    }
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
+    }
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
+    }
+    100% {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
+  @keyframes shiny-text {
+    0%,
+    90%,
+    100% {
+      background-position: calc(-100% - var(--shiny-width)) 0;
+    }
+    30%,
+    60% {
+      background-position: calc(100% + var(--shiny-width)) 0;
+    }
+  }
+  @keyframes ripple {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+  }
+  @keyframes border-beam {
+    to {
+      offset-distance: 100%;
+    }
+  }
 }
 
 html,
@@ -97,7 +176,14 @@ body,
 
 body {
   margin: 0;
-  background: var(--ground);
+  background-color: var(--ground);
+  /* Ein Hauch Licht von oben – gibt der Fläche Tiefe, ohne zu färben. */
+  background-image: radial-gradient(
+    1100px 520px at 50% -220px,
+    color-mix(in srgb, var(--accent) 13%, transparent),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -133,6 +219,44 @@ body {
   max-width: 62ch;
 }
 
+/* Text im Akzentverlauf – für die zweite Titelzeile. */
+@utility text-verlauf {
+  background-image: linear-gradient(100deg, var(--verlauf-a), var(--verlauf-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Erscheinen beim Laden (Magic UI blur-fade, als CSS). Die Verzögerung
+   setzt `--verzoegerung` am Element. */
+@keyframes blur-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.erscheinen {
+  animation: blur-fade 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--verzoegerung, 0s);
+}
+
+/* Beim Scrollen einblenden – nur wo der Browser scrollgebundene
+   Animationen kann. Sonst ist der Inhalt einfach da. */
+@supports (animation-timeline: view()) {
+  .einblenden {
+    animation: blur-fade linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -142,27 +266,10 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* Warteschlangen-Animation: ein ruhiger Suchlauf, kein Spinner-Karussell. */
-@keyframes vac-sweep {
-  from {
-    transform: translateX(-100%);
+  /* Scrollgebundenes Einblenden ganz aus – sonst bliebe Inhalt halb sichtbar. */
+  .einblenden {
+    animation: none !important;
   }
-  to {
-    transform: translateX(400%);
-  }
-}
-
-.sweep::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  width: 25%;
-  border-radius: 999px;
-  background: var(--accent);
-  animation: vac-sweep 1.8s ease-in-out infinite;
 }
 
 @keyframes vac-blink {
@@ -197,11 +304,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sweep::after {
-    width: 100%;
-    opacity: 0.35;
-    animation: none;
-  }
   .typing-dot {
     animation: none;
     opacity: 0.6;

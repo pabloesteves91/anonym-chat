@@ -250,7 +250,7 @@ export function Profile() {
           <>
             <ul className="flex flex-wrap gap-2">
               {selfBlocked.map((id) => (
-                <li key={id} className="rounded-sm border border-line px-2 py-1 font-mono text-xs text-muted">
+                <li key={id} className="rounded-full border border-line px-2.5 py-1 font-mono text-xs text-muted">
                   {id}
                 </li>
               ))}

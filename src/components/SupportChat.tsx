@@ -104,7 +104,7 @@ export function SupportChat({
               <div key={n.id} className={`flex flex-col ${meine ? 'items-end' : 'items-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-sm border px-3 py-2 sm:max-w-[75%] ${
-                    meine ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface'
+                    meine ? 'border-white/20 bg-linear-to-br from-accent-bright to-accent text-accent-ink' : 'border-line bg-surface'
                   }`}
                 >
                   <p className="text-[0.9375rem] whitespace-pre-wrap">{n.text}</p>

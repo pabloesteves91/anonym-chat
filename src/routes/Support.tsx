@@ -56,7 +56,7 @@ function Anfragezeile({ anfrage }: { anfrage: SupportAnfrage }) {
   return (
     <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1 bg-surface px-3 py-2.5 text-sm">
       <span
-        className={`rounded-sm border px-2 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[anfrage.status]}`}
+        className={`rounded-full border px-2.5 py-0.5 font-mono text-[0.6875rem] tracking-wide uppercase ${STATUS_STYLE[anfrage.status]}`}
       >
         {STATUS_LABEL[anfrage.status]}
       </span>
@@ -367,7 +367,7 @@ export function Support() {
         ) : eigene.length === 0 ? (
           <p className="text-sm text-muted">Noch keine. Was du uns schickst, erscheint hier mit dem aktuellen Stand.</p>
         ) : (
-          <ul className="flex flex-col gap-px overflow-hidden rounded-sm border border-line bg-line">
+          <ul className="flex flex-col gap-px overflow-hidden rounded-2xl border border-line bg-line">
             {eigene.map((anfrage) => (
               <Anfragezeile key={anfrage.id} anfrage={anfrage} />
             ))}

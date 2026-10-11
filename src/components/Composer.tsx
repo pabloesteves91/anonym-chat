@@ -78,7 +78,7 @@ export function Composer({
       {verdict?.level === 'severe' ? (
         <div
           role="alert"
-          className="mb-3 rounded-sm border border-signal/50 bg-signal-soft px-3 py-2.5 text-sm"
+          className="mb-3 rounded-xl border border-signal/50 bg-signal-soft px-3.5 py-3 text-sm"
         >
           <p className="font-mono text-[0.6875rem] tracking-wide text-signal uppercase">
             ▲ {WARNUNG[verdict.category].titel}
@@ -110,8 +110,9 @@ export function Composer({
             if (event.target.value.trim()) onTyping?.()
           }}
           onKeyDown={onKeyDown}
-          placeholder="Nachricht schreiben. Enter sendet, Shift+Enter macht eine neue Zeile."
-          className="max-h-32 min-h-[2.75rem] flex-1 resize-y rounded-sm border border-line-strong bg-surface px-3 py-2.5 text-ink placeholder:text-muted"
+          placeholder="Nachricht schreiben …"
+          aria-describedby="nachricht-hinweis"
+          className="max-h-32 min-h-[2.875rem] flex-1 resize-y rounded-[22px] border border-line-strong bg-raised/60 px-4 py-3 text-ink placeholder:text-muted transition-[border-color,box-shadow] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
         />
         <Button
           variant={needsConfirm ? 'danger' : 'primary'}
@@ -121,6 +122,9 @@ export function Composer({
           {needsConfirm ? 'Auf eigene Verantwortung senden' : 'Senden'}
         </Button>
       </div>
+      <p id="nachricht-hinweis" className="mt-1.5 hidden pl-4 text-xs text-muted sm:block">
+        Enter sendet, Shift+Enter macht eine neue Zeile.
+      </p>
     </div>
   )
 }
